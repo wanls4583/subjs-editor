@@ -203,6 +203,7 @@
         var $linePre = this.linesDom[this.pos.line - 1];
         if ($linePre) {
             $linePre.html(this.highlight(this.pos.line))
+            this.pairHighlight(this.pos.line);
         } else {
             this.addLine();
         }
@@ -216,20 +217,39 @@
         } else {
             $dom.insertBefore($linePre)
         }
-        this.linesDom.splice(this.pos.line - 1, 0, $dom)
+        this.linesDom.splice(this.pos.line - 1, 0, $dom);
+        var lineKeys = Util.keys(this.donePreReg || {});
+        lineKeys.sort();
+        lineKeys.reverse();
+        for (var tmp = 0; tmp < lineKeys.length; tmp++) {
+            //多行匹配记录后移一位
+            if (lineKeys[tmp] > this.pos.line) {
+                this.donePreReg[lineKeys[tmp]] = this.donePreReg[lineKeys[tmp]-1];
+                delete this.donePreReg[lineKeys[tmp]-1]
+            }else{
+                break;
+            }
+        }
+        this.pairHighlight(this.pos.line-1);
+        this.pairHighlight(this.pos.line);
     }
     //删除一行
     _proto.deleteLine = function(line) {
         this.linesDom[line - 1].remove();
         this.linesDom.splice(line - 1, 1);
-        for (var key in this.donePreReg) {
-            var obj = this.donePreReg[key];
-            delete obj[line];
+        var lineKeys = Util.keys(this.donePreReg || {});
+        lineKeys.sort();
+        lineKeys.reverse();
+        for (var tmp = 0; tmp < lineKeys.length; tmp++) {
+            //多行匹配记录前移一位
+            if (lineKeys[tmp] > this.pos.line) {
+                this.donePreReg[lineKeys[tmp]] = this.donePreReg[lineKeys[tmp]+1];
+                delete this.donePreReg[lineKeys[tmp]+1]
+            }else{
+                break;
+            }
         }
-        for (var key in this.doneSuffixReg) {
-            var obj = this.doneSuffixReg[key];
-            delete obj[line];
-        }
+        this.pairHighlight(this.pos.line);
     }
     //创建光标
     _proto.createCrusor = function() {
@@ -249,10 +269,10 @@
             left: left + 'px'
         });
     }
-    //代码高亮
-    _proto.highlight = function(line) {
+    //单行代码高亮
+    _proto.highlight = function(currentLine) {
         var self = this;
-        var str = this.lines[line - 1];
+        var str = this.lines[currentLine - 1];
         var doneRangeOnline = []; //一行中已处理过的区域
         for (var i = 0; i < pairReg.length; i++) {
             _execPairReg(i, true);
@@ -270,10 +290,10 @@
                 className = pairClassNames[regIndex],
                 start, end;
             if (!match) {
-                if (ifPre && self.donePreReg[line] && self.donePreReg[line][regIndex]) {
-                    self.donePreReg[line][regIndex] = { del: true }
-                } else if(!ifPre && self.doneSuffixReg[line] && self.doneSuffixReg[line][regIndex]){
-                    self.doneSuffixReg[line][regIndex] = { del: true }
+                if (ifPre && self.donePreReg[currentLine] && self.donePreReg[currentLine][regIndex]) {
+                    self.donePreReg[currentLine][regIndex] = { del: true }
+                } else if (!ifPre && self.doneSuffixReg[currentLine] && self.doneSuffixReg[currentLine][regIndex]) {
+                    self.doneSuffixReg[currentLine][regIndex] = { del: true }
                 }
                 return;
             }
@@ -286,15 +306,15 @@
             }
             if (ifPre) {
                 doneRangeOnline.push({ start: start, end: end, className: className });
-                if (!self.donePreReg[line] || self.donePreReg[line][regIndex]) {
-                    self.donePreReg[line] = self.donePreReg[line] || [];
-                    self.donePreReg[line][regIndex] = { undo: true }
+                if (!self.donePreReg[currentLine] || self.donePreReg[currentLine][regIndex]) {
+                    self.donePreReg[currentLine] = self.donePreReg[currentLine] || [];
+                    self.donePreReg[currentLine][regIndex] = { undo: true }
                 }
             } else {
                 doneRangeOnline.push({ start: 0, end: end, className: className });
-                if (!self.doneSuffixReg[line] || self.doneSuffixReg[line][regIndex]) {
-                    self.doneSuffixReg[line] = self.doneSuffixReg[line] || [];
-                    self.doneSuffixReg[line][regIndex] = { undo: true }
+                if (!self.doneSuffixReg[currentLine] || self.doneSuffixReg[currentLine][regIndex]) {
+                    self.doneSuffixReg[currentLine] = self.doneSuffixReg[currentLine] || [];
+                    self.doneSuffixReg[currentLine][regIndex] = { undo: true }
                 }
             }
         }
@@ -344,12 +364,18 @@
             str = Util.insertStr(str, obj.end + 1, '</span>');
             str = Util.insertStr(str, obj.start, '<span class="' + obj.className + '">');
         }
+
+        return str;
+    }
+    //多行代码高亮
+    _proto.pairHighlight = function(currentLine) {
+        var self = this;
         //处理多行匹配preRegs结果
         _doPairRegResult();
         _doPairSuffixResult();
 
         function _doPairRegResult() {
-            var lineDonePreReg = self.donePreReg[line] || {};
+            var lineDonePreReg = self.donePreReg[currentLine] || {};
             for (var regIndex in lineDonePreReg) { //处理preRegs
                 var preObj = lineDonePreReg[regIndex];
                 if (preObj.undo) { //新匹配到preReg
@@ -358,18 +384,18 @@
                     lineKeys.sort();
                     //寻找最近的匹配了suffixReg的行
                     for (var tmp = 0; tmp < lineKeys.length; tmp++) {
-                        if (self.doneSuffixReg[lineKeys[tmp]].regIndex == regIndex && lineKeys[tmp] >= line && lineKeys[tmp] < endLine) {
+                        if (self.doneSuffixReg[lineKeys[tmp]].regIndex == regIndex && lineKeys[tmp] >= currentLine && lineKeys[tmp] < endLine) {
                             endLine = lineKeys[tmp];
                             break;
                         }
                     }
-                    for (var tmp = line + 1; tmp < endLine; tmp++) {
+                    for (var tmp = currentLine + 1; tmp < endLine; tmp++) {
                         self.linesDom[tmp - 1].addClass(pairClassNames[regIndex]);
                     }
                     preObj.undo = false;
                     preObj.endLine = endLine;
                 } else if (preObj.del) { //不再匹配preReg
-                    for (var tmp = line; tmp <= preObj.endLine; tmp++) {
+                    for (var tmp = currentLine; tmp <= preObj.endLine; tmp++) {
                         self.linesDom[tmp - 1].removeClass(pairClassNames[regIndex]);
                     }
                     preObj.del = false;
@@ -378,36 +404,40 @@
         }
 
         function _doPairSuffixResult() {
-            var lineDoneSuffixReg = self.doneSuffixReg[line] || {};
+            var lineDoneSuffixReg = self.doneSuffixReg[currentLine] || {};
             for (var regIndex in lineDoneSuffixReg) { //处理suffixRegs
                 var suffixObj = lineDoneSuffixReg[regIndex];
                 if (suffixObj.undo) { //匹配到新的suffixReg
-                    for (var tmp = line; tmp <= self.lines.length; tmp++) {
+                    for (var tmp = currentLine; tmp <= self.lines.length; tmp++) {
                         self.linesDom[tmp - 1].removeClass(pairClassNames[regIndex]);
                     }
                     var lineKeys = Util.keys(self.donePreReg || {});
-                    for (var tmp = lineKeys.length - 1; tmp >= 0; tmp--) { 
+                    for (var tmp = 0; tmp < lineKeys.length; tmp++) {
                         //该行后的对应preReg的行需要重新添加class
-                        if (self.donePreReg[lineKeys[tmp]].regIndex == regIndex && lineKeys[tmp] > line) {
+                        if (self.donePreReg[lineKeys[tmp]].regIndex == regIndex && lineKeys[tmp] > currentLine) {
                             self.donePreReg[lineKeys[tmp]].undo = true;
                         }
                     }
-                    for (var tmp = line; tmp <= self.lines.length; tmp++) { //删除该行后所有行对应的class
+                    for (var tmp = currentLine; tmp <= self.lines.length; tmp++) { //删除该行后所有行对应的class
                         self.linesDom[tmp - 1].removeClass(pairClassNames[regIndex]);
                     }
                     suffixObj.undo = false;
                     _doPairRegResult(); //重新添加满足条件的行的class
                 } else if (suffixObj.del) {
-                    if (self.linesDom[line - 1].find('.' + pairClassNames[regIndex])[0]) {
-                        for (var tmp = line; tmp <= self.lines.length; tmp++) {
-                            self.linesDom[tmp - 1].addClass(pairClassNames[regIndex]);
+                    var lineKeys = Util.keys(self.donePreReg || {});
+                    lineKeys.sort();
+                    for (var tmp = 0; tmp < lineKeys.length; tmp++) {
+                        //该行前一个对应preReg的最进的行需要重新添加class
+                        if (self.donePreReg[lineKeys[tmp]].regIndex == regIndex && lineKeys[tmp] < currentLine) {
+                            self.donePreReg[lineKeys[tmp]].undo = true;
+                            break;
                         }
                     }
-                    suffixObj.del = false;
+                    delete self.doneSuffixReg[currentLine];
+                    _doPairRegResult(); //重新添加满足条件的行的class
                 }
             }
         }
-        return str;
     }
 
 
