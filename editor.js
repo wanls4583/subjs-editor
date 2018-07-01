@@ -1,7 +1,7 @@
 ! function($) {
     var pairReg = [{
-        pre: /^(?:[^'"]*?|(?:[^'"]*?(?:'\w*'|"\w*")[^'"]*?)*?)(\/\*[^\n])(?:\*\/)?/,
-        Suffix: /\*\//
+        pre: /^(?:[^'"]*?|(?:[^'"]*?(?:'\w*'|"\w*")[^'"]*?)*?)(\/\*[^\n]*)(?:\*\/)?/,
+        suffix: /\*\//
     }]
 
     var reg = [
@@ -264,10 +264,10 @@
             if (ifPre) {
                 regObj = pairReg[regIndex].pre;
             } else {
-                regObj = pairReg[regIndex].Suffix;
+                regObj = pairReg[regIndex].suffix;
             }
             var match = regObj.exec(str),
-                classNames = pairClassNames[i],
+                className = pairClassNames[regIndex],
                 start, end;
             if (!match) {
                 if (ifPre && self.donePreReg[line] && self.donePreReg[line][regIndex]) {
@@ -382,7 +382,7 @@
             for (var regIndex in lineDoneSuffixReg) { //处理suffixRegs
                 var suffixObj = lineDoneSuffixReg[regIndex];
                 if (suffixObj.undo) { //匹配到新的suffixReg
-                    for (var tmp = line; tmp <= self.lins.length; tmp++) {
+                    for (var tmp = line; tmp <= self.lines.length; tmp++) {
                         self.linesDom[tmp - 1].removeClass(pairClassNames[regIndex]);
                     }
                     var lineKeys = Util.keys(self.donePreReg || {});
@@ -399,7 +399,7 @@
                     _doPairRegResult(); //重新添加满足条件的行的class
                 } else if (suffixObj.del) {
                     if (self.linesDom[line - 1].find('.' + pairClassNames[regIndex])[0]) {
-                        for (var tmp = line; tmp <= self.lins.length; tmp++) {
+                        for (var tmp = line; tmp <= self.lines.length; tmp++) {
                             self.linesDom[tmp - 1].addClass(pairClassNames[regIndex]);
                         }
                     }
