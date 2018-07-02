@@ -4,14 +4,16 @@
 <head>
     <title>subjs</title>
     <script src="jquery.min.js"></script>
-    <script type="text/javascript" src="jsmode.js"></script>
+    <link rel="stylesheet" type="text/css" href="js-syntax.css">
     <script type="text/javascript" src="editor.js"></script>
     <style type="text/css">
+        html,body{
+            margin: 0;
+            padding: 0;
+        }
     	#editor{
-    		position: relative;
     		height: 500px;
     		border: 1px solid #000;
-    		letter-spacing: k
     	}
     </style>
 </head>
@@ -24,7 +26,9 @@
     // 	var sub = new SubJs();
     // 	sub.highlight(str);
     // }
-    new SubJs({$wrapper:'#editor'});
+    new SubJs({
+        $wrapper:'#editor'
+    });
     </script>
 </body>
 

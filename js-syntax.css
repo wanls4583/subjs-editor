@@ -1,0 +1,31 @@
+.editor_context {
+    color: #05a;
+}
+
+.line_num_bg{
+	background-color: rgba(0,0,0,0.1);
+}
+.line_num {
+    text-align: right;
+    color: #999;
+}
+.key {
+    color: #7F0055;
+}
+
+.method {
+    color: #00f;
+}
+
+.comment,
+.pair_comment {
+    color: #3F7F5F;
+}
+
+.string {
+    color: #a11;
+}
+
+.number {
+    color: #164;
+}
