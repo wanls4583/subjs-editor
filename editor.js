@@ -94,22 +94,21 @@
             var left = column * self.charWidth;
             if (self.pos.line > self.lines.length) {
                 self.pos.line = self.lines.length;
-                column = self.lines.length;
-            }else if (column > self.lines[self.pos.line - 1].length) {
-                column = self.lines[self.pos.line - 1].length
-            }
-            while (column > 0) {
-                var str = self.lines[self.pos.line - 1].substring(0, column);
-                var match = str.match(self.fullAngleReg);
-                var _left = str.length * self.charWidth;
-                if (match) {
-                    _left += match.length * self.charWidth;
+                self.pos.column = self.lines[self.lines.length-1].length;
+            }else{
+                while (column > 0) {
+                    var str = self.lines[self.pos.line - 1].substring(0, column);
+                    var match = str.match(self.fullAngleReg);
+                    var _left = str.length * self.charWidth;
+                    if (match) {
+                        _left += match.length * self.charWidth;
+                    }
+                    if (_left <= left) {
+                        self.pos.column = column;
+                        break;
+                    }
+                    column--;
                 }
-                if (_left <= left) {
-                    self.pos.column = column;
-                    break;
-                }
-                column--;
             }
             self.$textarea[0].focus();
             self.updateCursorPos();
