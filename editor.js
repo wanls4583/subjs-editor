@@ -181,9 +181,16 @@
                         if (val) {
                             var str = self.lines[self.pos.line - 1];
                             str = str.substring(0, self.pos.column) + val + str.substr(self.pos.column);
-                            self.lines[self.pos.line - 1] = str;
+                            var strs = str.split(/\r\n|\r|\n/);
+                            self.lines[self.pos.line - 1] = strs[0];
                             self.pos.column += val.length;
                             self.updateLine();
+                            for(var tmp = 1; tmp<strs.length; tmp++){ //粘贴操作可能存在换号符
+                                self.pos.line++;
+                                self.lines.splice(self.pos.line - 1, 0, strs[tmp]);
+                                self.pos.column = strs[tmp].length;
+                                self.addLine();
+                            }
                             self.$textarea.val('');
                             self.updateCursorPos();
                         }

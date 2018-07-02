@@ -2,16 +2,22 @@
     color: #05a;
 }
 
-.line_num_bg{
-	background-color: rgba(0,0,0,0.1);
-	border-right: 1px solid rgba(0,0,0,0.2);
+.line_num_bg {
+    border-right: 1px solid rgba(0, 0, 0, .2);
+    background-color: rgba(0, 0, 0, .1);
 }
+
 .line_num {
     text-align: right;
     color: #999;
 }
+
 .key {
-    color: #7F0055;
+    color: #7f0055;
+}
+
+.oprator {
+    color: #7f0055;
 }
 
 .method {
@@ -20,7 +26,7 @@
 
 .comment,
 .pair_comment {
-    color: #3F7F5F;
+    color: #3f7f5f;
 }
 
 .string {
