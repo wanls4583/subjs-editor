@@ -79,21 +79,26 @@
         this.getCharWidth();
         this.creatTextarea();
         this.updateLine();
+        this.bindEvent();
+    }
+    _proto.bindEvent = function() {
+        var self = this;
         this.$context.on('click', function(e) {
             if (e.target != self.$context[0]) {
                 self.pos.line = Math.floor(e.target.offsetParent.offsetTop / self.charHight) + 1;
             } else {
                 self.pos.line = Math.ceil(e.offsetY / self.charHight);
             }
-            if (self.pos.line > self.lines.length) {
-                self.pos.line = self.lines.length
-            }
             var column = Math.round(e.offsetX / self.charWidth);
+            column = column < 0 ? 0 : column;
             var left = column * self.charWidth;
-            if (column > self.lines[self.pos.line - 1].length) {
+            if (self.pos.line > self.lines.length) {
+                self.pos.line = self.lines.length;
+                column = self.lines.length;
+            }else if (column > self.lines[self.pos.line - 1].length) {
                 column = self.lines[self.pos.line - 1].length
             }
-            while (true) {
+            while (column > 0) {
                 var str = self.lines[self.pos.line - 1].substring(0, column);
                 var match = str.match(self.fullAngleReg);
                 var _left = str.length * self.charWidth;
@@ -219,7 +224,7 @@
         var $linePre = $('.pre_code_line')[this.pos.line - 1];
         var $dom = $('<pre style="position:relative;margin:0;height:' + this.charHight + 'px;" class="pre_code_line">' +
             '<span class="line_num" style="position:absolute;left:-45px;top:0;width:36px;padding-right:4px;">' + this.pos.line + '</span>' +
-            '<div class="code">' + this.highlight(this.pos.line) + '</div></pre>');
+            '<div class="code" style="height:100%;">' + this.highlight(this.pos.line) + '</div></pre>');
         if (!$linePre) {
             this.$context.append($dom);
         } else {
@@ -358,7 +363,7 @@
                     self.donePreReg[currentLine][regIndex] = { undo: true, line: currentLine }
                 }
             } else {
-                doneRangeOnline.push({ start: 0, end: end, className: className });
+                doneRangeOnline.push({ start: 0, end: end, className: 'flag__' + className });
                 if (!self.doneSuffixReg[currentLine] || !self.doneSuffixReg[currentLine][regIndex]) {
                     self.doneSuffixReg[currentLine] = self.doneSuffixReg[currentLine] || [];
                     self.doneSuffixReg[currentLine][regIndex] = { undo: true, line: currentLine }
@@ -438,6 +443,9 @@
                         if (self.doneSuffixReg[lineKeys[tmp]][regIndex] && lineKeys[tmp] >= currentLine) {
                             endLine = lineKeys[tmp];
                             endSuffix = self.doneSuffixReg[lineKeys[tmp]][regIndex];
+                            self.linesDom[endLine - 1].find('.flag__' + pairClassNames[regIndex])
+                                .removeClass('flag__' + pairClassNames[regIndex])
+                                .addClass(pairClassNames[regIndex]);
                             break;
                         }
                     }
@@ -480,13 +488,11 @@
                     }
                     if (nearPreLine > -1) {
                         var tmp = self.donePreReg[nearPreLine][regIndex].endSuffix;
-                        var line =  tmp ? tmp.line : self.lines.length + 1;
+                        var line = tmp ? tmp.line : self.lines.length + 1;
                         for (tmp = currentLine; tmp <= line - 1; tmp++) { //删除对应的class
                             self.linesDom[tmp - 1].removeClass(pairClassNames[regIndex]);
                         }
                         nearPreLine > -1 && _checkPairPreReg(nearPreLine); //重新添加满足条件的行的class
-                    }else{
-                        self.linesDom[currentLine-1].find('.'+pairClassNames[regIndex]).removeClass(pairClassNames[regIndex])
                     }
                     suffixObj.undo = false;
                 } else if (suffixObj.del) {
@@ -518,8 +524,8 @@
                 if (line < currentLine) {
                     for (var regIndex in self.donePreReg[line]) {
                         var obj = self.donePreReg[line][regIndex].endSuffix;
-                        var line = obj ? obj.line : self.lines.length+1;
-                        if (line-1 >= currentLine) {
+                        var line = obj ? obj.line : self.lines.length + 1;
+                        if (line - 1 >= currentLine) {
                             self.linesDom[currentLine - 1].addClass(pairClassNames[regIndex]);
                         }
                     }
