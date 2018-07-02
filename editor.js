@@ -89,13 +89,14 @@
             } else {
                 self.pos.line = Math.ceil(e.offsetY / self.charHight);
             }
-            var column = Math.round(e.offsetX / self.charWidth);
-            column = column < 0 ? 0 : column;
-            var left = column * self.charWidth;
             if (self.pos.line > self.lines.length) {
                 self.pos.line = self.lines.length;
                 self.pos.column = self.lines[self.lines.length-1].length;
             }else{
+                var column = Math.round(e.offsetX / self.charWidth);
+                column = column < 0 ? 0 : column;
+                column = column > self.lines[self.pos.line-1].length ? self.lines[self.pos.line-1].length : column ;
+                var left = column * self.charWidth;
                 while (column > 0) {
                     var str = self.lines[self.pos.line - 1].substring(0, column);
                     var match = str.match(self.fullAngleReg);
