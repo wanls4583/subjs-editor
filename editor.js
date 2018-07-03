@@ -100,13 +100,20 @@
         this.creatContext();
         this.getCharWidth();
         this.creatTextarea();
+        this.createCrusor();
         this.updateLine();
         this.bindEvent();
     }
     _proto.bindEvent = function() {
         var self = this;
         this.$context.on('click', function(e) {
+            if(e.target == self.$textarea[0]){
+                return;
+            }
             if (Util.getSelectedText()) {
+                self.$textarea.val(Util.getSelectedText());
+                self.$textarea.select();
+                self.$cursor.hide();
                 return;
             }
             if (e.target != self.$context[0]) {
@@ -149,6 +156,7 @@
             self.updateCursorPos();
         })
         this.$textarea.on('keydown', function(e) {
+            self.$textarea.val('');
             if (e.ctrlKey && e.keyCode == 65) { //ctrl+a
                 e.preventDefault();
                 self.$textWrap.hide();
@@ -215,7 +223,7 @@
                         self.pos.column = 0;
                         self.addLine();
                         setTimeout(function() {
-                            self.$textarea.val('');
+                            // self.$textarea.val('');
                         }, 0);
                         break;
                     case 9: //tab
@@ -245,7 +253,7 @@
                     self.pos.column = strs[tmp].length;
                     self.addLine();
                 }
-                self.$textarea.val('');
+                // self.$textarea.val('');
                 self.updateCursorPos();
             }
 
@@ -276,14 +284,40 @@
     }
     //创建输入框
     _proto.creatTextarea = function() {
-        var wrapStyle = 'position:absolute;top:0;left:0;overflow:hidden;width:' + this.charWidth + 'px;height:' + this.charHight + 'px';
-        var areaStyle = 'height:' + this.charHight + 'px;line-height:' + this.charHight + 'px;width:' + this.charWidth + 'px;padding:0;outline:none;border-style:none;resize:none;overflow:hidden;background-color:transparent'
+        var self = this;
+        var wrapStyle = 'position:absolute;top:0;left:0;overflow:hidden;width:3;height:0';
+        var areaStyle = 'height:100%;width:100%;padding:0;outline:none;border-style:none;resize:none;overflow:hidden;background-color:transparent;color:transparent'
         this.$context[0].innerHTML = '\
             <div id="subjs_editor_textarea_wrap" style="' + wrapStyle + '">\
                 <textarea id="subjs_editor_textarea" style="' + areaStyle + '"></textarea>\
             </div>';
         this.$textarea = this.$context.find('#subjs_editor_textarea');
         this.$textWrap = this.$context.find('#subjs_editor_textarea_wrap');
+        this.$textarea.on('focus',function(){
+            self.$cursor.show();
+        });
+        this.$textarea.on('blur',function(){
+            self.$cursor.hide();
+        });
+    }
+    //创建光标
+    _proto.createCrusor = function() {
+        this.$cursor = $('<i style="display:none;position:absolute;width:2px;height:'+this.charHight+'px;background-color:#333"></i>');
+        this.$context.append(this.$cursor);
+        var show = true;
+        var self = this;
+        function flicker(){
+            if(show){
+                self.$cursor.css('visibility','visible');
+            }else{
+                self.$cursor.css('visibility','hidden');
+            }
+            show = !show;
+            setTimeout(function(){
+                flicker();
+            },500);
+        }
+        flicker();
     }
     //更新一行
     _proto.updateLine = function() {
@@ -395,10 +429,6 @@
 
         this.pairHighlight(this.pos.line);
     }
-    //创建光标
-    _proto.createCrusor = function() {
-
-    }
     _proto.updateCursorPos = function() {
         var self = this;
         var top = (this.pos.line - 1) * this.charHight;
@@ -411,6 +441,10 @@
             left += match.length * (this.fullAngleCharWidth - this.charWidth);
         }
         this.$textWrap.css({
+            top: top + paddingTop + 'px',
+            left: left + 'px'
+        });
+        this.$cursor.css({
             top: top + paddingTop + 'px',
             left: left + 'px'
         });
