@@ -132,13 +132,9 @@
             self.updateCursorPos();
         })
         this.$textarea.on('keydown', function(e) {
-            if (e.ctrlKey) {
-                switch (e.keyCode) {
-                    case 65: //ctrl+a
-                        e.preventDefault();
-                        Util.selectAll(self.$context[0]);
-                        break;
-                }
+            if (e.ctrlKey && e.keyCode == 65) { //ctrl+a
+                e.preventDefault();
+                Util.selectAll(self.$context[0]);
             } else {
                 switch (e.keyCode) {
                     case 37: //left arrow
