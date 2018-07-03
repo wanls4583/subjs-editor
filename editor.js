@@ -112,7 +112,6 @@
             }
             if (Util.getSelectedText()) {
                 self.$textarea.val(Util.getSelectedText());
-                self.$textarea.select();
                 self.$cursor.hide();
                 return;
             }
@@ -155,6 +154,7 @@
             self.$textarea[0].focus();
             self.updateCursorPos();
         })
+        var preCode = 0;
         this.$textarea.on('keydown', function(e) {
             self.$textarea.val('');
             if (e.ctrlKey && e.keyCode == 65) { //ctrl+a
@@ -233,13 +233,20 @@
                         _update(val);
                         break;
                     default:
-                        setTimeout(function() {
-                            var val = self.$textarea.val();
-                            val && _update(val);
-                        }, 0)
+                        if(preCode > 222 && e.keyCode==16){ //中文输入后shift延迟较大
+                            setTimeout(function(){
+                                var val = self.$textarea.val();
+                                val && _update(val);
+                            },100);
+                        }else{
+                            setTimeout(function() {
+                                var val = self.$textarea.val();
+                                val && _update(val);
+                            }, 0)
+                        }
                 }
             }
-
+            preCode = e.keyCode;
             function _update(val) {
                 var str = self.lines[self.pos.line - 1];
                 str = str.substring(0, self.pos.column) + val + str.substr(self.pos.column);
@@ -315,7 +322,7 @@
             show = !show;
             setTimeout(function(){
                 flicker();
-            },500);
+            },350);
         }
         flicker();
     }
