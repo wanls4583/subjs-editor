@@ -59,10 +59,10 @@
                 window.getSelection().addRange(range);
             }
         },
-        getStyleVal: function(dom,prop){
-            if(window.getComputedStyle){
-                return window.getComputedStyle(dom,null)[prop];
-            }else{
+        getStyleVal: function(dom, prop) {
+            if (window.getComputedStyle) {
+                return window.getComputedStyle(dom, null)[prop];
+            } else {
                 return dom.currentStyle[prop]
             }
         }
@@ -110,7 +110,7 @@
                 return;
             }
             if (e.target != self.$context[0]) {
-                self.pos.line = Math.floor(e.target.offsetParent.offsetTop / self.charHight) + 1;
+                self.pos.line = Math.floor($(e.target).parents('.pre_code_line')[0].offsetTop / self.charHight) + 1;
             } else {
                 self.pos.line = Math.ceil(e.offsetY / self.charHight);
             }
@@ -119,8 +119,18 @@
                 self.pos.column = self.lines[self.lines.length - 1].length;
             } else {
                 var column = Math.ceil(e.offsetX / self.charWidth);
+                var str = self.lines[self.pos.line - 1]
                 column = column < 0 ? 0 : column;
+                column = column > str.length ? str.length : column;
                 var left = e.offsetX;
+                var match = str.match(self.fullAngleReg);
+                var maxWidth = str.length * self.charWidth;
+                if (match) {
+                    maxWidth += match.length * (self.fullAngleCharWidth - self.charWidth);
+                }
+                if (left > maxWidth) {
+                    left = maxWidth;
+                }
                 while (column > 0) {
                     var str = self.lines[self.pos.line - 1].substring(0, column);
                     var match = str.match(self.fullAngleReg);
@@ -257,13 +267,13 @@
         this.$wrapper = $('<div class="editor_wrap"></div>');
         this.$wrapper.append(this.$leftNumBg);
         this.$wrapper.append(this.$context);
-        this.$wrapper.css({ position: 'relative', overflow: 'auto' ,height:'100%'});
+        this.$wrapper.css({ position: 'relative', overflow: 'auto', height: '100%' });
         this.options.$wrapper.append(this.$wrapper);
     }
     //创建输入框
     _proto.creatTextarea = function() {
-        var wrapStyle = 'position:absolute;top:0;left:0;overflow:hidden;width:' + this.charWidth + 'px;';
-        var areaStyle = 'height:1.1em;width:' + this.charWidth + 'px;padding:0;outline:none;border-style:none;resize:none;overflow:hidden;background-color:transparent'
+        var wrapStyle = 'position:absolute;top:0;left:0;overflow:hidden;width:' + this.charWidth + 'px;height:' + this.charHight + 'px';
+        var areaStyle = 'height:' + this.charHight + 'px;line-height:' + this.charHight + 'px;width:' + this.charWidth + 'px;padding:0;outline:none;border-style:none;resize:none;overflow:hidden;background-color:transparent'
         this.$context[0].innerHTML = '\
             <div id="subjs_editor_textarea_wrap" style="' + wrapStyle + '">\
                 <textarea id="subjs_editor_textarea" style="' + areaStyle + '"></textarea>\
@@ -283,11 +293,11 @@
     }
     _proto.addLine = function() {
         var $linePre = $('.pre_code_line')[this.pos.line - 1];
-        var marginL = Util.getStyleVal(this.$context[0],'marginLeft');
-        var marginR = Util.getStyleVal(this.$context[0],'marginRight');
+        var marginL = Util.getStyleVal(this.$context[0], 'marginLeft');
+        var marginR = Util.getStyleVal(this.$context[0], 'marginRight');
         var $dom = $('\
             <div style="position:relative;margin:0;height:' + this.charHight + 'px;" class="pre_code_line">\
-                <i class="current_line_bg" style="display:none;position:absolute;left:-45px;top:0;z-index:1;height:100%;width:100%;padding-left:'+marginL+';padding-right:'+marginR+'"></i>\
+                <i class="current_line_bg" style="display:none;position:absolute;left:-45px;top:0;z-index:1;height:100%;width:100%;padding-left:' + marginL + ';padding-right:' + marginR + '"></i>\
                 <div class="code" style="position:relative;z-index:2;height:100%;white-space:pre">' + this.highlight(this.pos.line) + '</div>\
             </div>');
         if (!$linePre) {
@@ -391,8 +401,8 @@
         var str = this.lines[this.pos.line - 1].substring(0, this.pos.column);
         var match = str.match(this.fullAngleReg);
         var left = str.length * this.charWidth;
-        var paddingTop = Util.getStyleVal(this.$context[0],'paddingTop');
-        paddingTop = parseInt(paddingTop.substring(0,paddingTop.length-2));
+        var paddingTop = Util.getStyleVal(this.$context[0], 'paddingTop');
+        paddingTop = parseInt(paddingTop.substring(0, paddingTop.length - 2));
         if (match) {
             left += match.length * (this.fullAngleCharWidth - this.charWidth);
         }
@@ -400,11 +410,11 @@
             top: top + paddingTop + 'px',
             left: left + 'px'
         });
-        if(this.$currentLineBg){
+        if (this.$currentLineBg) {
             this.$currentLineBg.hide();
         }
-        this.$currentLineBg = this.linesDom[this.pos.line-1].find('.current_line_bg').show();
-        
+        this.$currentLineBg = this.linesDom[this.pos.line - 1].find('.current_line_bg').show();
+
     }
     //单行代码高亮
     _proto.highlight = function(currentLine) {
