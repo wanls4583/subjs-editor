@@ -151,7 +151,11 @@
         this.$textarea.on('keydown', function(e) {
             if (e.ctrlKey && e.keyCode == 65) { //ctrl+a
                 e.preventDefault();
+                self.$textWrap.hide();
                 Util.selectAll(self.$context[0]);
+                setTimeout(function(){
+                    self.$textWrap.show();
+                },50);
             } else {
                 switch (e.keyCode) {
                     case 37: //left arrow
