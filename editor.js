@@ -106,15 +106,7 @@
     }
     _proto.bindEvent = function() {
         var self = this;
-        this.$context.on('click', function(e) {
-            if(e.target == self.$textarea[0]){
-                return;
-            }
-            if (Util.getSelectedText()) {
-                self.$textarea.val(Util.getSelectedText());
-                self.$cursor.hide();
-                return;
-            }
+        this.$context.on('mouseup', function(e) {
             if (e.target != self.$context[0]) {
                 self.pos.line = Math.floor($(e.target).parents('.pre_code_line')[0].offsetTop / self.charHight) + 1;
             } else {
@@ -137,6 +129,7 @@
                 if (left > maxWidth) {
                     left = maxWidth;
                 }
+                self.pos.column = 0;
                 while (column > 0) {
                     var str = self.lines[self.pos.line - 1].substring(0, column);
                     var match = str.match(self.fullAngleReg);
@@ -151,8 +144,29 @@
                     column--;
                 }
             }
-            self.$textarea[0].focus();
             self.updateCursorPos();
+            var preLeft = self.$textWrap[0].style.left;
+            var preTop = self.$textWrap[0].style.top;
+            self.$textarea.val(Util.getSelectedText());
+            self.$cursor.hide();
+            self.$textWrap.css({
+                top: e.target == self.$context[0] ? e.offsetY : preTop,
+                left: e.offsetX - 1 + 'px',
+                'z-index': '3',
+                height: self.charHight+'px'
+            })
+            setTimeout(function(){
+                self.$textWrap.css({
+                    top: preTop,
+                    left: preLeft,
+                    'z-index':'-1',
+                    height:'0px'
+                })
+            },100);
+
+            if (!Util.getSelectedText()) { //选择文本
+                self.$textarea[0].focus();
+            }
         })
         var preCode = 0;
         this.$textarea.on('keydown', function(e) {
@@ -292,7 +306,7 @@
     //创建输入框
     _proto.creatTextarea = function() {
         var self = this;
-        var wrapStyle = 'position:absolute;top:0;left:0;overflow:hidden;width:3;height:0';
+        var wrapStyle = 'position:absolute;top:0;left:0;z-index:-1;overflow:hidden;width:3px;height:0';
         var areaStyle = 'height:100%;width:100%;padding:0;outline:none;border-style:none;resize:none;overflow:hidden;background-color:transparent;color:transparent'
         this.$context[0].innerHTML = '\
             <div id="subjs_editor_textarea_wrap" style="' + wrapStyle + '">\
@@ -309,7 +323,7 @@
     }
     //创建光标
     _proto.createCrusor = function() {
-        this.$cursor = $('<i style="display:none;position:absolute;width:2px;height:'+this.charHight+'px;background-color:#333"></i>');
+        this.$cursor = $('<i class="cursor" style="display:none;position:absolute;width:2px;height:'+this.charHight+'px;background-color:#333"></i>');
         this.$context.append(this.$cursor);
         var show = true;
         var self = this;

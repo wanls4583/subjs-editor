@@ -1,8 +1,19 @@
-#editor {
+.editor_wrap {
     color: #05a;
     font-family: Monaco, Menlo, "Ubuntu Mono", Consolas, source-code-pro, monospace;
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.5;
+    letter-spacing: 0.5px;
+}
+.editor_context .code::selection{
+    background-color: rgba(0,0,0,0.2);
+}
+.editor_context span::selection{
+    background-color: rgba(0,0,0,0.2);
+}
+.cursor{
+    width: 1px !important;
+    background-color: #000 !important;
 }
 .current_line_bg{
 	background-color: rgba(0,0,0,0.1);
