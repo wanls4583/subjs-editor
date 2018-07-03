@@ -1,23 +1,28 @@
 .editor_wrap {
-    color: #05a;
-    font-family: Monaco, Menlo, "Ubuntu Mono", Consolas, source-code-pro, monospace;
+    font-family: Monaco, Menlo, 'Ubuntu Mono', Consolas, source-code-pro, monospace;
     font-size: 13px;
     line-height: 1.5;
-    letter-spacing: 0.5px;
+    color: #05a;
+    letter-spacing: .5px;
 }
-.editor_context .code::selection{
-    background-color: rgba(0,0,0,0.2);
+
+.editor_context .code::selection {
+    background-color: rgba(0, 0, 0, .2);
 }
-.editor_context span::selection{
-    background-color: rgba(0,0,0,0.2);
+
+.editor_context span::selection {
+    background-color: rgba(0, 0, 0, .2);
 }
-.cursor{
+
+.cursor {
     width: 1px !important;
     background-color: #000 !important;
 }
-.current_line_bg{
-	background-color: rgba(0,0,0,0.1);
+
+.current_line_bg {
+    background-color: rgba(0, 0, 0, .1);
 }
+
 .line_num_bg {
     border-right: 1px solid rgba(0, 0, 0, .2);
     background-color: rgba(0, 0, 0, .1);
