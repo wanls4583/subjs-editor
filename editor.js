@@ -39,6 +39,13 @@
             for (var i = 0; i < arr.length; i++) {
                 arr[i] = Number(arr[i]);
             }
+        },
+        getSelectedText: function() {
+            if (document.selection) {
+                return document.selection.createRange().text;
+            } else if (window.getSelection) {
+                return window.getSelection().toString();
+            }
         }
     }
 
@@ -80,6 +87,9 @@
     _proto.bindEvent = function() {
         var self = this;
         this.$context.on('click', function(e) {
+            if (Util.getSelectedText()) {
+                return;
+            }
             if (e.target != self.$context[0]) {
                 self.pos.line = Math.floor(e.target.offsetParent.offsetTop / self.charHight) + 1;
             } else {
@@ -89,10 +99,9 @@
                 self.pos.line = self.lines.length;
                 self.pos.column = self.lines[self.lines.length - 1].length;
             } else {
-                var column = Math.round(e.offsetX / self.charWidth);
+                var column = Math.ceil(e.offsetX / self.charWidth);
                 column = column < 0 ? 0 : column;
-                column = column > self.lines[self.pos.line - 1].length ? self.lines[self.pos.line - 1].length : column;
-                var left = column * self.charWidth;
+                var left = e.offsetX;
                 while (column > 0) {
                     var str = self.lines[self.pos.line - 1].substring(0, column);
                     var match = str.match(self.fullAngleReg);
@@ -100,7 +109,7 @@
                     if (match) {
                         _left += match.length * (self.fullAngleCharWidth - self.charWidth);
                     }
-                    if (_left <= left) {
+                    if (Math.abs(_left - left) < self.charWidth) {
                         self.pos.column = column;
                         break;
                     }
@@ -250,7 +259,7 @@
         var $linePre = $('.pre_code_line')[this.pos.line - 1];
         var $dom = $('\
             <div style="position:relative;margin:0;height:' + this.charHight + 'px;" class="pre_code_line">\
-                <span class="line_num" style="position:absolute;left:-45px;top:0;width:36px;padding-right:4px;">' + this.pos.line + '</span>\
+                <span class="line_num" style="position:absolute;left:-45px;top:0;width:36px;padding-right:4px;user-select:none">' + this.pos.line + '</span>\
                 <div class="code" style="height:100%;white-space:pre">' + this.highlight(this.pos.line) + '</div>\
             </div>');
         if (!$linePre) {
