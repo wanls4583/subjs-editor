@@ -53,13 +53,15 @@
         this.syntax = options.syntax || 'javascript';
         this.donePreReg = {}; //多行匹配开始记录
         this.doneSuffixReg = {}; //多行匹配结束记录
+        this.options = {}; //参数
         if (typeof options.$wrapper == 'string') {
-            this.$wrapper = $(options.$wrapper);
+            this.options.$wrapper = $(options.$wrapper);
         } else if (typeof options.$wrapper == 'object') {
-            this.$wrapper = options.$wrapper;
+            this.options.$wrapper = options.$wrapper;
         } else {
             return new Error('$wrapper must be string or object');
         }
+        this.options.tabsize = options.tabsize || 4;
         this._init();
     }
 
@@ -67,15 +69,9 @@
 
     _proto._init = function() {
         let self = this;
-        var $wrap = $('<div class="editor_wrap" style="height:100%;overflow:auto;padding:5px 0 0 40px,position:relative;z-index:1"></div>');
-        this.$leftNumBg = $('<div class="line_num_bg" style="position:absolute;top:0;left:0;width:40px;height:100%"></div>');
-        this.$context = $('<div class="editor_context" style="position:relative;z-index:1;min-height:100%;margin:0 15px 0 45px;"></div>');
-        $wrap.append(this.$context);
-        this.$wrapper.append(this.$leftNumBg);
-        this.$wrapper.append($wrap);
-        this.$wrapper.css({ position: 'relative' });
         //全角符号和中文字符
         this.fullAngleReg = /[\x00-\x1f\x80-\xa0\xad\u1680\u180E\u2000-\u200f\u2028\u2029\u202F\u205F\u3000\uFEFF\uFFF9-\uFFFC]|[\u1100-\u115F\u11A3-\u11A7\u11FA-\u11FF\u2329-\u232A\u2E80-\u2E99\u2E9B-\u2EF3\u2F00-\u2FD5\u2FF0-\u2FFB\u3000-\u303E\u3041-\u3096\u3099-\u30FF\u3105-\u312D\u3131-\u318E\u3190-\u31BA\u31C0-\u31E3\u31F0-\u321E\u3220-\u3247\u3250-\u32FE\u3300-\u4DBF\u4E00-\uA48C\uA490-\uA4C6\uA960-\uA97C\uAC00-\uD7A3\uD7B0-\uD7C6\uD7CB-\uD7FB\uF900-\uFAFF\uFE10-\uFE19\uFE30-\uFE52\uFE54-\uFE66\uFE68-\uFE6B\uFF01-\uFF60\uFFE0-\uFFE6]|[\uD800-\uDBFF][\uDC00-\uDFFF]/g;
+        this.creatContext();
         this.getCharWidth();
         this.creatTextarea();
         this.updateLine();
@@ -91,18 +87,18 @@
             }
             if (self.pos.line > self.lines.length) {
                 self.pos.line = self.lines.length;
-                self.pos.column = self.lines[self.lines.length-1].length;
-            }else{
+                self.pos.column = self.lines[self.lines.length - 1].length;
+            } else {
                 var column = Math.round(e.offsetX / self.charWidth);
                 column = column < 0 ? 0 : column;
-                column = column > self.lines[self.pos.line-1].length ? self.lines[self.pos.line-1].length : column ;
+                column = column > self.lines[self.pos.line - 1].length ? self.lines[self.pos.line - 1].length : column;
                 var left = column * self.charWidth;
                 while (column > 0) {
                     var str = self.lines[self.pos.line - 1].substring(0, column);
                     var match = str.match(self.fullAngleReg);
                     var _left = str.length * self.charWidth;
                     if (match) {
-                        _left += match.length * self.charWidth;
+                        _left += match.length * (self.fullAngleCharWidth - self.charWidth);
                     }
                     if (_left <= left) {
                         self.pos.column = column;
@@ -176,44 +172,67 @@
                         self.$textarea.val('');
                     }, 0);
                     break;
+                case 9: //tab
+                    e.preventDefault();
+                    var val = '';
+                    for (var tmp = 0; tmp < self.options.tabsize; tmp++) { val += ' ' };
+                    _update(val);
+                    break;
                 default:
                     setTimeout(function() {
                         var val = self.$textarea.val();
-                        if (val) {
-                            var str = self.lines[self.pos.line - 1];
-                            str = str.substring(0, self.pos.column) + val + str.substr(self.pos.column);
-                            var strs = str.split(/\r\n|\r|\n/);
-                            self.lines[self.pos.line - 1] = strs[0];
-                            self.pos.column += val.length;
-                            self.updateLine();
-                            for(var tmp = 1; tmp<strs.length; tmp++){ //粘贴操作可能存在换号符
-                                self.pos.line++;
-                                self.lines.splice(self.pos.line - 1, 0, strs[tmp]);
-                                self.pos.column = strs[tmp].length;
-                                self.addLine();
-                            }
-                            self.$textarea.val('');
-                            self.updateCursorPos();
-                        }
+                        val && _update(val);
                     }, 0)
             }
+
+            function _update(val) {
+                var str = self.lines[self.pos.line - 1];
+                str = str.substring(0, self.pos.column) + val + str.substr(self.pos.column);
+                var strs = str.split(/\r\n|\r|\n/);
+                self.lines[self.pos.line - 1] = strs[0];
+                self.pos.column += val.length;
+                self.updateLine();
+                for (var tmp = 1; tmp < strs.length; tmp++) { //粘贴操作可能存在换号符
+                    self.pos.line++;
+                    self.lines.splice(self.pos.line - 1, 0, strs[tmp]);
+                    self.pos.column = strs[tmp].length;
+                    self.addLine();
+                }
+                self.$textarea.val('');
+                self.updateCursorPos();
+            }
+
             self.updateCursorPos();
         })
     }
     //获取字符宽度
     _proto.getCharWidth = function() {
-        var str = 'XXXXXXXXXXXXXX';
-        this.$context[0].innerHTML = '<pre><span style="display:inline-block" class="char_width">' + str + '</span></pre>';
-        this.charWidth = $('.char_width')[0].clientWidth / str.length;
-        this.charHight = $('.char_width')[0].clientHeight;
+        var str1 = 'XXXXXXXXXXXXXX';
+        var str2 = '啊啊啊啊啊啊啊啊';
+        this.$context[0].innerHTML = '<span style="display:inline-block" class="char_width_1">' + str1 + '</span><span style="display:inline-block" class="char_width_2">' + str2 + '</span>';
+        this.charWidth = $('.char_width_1')[0].clientWidth / str1.length;
+        this.charHight = $('.char_width_1')[0].clientHeight;
+        this.fullAngleCharWidth = $('.char_width_2')[0].clientWidth / str2.length;
         this.$context[0].innerHTML = '';
-        console.log('charSize', this.charWidth, this.charHight);
+        console.log('charSize', this.charWidth, this.fullAngleCharWidth, this.charHight);
+    }
+    _proto.creatContext = function() {
+        var $wrap = $('<div class="editor_wrap" style="position:relative;z-index:1;height:100%;padding:5px 0;overflow:auto;box-sizing:border-box"></div>');
+        this.$leftNumBg = $('<div class="line_num_bg" style="position:absolute;top:0;left:0;width:40px;height:100%"></div>');
+        this.$context = $('<div class="editor_context" style="position:relative;z-index:1;min-height:100%;margin:0 15px 0 45px;"></div>');
+        $wrap.append(this.$context);
+        this.options.$wrapper.append(this.$leftNumBg);
+        this.options.$wrapper.append($wrap);
+        this.options.$wrapper.css({ position: 'relative' });
     }
     //创建输入框
     _proto.creatTextarea = function() {
-        var wrapStyle = 'position:absolute;top:0;left:0;overflow:hidden;width:' + this.charWidth + 'px;height:1em;';
-        var areaStyle = 'height:1em;width:' + this.charWidth + 'px;padding:0;outline:none;border-style:none;resize:none;overflow:hidden;background-color:transparent'
-        this.$context[0].innerHTML = '<div id="subjs_editor_textarea_wrap" style="' + wrapStyle + '"><textarea id="subjs_editor_textarea" style="' + areaStyle + '"></textarea></div>'
+        var wrapStyle = 'position:absolute;top:0;left:0;overflow:hidden;width:' + this.charWidth + 'px;height:1.2em;';
+        var areaStyle = 'height:1.2em;width:' + this.charWidth + 'px;padding:0;outline:none;border-style:none;resize:none;overflow:hidden;background-color:transparent'
+        this.$context[0].innerHTML = '\
+            <div id="subjs_editor_textarea_wrap" style="' + wrapStyle + '">\
+                <textarea id="subjs_editor_textarea" style="' + areaStyle + '"></textarea>\
+            </div>';
         this.$textarea = this.$context.find('#subjs_editor_textarea');
         this.$textWrap = this.$context.find('#subjs_editor_textarea_wrap');
     }
@@ -229,9 +248,11 @@
     }
     _proto.addLine = function() {
         var $linePre = $('.pre_code_line')[this.pos.line - 1];
-        var $dom = $('<pre style="position:relative;margin:0;height:' + this.charHight + 'px;" class="pre_code_line">' +
-            '<span class="line_num" style="position:absolute;left:-45px;top:0;width:36px;padding-right:4px;">' + this.pos.line + '</span>' +
-            '<div class="code" style="height:100%;">' + this.highlight(this.pos.line) + '</div></pre>');
+        var $dom = $('\
+            <div style="position:relative;margin:0;height:' + this.charHight + 'px;" class="pre_code_line">\
+                <span class="line_num" style="position:absolute;left:-45px;top:0;width:36px;padding-right:4px;">' + this.pos.line + '</span>\
+                <div class="code" style="height:100%;white-space:pre">' + this.highlight(this.pos.line) + '</div>\
+            </div>');
         if (!$linePre) {
             this.$context.append($dom);
         } else {
@@ -321,7 +342,7 @@
         var match = str.match(this.fullAngleReg);
         var left = str.length * this.charWidth;
         if (match) {
-            left += match.length * this.charWidth;
+            left += match.length * (this.fullAngleCharWidth - this.charWidth);
         }
         this.$textWrap.css({
             top: top + 'px',

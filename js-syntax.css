@@ -1,5 +1,7 @@
 .editor_context {
     color: #05a;
+    font-family: Monaco, Menlo, "Ubuntu Mono", Consolas, source-code-pro, monospace;
+    font-size: 12px;
 }
 
 .line_num_bg {
