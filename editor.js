@@ -46,6 +46,18 @@
             } else if (window.getSelection) {
                 return window.getSelection().toString();
             }
+        },
+        selectAll: function(element) {
+            if (document.selection) {
+                var range = document.body.createTextRange();
+                range.moveToElementText(element);
+                range.select();
+            } else if (window.getSelection) {
+                var range = document.createRange();
+                range.selectNode(element);
+                window.getSelection().removeAllRanges();
+                window.getSelection().addRange(range);
+            }
         }
     }
 
@@ -120,78 +132,87 @@
             self.updateCursorPos();
         })
         this.$textarea.on('keydown', function(e) {
-            switch (e.keyCode) {
-                case 37: //left arrow
-                    if (self.pos.column > 0) {
-                        self.pos.column--;
-                    } else if (self.pos.line > 1) {
-                        self.pos.line--;
-                        self.pos.column = self.lines[self.pos.line - 1].length;
-                    }
-                    break;
-                case 38: //up arrow
-                    if (self.pos.line > 1) {
-                        self.pos.line--;
-                    }
-                    break;
-                case 39: //right arrow
-                    if (self.pos.column < self.lines[self.pos.line - 1].length) {
-                        self.pos.column++;
-                    } else if (self.pos.line < self.lines.length) {
+            if (e.ctrlKey) {
+                switch (e.keyCode) {
+                    case 65: //ctrl+a
+                        e.preventDefault();
+                        Util.selectAll(self.$context[0]);
+                        break;
+                }
+            } else {
+                switch (e.keyCode) {
+                    case 37: //left arrow
+                        if (self.pos.column > 0) {
+                            self.pos.column--;
+                        } else if (self.pos.line > 1) {
+                            self.pos.line--;
+                            self.pos.column = self.lines[self.pos.line - 1].length;
+                        }
+                        break;
+                    case 38: //up arrow
+                        if (self.pos.line > 1) {
+                            self.pos.line--;
+                        }
+                        break;
+                    case 39: //right arrow
+                        if (self.pos.column < self.lines[self.pos.line - 1].length) {
+                            self.pos.column++;
+                        } else if (self.pos.line < self.lines.length) {
+                            self.pos.line++;
+                            self.pos.column = 0;
+                        }
+                        break;
+                    case 40: //down arrow
+                        if (self.pos.line < self.lines.length) {
+                            self.pos.line++;
+                        }
+                        break;
+                    case 46: //delete
+                        var str = self.lines[self.pos.line - 1];
+                        str = str.substring(0, self.pos.column) + str.substr(self.pos.column + 1);
+                        self.lines[self.pos.line - 1] = str;
+                        self.updateLine();
+                        break;
+                    case 8: //backspace
+                        var str = self.lines[self.pos.line - 1];
+                        str = str.substring(0, self.pos.column - 1) + str.substr(self.pos.column);
+                        self.lines[self.pos.line - 1] = str;
+                        if (self.pos.column > 0) {
+                            self.pos.column--;
+                        } else if (self.pos.line > 1) {
+                            self.pos.line--;
+                            self.pos.column = self.lines[self.pos.line - 1].length;
+                            self.lines[self.pos.line - 1] = self.lines[self.pos.line - 1] + self.lines[self.pos.line];
+                            self.lines.splice(self.pos.line, 1);
+                            self.deleteLine(self.pos.line + 1);
+                        }
+                        self.updateLine();
+                        break;
+                    case 13: //换行
+                        // case 108: //数字键换行
+                        var str = self.lines[self.pos.line - 1];
+                        self.lines[self.pos.line - 1] = str.substring(0, self.pos.column);
+                        self.updateLine();
                         self.pos.line++;
+                        self.lines.splice(self.pos.line - 1, 0, str.substr(self.pos.column));
                         self.pos.column = 0;
-                    }
-                    break;
-                case 40: //down arrow
-                    if (self.pos.line < self.lines.length) {
-                        self.pos.line++;
-                    }
-                    break;
-                case 46: //delete
-                    var str = self.lines[self.pos.line - 1];
-                    str = str.substring(0, self.pos.column) + str.substr(self.pos.column + 1);
-                    self.lines[self.pos.line - 1] = str;
-                    self.updateLine();
-                    break;
-                case 8: //backspace
-                    var str = self.lines[self.pos.line - 1];
-                    str = str.substring(0, self.pos.column - 1) + str.substr(self.pos.column);
-                    self.lines[self.pos.line - 1] = str;
-                    if (self.pos.column > 0) {
-                        self.pos.column--;
-                    } else if (self.pos.line > 1) {
-                        self.pos.line--;
-                        self.pos.column = self.lines[self.pos.line - 1].length;
-                        self.lines[self.pos.line - 1] = self.lines[self.pos.line - 1] + self.lines[self.pos.line];
-                        self.lines.splice(self.pos.line, 1);
-                        self.deleteLine(self.pos.line + 1);
-                    }
-                    self.updateLine();
-                    break;
-                case 13: //换行
-                    // case 108: //数字键换行
-                    var str = self.lines[self.pos.line - 1];
-                    self.lines[self.pos.line - 1] = str.substring(0, self.pos.column);
-                    self.updateLine();
-                    self.pos.line++;
-                    self.lines.splice(self.pos.line - 1, 0, str.substr(self.pos.column));
-                    self.pos.column = 0;
-                    self.addLine();
-                    setTimeout(function() {
-                        self.$textarea.val('');
-                    }, 0);
-                    break;
-                case 9: //tab
-                    e.preventDefault();
-                    var val = '';
-                    for (var tmp = 0; tmp < self.options.tabsize; tmp++) { val += ' ' };
-                    _update(val);
-                    break;
-                default:
-                    setTimeout(function() {
-                        var val = self.$textarea.val();
-                        val && _update(val);
-                    }, 0)
+                        self.addLine();
+                        setTimeout(function() {
+                            self.$textarea.val('');
+                        }, 0);
+                        break;
+                    case 9: //tab
+                        e.preventDefault();
+                        var val = '';
+                        for (var tmp = 0; tmp < self.options.tabsize; tmp++) { val += ' ' };
+                        _update(val);
+                        break;
+                    default:
+                        setTimeout(function() {
+                            var val = self.$textarea.val();
+                            val && _update(val);
+                        }, 0)
+                }
             }
 
             function _update(val) {
@@ -219,25 +240,27 @@
         var str1 = 'XXXXXXXXXXXXXX';
         var str2 = '啊啊啊啊啊啊啊啊';
         this.$context[0].innerHTML = '<span style="display:inline-block" class="char_width_1">' + str1 + '</span><span style="display:inline-block" class="char_width_2">' + str2 + '</span>';
-        this.charWidth = $('.char_width_1')[0].clientWidth / str1.length;
-        this.charHight = $('.char_width_1')[0].clientHeight;
+        var dom = $('.char_width_1')[0];
+        this.charWidth = dom.clientWidth / str1.length;
+        this.charHight = dom.clientHeight;
         this.fullAngleCharWidth = $('.char_width_2')[0].clientWidth / str2.length;
+        this.fontSize = window.getComputedStyle ? window.getComputedStyle(dom, null).fontSize : dom.currentStyle.fontSize;
         this.$context[0].innerHTML = '';
         console.log('charSize', this.charWidth, this.fullAngleCharWidth, this.charHight);
     }
     _proto.creatContext = function() {
-        var $wrap = $('<div class="editor_wrap" style="position:relative;z-index:1;height:100%;padding:5px 0;overflow:auto;box-sizing:border-box"></div>');
-        this.$leftNumBg = $('<div class="line_num_bg" style="position:absolute;top:0;left:0;width:40px;height:100%"></div>');
-        this.$context = $('<div class="editor_context" style="position:relative;z-index:1;min-height:100%;margin:0 15px 0 45px;"></div>');
-        $wrap.append(this.$context);
-        this.options.$wrapper.append(this.$leftNumBg);
-        this.options.$wrapper.append($wrap);
-        this.options.$wrapper.css({ position: 'relative' });
+        this.$leftNumBg = $('<div class="line_num_bg" style="float:left;width:40px;min-height:100%;"></div>');
+        this.$context = $('<div class="editor_context" style="position:relative;min-height:100%;margin:0 15px 0 45px;"></div>');
+        this.$wrapper = $('<div class="editor_wrap"></div>');
+        this.$wrapper.append(this.$leftNumBg);
+        this.$wrapper.append(this.$context);
+        this.$wrapper.css({ position: 'relative', overflow: 'auto' ,height:'100%'});
+        this.options.$wrapper.append(this.$wrapper);
     }
     //创建输入框
     _proto.creatTextarea = function() {
-        var wrapStyle = 'position:absolute;top:0;left:0;overflow:hidden;width:' + this.charWidth + 'px;height:1.2em;';
-        var areaStyle = 'height:1.2em;width:' + this.charWidth + 'px;padding:0;outline:none;border-style:none;resize:none;overflow:hidden;background-color:transparent'
+        var wrapStyle = 'position:absolute;top:0;left:0;overflow:hidden;width:' + this.charWidth + 'px;';
+        var areaStyle = 'height:1.1em;width:' + this.charWidth + 'px;padding:0;outline:none;border-style:none;resize:none;overflow:hidden;background-color:transparent'
         this.$context[0].innerHTML = '\
             <div id="subjs_editor_textarea_wrap" style="' + wrapStyle + '">\
                 <textarea id="subjs_editor_textarea" style="' + areaStyle + '"></textarea>\
@@ -259,14 +282,26 @@
         var $linePre = $('.pre_code_line')[this.pos.line - 1];
         var $dom = $('\
             <div style="position:relative;margin:0;height:' + this.charHight + 'px;" class="pre_code_line">\
-                <span class="line_num" style="position:absolute;left:-45px;top:0;width:36px;padding-right:4px;user-select:none">' + this.pos.line + '</span>\
-                <div class="code" style="height:100%;white-space:pre">' + this.highlight(this.pos.line) + '</div>\
+                <i class="current_line_bg" style="display:none;position:absolute;left:-45px;top:0;z-index:1;height:100%;width:100%;padding:0 15px 0 45px;"></i>\
+                <div class="code" style="position:relative;z-index:2;height:100%;white-space:pre">' + this.highlight(this.pos.line) + '</div>\
             </div>');
         if (!$linePre) {
             this.$context.append($dom);
         } else {
             $dom.insertBefore($linePre)
         }
+        var $num = $('<span class="line_num">' + this.lines.length + '</span>')
+        $num.css({
+            'display': 'block',
+            'height': this.charHight + 'px',
+            'line-height': this.charHight + 'px',
+            'width': '36px',
+            'padding-right': '4px',
+            'user-select': 'none',
+            'text-align': 'right',
+            'font-size': this.fontSize
+        })
+        this.$leftNumBg.append($num);
         this.linesDom.splice(this.pos.line - 1, 0, $dom);
 
         var lineKeys = Util.keys(this.donePreReg || {});
@@ -305,6 +340,7 @@
     //删除一行
     _proto.deleteLine = function(line) {
         this.linesDom[line - 1].remove();
+        this.$leftNumBg.find('.line_num:last').remove();
         this.linesDom.splice(line - 1, 1);
 
         var lineKeys = Util.keys(this.donePreReg || {});
@@ -357,6 +393,11 @@
             top: top + 'px',
             left: left + 'px'
         });
+        if(this.$currentLineBg){
+            this.$currentLineBg.hide();
+        }
+        this.$currentLineBg = this.linesDom[this.pos.line-1].find('.current_line_bg').show();
+        
     }
     //单行代码高亮
     _proto.highlight = function(currentLine) {

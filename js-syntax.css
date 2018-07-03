@@ -1,16 +1,17 @@
-.editor_context {
+#editor {
     color: #05a;
     font-family: Monaco, Menlo, "Ubuntu Mono", Consolas, source-code-pro, monospace;
     font-size: 12px;
 }
-
+.current_line_bg{
+	background-color: rgba(0,0,0,0.1);
+}
 .line_num_bg {
     border-right: 1px solid rgba(0, 0, 0, .2);
     background-color: rgba(0, 0, 0, .1);
 }
 
 .line_num {
-    text-align: right;
     color: #999;
 }
 
