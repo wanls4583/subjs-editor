@@ -65,6 +65,15 @@
             } else {
                 return dom.currentStyle[prop]
             }
+        },
+        nextFrame: function(callback){
+            if(window.requestAnimationFrame){
+                window.requestAnimationFrame(callback);
+            }else{
+                setTimeout(function(){
+                    callback();
+                },0);
+            }
         }
     }
 
@@ -172,8 +181,13 @@
                     })
                 }, 100);
             } else if (e.button == 2) {
+                var rangge = window.getSelection().getRangeAt(0);
                 self.$textarea[0].focus();
                 self.$textarea[0].select();
+                Util.nextFrame(function(){
+                    window.getSelection().removeAllRanges();
+                    window.getSelection().addRange(rangge);
+                })
             }
         })
         var preCode = 0;
