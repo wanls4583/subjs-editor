@@ -10,11 +10,6 @@
     user-select: none;
 }
 
-.editor_wrap textarea::selection{
-    background-color: transparent;
-    color: transparent;
-}
-
 .editor_context .code::selection {
     background-color: rgba(0, 0, 0, .2);
 }

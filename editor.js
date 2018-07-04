@@ -47,7 +47,7 @@
                 return window.getSelection().toString();
             }
         },
-        selectAll: function(element) {
+        select: function(element) {
             if (document.selection) {
                 var range = document.body.createTextRange();
                 range.moveToElementText(element);
@@ -66,13 +66,13 @@
                 return dom.currentStyle[prop]
             }
         },
-        nextFrame: function(callback){
-            if(window.requestAnimationFrame){
+        nextFrame: function(callback) {
+            if (window.requestAnimationFrame) {
                 window.requestAnimationFrame(callback);
-            }else{
-                setTimeout(function(){
+            } else {
+                setTimeout(function() {
                     callback();
-                },0);
+                }, 0);
             }
         }
     }
@@ -110,28 +110,30 @@
         this.getCharWidth();
         this.creatTextarea();
         this.createCrusor();
-        this.updateLine();
+        this.addLine();
         this.bindEvent();
     }
     _proto.bindEvent = function() {
         var self = this;
-        this.$context.on('mousedown',function(){
+        this.$context.on('mousedown', function() {
             clearTimeout(self.textaTimer);
         });
         this.$context.on('mouseup', function(e) {
+            var column = self.pos.column;
+            var lien = self.pos.line;
             if (e.target != self.$context[0]) {
                 if ($(e.target).parents('.pre_code_line')[0]) {
-                    self.pos.line = Math.floor($(e.target).parents('.pre_code_line')[0].offsetTop / self.charHight) + 1;
+                    line = Math.floor($(e.target).parents('.pre_code_line')[0].offsetTop / self.charHight) + 1;
                 }
             } else {
-                self.pos.line = Math.ceil(e.offsetY / self.charHight);
+                line = Math.ceil(e.offsetY / self.charHight);
             }
-            if (self.pos.line > self.lines.length) {
-                self.pos.line = self.lines.length;
-                self.pos.column = self.lines[self.lines.length - 1].length;
+            if (line > self.lines.length) {
+                line = self.lines.length;
+                column = self.lines[self.lines.length - 1].length;
             } else {
-                var column = Math.ceil(e.offsetX / self.charWidth);
-                var str = self.lines[self.pos.line - 1]
+                var str = self.lines[line - 1];
+                column = Math.ceil(e.offsetX / self.charWidth);
                 column = column < 0 ? 0 : column;
                 column = column > str.length ? str.length : column;
                 var left = e.offsetX;
@@ -143,50 +145,60 @@
                 if (left > maxWidth) {
                     left = maxWidth;
                 }
-                self.pos.column = 0;
+                column = 0;
                 while (column > 0) {
-                    var str = self.lines[self.pos.line - 1].substring(0, column);
+                    var str = self.lines[line - 1].substring(0, column);
                     var match = str.match(self.fullAngleReg);
                     var _left = str.length * self.charWidth;
                     if (match) {
                         _left += match.length * (self.fullAngleCharWidth - self.charWidth);
                     }
                     if (Math.abs(_left - left) < self.charWidth) {
-                        self.pos.column = column;
+                        column = column;
                         break;
                     }
                     column--;
                 }
             }
-            self.updateCursorPos();
-            var preLeft = self.$textWrap[0].style.left;
-            var preTop = self.$textWrap[0].style.top;
+
             self.$textarea.val(Util.getSelectedText());
             self.$cursor.hide();
+
+            var paddingTop = Util.getStyleVal(self.$context[0], 'paddingTop');
+            paddingTop = parseInt(paddingTop.substring(0, paddingTop.length - 2));
+            var top = paddingTop + (line - 1) * self.charHight;
+
             self.$textWrap.css({
-                top: e.target == self.$context[0] ? e.offsetY : preTop,
+                top: e.target == self.$context[0] ? e.offsetY - 1 : top - 1,
                 left: e.offsetX - 1 + 'px',
-                'z-index': '3',
-                height: self.charHight + 'px'
+                'z-index': '3'
             })
 
-            if (!Util.getSelectedText()) { //选择文本
+            if (!Util.getSelectedText() && e.button != 2) { //单纯的点击
+                self.pos.line = line;
+                self.pos.column = column;
                 self.$textarea[0].focus();
-                self.textaTimer = setTimeout(function() {
-                    self.$textWrap.css({
-                        top: preTop,
-                        left: preLeft,
-                        'z-index': '-1',
-                        height: '0px'
-                    })
-                }, 100);
+                self.$textWrap.css({
+                    'z-index': '-1',
+                });
+                self.updateCursorPos();
             } else if (e.button == 2) {
                 var rangge = window.getSelection().getRangeAt(0);
                 self.$textarea[0].focus();
                 self.$textarea[0].select();
-                Util.nextFrame(function(){
+
+                Util.nextFrame(function() {
                     window.getSelection().removeAllRanges();
                     window.getSelection().addRange(rangge);
+                    self.$textWrap.css({
+                        'z-index': '-1'
+                    });
+                })
+            } else {
+                Util.nextFrame(function() {
+                    self.$textWrap.css({
+                        'z-index': '-1'
+                    });
                 })
             }
         })
@@ -196,7 +208,7 @@
             if (e.ctrlKey && e.keyCode == 65) { //ctrl+a
                 e.preventDefault();
                 self.$textWrap.hide();
-                Util.selectAll(self.$context[0]);
+                Util.select(self.$context[0]);
                 setTimeout(function() {
                     self.$textWrap.show();
                 }, 50);
@@ -329,7 +341,7 @@
     //创建输入框
     _proto.creatTextarea = function() {
         var self = this;
-        var wrapStyle = 'position:absolute;top:0;left:0;z-index:-1;overflow:hidden;width:3px;height:0';
+        var wrapStyle = 'position:absolute;top:0;left:0;z-index:-1;overflow:hidden;opacity:0;width:3px;height:' + (self.charHight + 2) + 'px'
         var areaStyle = 'height:100%;width:100%;padding:0;outline:none;border-style:none;resize:none;overflow:hidden;background-color:transparent;color:transparent'
         this.$context[0].innerHTML = '\
             <div id="subjs_editor_textarea_wrap" style="' + wrapStyle + '">\
@@ -363,6 +375,31 @@
             }, 350);
         }
         flicker();
+    }
+    //更新光标坐标
+    _proto.updateCursorPos = function() {
+        var self = this;
+        var top = (this.pos.line - 1) * this.charHight;
+        var str = this.lines[this.pos.line - 1].substring(0, this.pos.column);
+        var match = str.match(this.fullAngleReg);
+        var left = str.length * this.charWidth;
+        var paddingTop = Util.getStyleVal(this.$context[0], 'paddingTop');
+        paddingTop = parseInt(paddingTop.substring(0, paddingTop.length - 2));
+        if (match) {
+            left += match.length * (this.fullAngleCharWidth - this.charWidth);
+        }
+        this.$textWrap.css({
+            top: top + paddingTop + 'px',
+            left: left + 'px'
+        });
+        this.$cursor.css({
+            top: top + paddingTop + 'px',
+            left: left + 'px'
+        });
+        if (this.$currentLineBg) {
+            this.$currentLineBg.hide();
+        }
+        this.$currentLineBg = this.linesDom[this.pos.line - 1].find('.current_line_bg').show();
     }
     //更新一行
     _proto.updateLine = function() {
@@ -473,31 +510,6 @@
         }
 
         this.pairHighlight(this.pos.line);
-    }
-    _proto.updateCursorPos = function() {
-        var self = this;
-        var top = (this.pos.line - 1) * this.charHight;
-        var str = this.lines[this.pos.line - 1].substring(0, this.pos.column);
-        var match = str.match(this.fullAngleReg);
-        var left = str.length * this.charWidth;
-        var paddingTop = Util.getStyleVal(this.$context[0], 'paddingTop');
-        paddingTop = parseInt(paddingTop.substring(0, paddingTop.length - 2));
-        if (match) {
-            left += match.length * (this.fullAngleCharWidth - this.charWidth);
-        }
-        this.$textWrap.css({
-            top: top + paddingTop + 'px',
-            left: left + 'px'
-        });
-        this.$cursor.css({
-            top: top + paddingTop + 'px',
-            left: left + 'px'
-        });
-        if (this.$currentLineBg) {
-            this.$currentLineBg.hide();
-        }
-        this.$currentLineBg = this.linesDom[this.pos.line - 1].find('.current_line_bg').show();
-
     }
     //单行代码高亮
     _proto.highlight = function(currentLine) {
