@@ -106,9 +106,12 @@
     }
     _proto.bindEvent = function() {
         var self = this;
+        this.$context.on('mousedown',function(){
+            clearTimeout(self.textaTimer);
+        });
         this.$context.on('mouseup', function(e) {
             if (e.target != self.$context[0]) {
-                if($(e.target).parents('.pre_code_line')[0]){
+                if ($(e.target).parents('.pre_code_line')[0]) {
                     self.pos.line = Math.floor($(e.target).parents('.pre_code_line')[0].offsetTop / self.charHight) + 1;
                 }
             } else {
@@ -155,19 +158,22 @@
                 top: e.target == self.$context[0] ? e.offsetY : preTop,
                 left: e.offsetX - 1 + 'px',
                 'z-index': '3',
-                height: self.charHight+'px'
+                height: self.charHight + 'px'
             })
-            setTimeout(function(){
-                self.$textWrap.css({
-                    top: preTop,
-                    left: preLeft,
-                    'z-index':'-1',
-                    height:'0px'
-                })
-            },100);
 
             if (!Util.getSelectedText()) { //选择文本
                 self.$textarea[0].focus();
+                self.textaTimer = setTimeout(function() {
+                    self.$textWrap.css({
+                        top: preTop,
+                        left: preLeft,
+                        'z-index': '-1',
+                        height: '0px'
+                    })
+                }, 100);
+            } else if (e.button == 2) {
+                self.$textarea[0].focus();
+                self.$textarea[0].select();
             }
         })
         var preCode = 0;
@@ -177,9 +183,9 @@
                 e.preventDefault();
                 self.$textWrap.hide();
                 Util.selectAll(self.$context[0]);
-                setTimeout(function(){
+                setTimeout(function() {
                     self.$textWrap.show();
-                },50);
+                }, 50);
             } else {
                 switch (e.keyCode) {
                     case 37: //left arrow
@@ -249,12 +255,12 @@
                         _update(val);
                         break;
                     default:
-                        if(preCode > 222 && e.keyCode==16){ //中文输入后shift延迟较大
-                            setTimeout(function(){
+                        if (preCode > 222 && e.keyCode == 16) { //中文输入后shift延迟较大
+                            setTimeout(function() {
                                 var val = self.$textarea.val();
                                 val && _update(val);
-                            },100);
-                        }else{
+                            }, 100);
+                        } else {
                             setTimeout(function() {
                                 var val = self.$textarea.val();
                                 val && _update(val);
@@ -263,6 +269,7 @@
                 }
             }
             preCode = e.keyCode;
+
             function _update(val) {
                 var str = self.lines[self.pos.line - 1];
                 str = str.substring(0, self.pos.column) + val + str.substr(self.pos.column);
@@ -316,29 +323,30 @@
             </div>';
         this.$textarea = this.$context.find('#subjs_editor_textarea');
         this.$textWrap = this.$context.find('#subjs_editor_textarea_wrap');
-        this.$textarea.on('focus',function(){
+        this.$textarea.on('focus', function() {
             self.$cursor.show();
         });
-        this.$textarea.on('blur',function(){
+        this.$textarea.on('blur', function() {
             self.$cursor.hide();
         });
     }
     //创建光标
     _proto.createCrusor = function() {
-        this.$cursor = $('<i class="cursor" style="display:none;position:absolute;width:2px;height:'+this.charHight+'px;background-color:#333"></i>');
+        this.$cursor = $('<i class="cursor" style="display:none;position:absolute;width:2px;height:' + this.charHight + 'px;background-color:#333"></i>');
         this.$context.append(this.$cursor);
         var show = true;
         var self = this;
-        function flicker(){
-            if(show){
-                self.$cursor.css('visibility','visible');
-            }else{
-                self.$cursor.css('visibility','hidden');
+
+        function flicker() {
+            if (show) {
+                self.$cursor.css('visibility', 'visible');
+            } else {
+                self.$cursor.css('visibility', 'hidden');
             }
             show = !show;
-            setTimeout(function(){
+            setTimeout(function() {
                 flicker();
-            },350);
+            }, 350);
         }
         flicker();
     }

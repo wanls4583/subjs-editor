@@ -1,9 +1,18 @@
 .editor_wrap {
-    font-family: Monaco, Menlo, 'Ubuntu Mono', Consolas, source-code-pro, monospace;
+    font-family: Monaco, Menlo, "Ubuntu Mono", Consolas, source-code-pro, monospace;
     font-size: 13px;
     line-height: 1.5;
-    color: #05a;
     letter-spacing: .5px;
+    color: #05a;
+}
+
+.editor_wrap textarea {
+    user-select: none;
+}
+
+.editor_wrap textarea::selection{
+    background-color: transparent;
+    color: transparent;
 }
 
 .editor_context .code::selection {
@@ -16,10 +25,12 @@
 
 .cursor {
     width: 1px !important;
+    user-select: none;
     background-color: #000 !important;
 }
 
 .current_line_bg {
+    user-select: none;
     background-color: rgba(0, 0, 0, .1);
 }
 
