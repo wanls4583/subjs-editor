@@ -108,7 +108,9 @@
         var self = this;
         this.$context.on('mouseup', function(e) {
             if (e.target != self.$context[0]) {
-                self.pos.line = Math.floor($(e.target).parents('.pre_code_line')[0].offsetTop / self.charHight) + 1;
+                if($(e.target).parents('.pre_code_line')[0]){
+                    self.pos.line = Math.floor($(e.target).parents('.pre_code_line')[0].offsetTop / self.charHight) + 1;
+                }
             } else {
                 self.pos.line = Math.ceil(e.offsetY / self.charHight);
             }
