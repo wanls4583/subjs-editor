@@ -86,8 +86,8 @@
         this.linesDom = [];
         this.pos = { line: 1, column: 0 };
         this.syntax = options.syntax || 'javascript';
-        this.donePreReg = {}; //多行匹配开始记录
-        this.doneSuffixReg = {}; //多行匹配结束记录
+        this.donePreReg = []; //多行匹配开始记录
+        this.doneSuffixReg = []; //多行匹配结束记录
         this.options = {}; //参数
         if (typeof options.$wrapper == 'string') {
             this.options.$wrapper = $(options.$wrapper);
@@ -426,35 +426,10 @@
         this.$leftNumBg.append($num);
         this.linesDom.splice(line - 1, 0, $dom);
 
-        var lineKeys = Util.keys(this.donePreReg || {});
-        Util.arrToNumber(lineKeys);
-        lineKeys.sort();
-        lineKeys.reverse();
-        for (var tmp = 0; tmp < lineKeys.length; tmp++) {
-            //多行匹配pre记录后移一位
-            if (lineKeys[tmp] > line - 1) {
-                this.donePreReg[lineKeys[tmp]] = this.donePreReg[lineKeys[tmp] - 1];
-                delete this.donePreReg[lineKeys[tmp] - 1]
-            } else {
-                break;
-            }
-        }
-
-        lineKeys = Util.keys(this.doneSuffixReg || {});
-        lineKeys.sort();
-        lineKeys.reverse();
-        for (var tmp = 0; tmp < lineKeys.length; tmp++) {
-            //多行匹配suffix记录后移一位
-            if (lineKeys[tmp] > line - 1) {
-                this.doneSuffixReg[lineKeys[tmp]] = this.doneSuffixReg[lineKeys[tmp] - 1];
-                for (var regIndex in this.doneSuffixReg[lineKeys[tmp]]) {
-                    this.doneSuffixReg[lineKeys[tmp]][regIndex].line = lineKeys[tmp];
-                }
-                delete this.doneSuffixReg[lineKeys[tmp] - 1]
-            } else {
-                break;
-            }
-        }
+        //多行匹配pre记录后移一位
+        this.donePreReg.splice(line-1,0,undefined);
+        //多行匹配suffix记录后移一位
+        this.doneSuffixReg.splice(line-1,0,undefined);
 
         this.pairHighlight(line - 1);
         this.pairHighlight(line);
@@ -467,36 +442,10 @@
         this.$leftNumBg.find('.line_num:last').remove();
         this.linesDom.splice(line - 1, 1);
 
-        var lineKeys = Util.keys(this.donePreReg || {});
-        Util.arrToNumber(lineKeys);
-        lineKeys.sort();
-        lineKeys.reverse();
-        for (var tmp = 0; tmp < lineKeys.length; tmp++) {
-            //多行匹配pre记录前移一位
-            if (lineKeys[tmp] > line - 1) {
-                this.donePreReg[lineKeys[tmp]] = this.donePreReg[lineKeys[tmp] + 1];
-                delete this.donePreReg[lineKeys[tmp] + 1]
-            } else {
-                break;
-            }
-        }
-
-        lineKeys = Util.keys(this.doneSuffixReg || {});
-        Util.arrToNumber(lineKeys);
-        lineKeys.sort();
-        lineKeys.reverse();
-        for (var tmp = 0; tmp < lineKeys.length; tmp++) {
-            //多行匹配suffix记录前移一位
-            if (lineKeys[tmp] > line - 1) {
-                this.doneSuffixReg[lineKeys[tmp]] = this.doneSuffixReg[lineKeys[tmp] + 1];
-                for (var regIndex in this.doneSuffixReg[lineKeys[tmp]]) {
-                    this.doneSuffixReg[lineKeys[tmp]][regIndex].line = lineKeys[tmp];
-                }
-                delete this.doneSuffixReg[lineKeys[tmp] + 1]
-            } else {
-                break;
-            }
-        }
+        //多行匹配pre记录前移一位
+        this.donePreReg.splice(line-1,1);
+        //多行匹配suffix记录前移一位
+        this.doneSuffixReg.splice(line-1,1);
 
         this.pairHighlight(this.pos.line);
     }
@@ -537,11 +486,11 @@
             }
             if (ifPre) {
                 doneRangeOnline.push({ start: start, end: end, className: className });
-                self.donePreReg[currentLine] = self.donePreReg[currentLine] || [];
+                self.donePreReg[currentLine] = self.donePreReg[currentLine] || {};
                 self.donePreReg[currentLine][regIndex] = { undo: true, line: currentLine }
             } else {
                 doneRangeOnline.push({ start: 0, end: end, className: 'flag__' + className });
-                self.doneSuffixReg[currentLine] = self.doneSuffixReg[currentLine] || [];
+                self.doneSuffixReg[currentLine] = self.doneSuffixReg[currentLine] || {};
                 self.doneSuffixReg[currentLine][regIndex] = { undo: true, line: currentLine }
             }
         }
@@ -609,16 +558,13 @@
                 var preObj = lineDonePreReg[regIndex];
                 var className = pairReg[regIndex].className;
                 if (preObj.undo) { //新匹配到preReg
-                    var lineKeys = Util.keys(self.doneSuffixReg || {});
                     var endLine = self.lines.length + 1,
                         endSuffix;
-                    Util.arrToNumber(lineKeys);
-                    lineKeys.sort();
                     //寻找最近的匹配了suffixReg的行
-                    for (var tmp = 0; tmp < lineKeys.length; tmp++) {
-                        if (self.doneSuffixReg[lineKeys[tmp]][regIndex] && lineKeys[tmp] >= currentLine) {
-                            endLine = lineKeys[tmp];
-                            endSuffix = self.doneSuffixReg[lineKeys[tmp]][regIndex];
+                    for (var tmp = 1; tmp <= self.doneSuffixReg.length; tmp++) {
+                        if (self.doneSuffixReg[tmp-1] && self.doneSuffixReg[tmp-1][regIndex] && tmp >= currentLine) {
+                            endLine = tmp;
+                            endSuffix = self.doneSuffixReg[tmp-1][regIndex];
                             self.linesDom[endLine - 1].find('.flag__' + className)
                                 .removeClass('flag__' + className)
                                 .addClass(className);
@@ -649,23 +595,19 @@
                     for (var tmp = currentLine; tmp <= self.lines.length; tmp++) {
                         self.linesDom[tmp - 1].removeClass(className);
                     }
-                    var lineKeys = Util.keys(self.donePreReg || {});
                     var nearPreLine = -1;
-                    Util.arrToNumber(lineKeys);
-                    lineKeys.sort();
-                    lineKeys.reverse();
-                    for (var tmp = 0; tmp < lineKeys.length; tmp++) {
+                    for (var tmp = self.donePreReg.length; tmp >=1; tmp--) {
                         //该行对应的前一个最近的未匹配到suffix的preReg行需要重新添加class
-                        var obj = self.donePreReg[lineKeys[tmp]][regIndex];
-                        if (lineKeys[tmp] < currentLine && obj) {
-                            self.donePreReg[lineKeys[tmp]][regIndex].undo = true;
+                        var obj = self.donePreReg[tmp-1];
+                        if (tmp < currentLine && obj && obj[regIndex]) {
+                            obj.undo = true;
                             obj.endSuffix = undefined;
-                            nearPreLine = lineKeys[tmp];
+                            nearPreLine = tmp;
                             break;
                         }
                     }
                     if (nearPreLine > -1) {
-                        var tmp = self.donePreReg[nearPreLine][regIndex].endSuffix;
+                        var tmp = self.donePreReg[nearPreLine-1][regIndex].endSuffix;
                         var line = tmp ? tmp.line : self.lines.length + 1;
                         for (tmp = currentLine; tmp <= line - 1; tmp++) { //删除对应的class
                             self.linesDom[tmp - 1].removeClass(className);
@@ -674,38 +616,33 @@
                     }
                     suffixObj.undo = false;
                 } else if (suffixObj.del) {
-                    var lineKeys = Util.keys(self.donePreReg || {});
                     var nearPreLine = -1;
-                    Util.arrToNumber(lineKeys);
-                    lineKeys.sort();
-                    lineKeys.reverse();
-                    for (var tmp = 0; tmp < lineKeys.length; tmp++) {
+                    for (var tmp = self.donePreReg.length; tmp >=1; tmp--) {
                         //该行前一个对应preReg的最进的行需要重新添加class
-                        if (self.donePreReg[lineKeys[tmp]][regIndex] && lineKeys[tmp] < currentLine) {
-                            self.donePreReg[lineKeys[tmp]][regIndex].undo = true;
-                            nearPreLine = lineKeys[tmp];
+                        var obj = self.donePreReg[tmp-1];
+                        if (obj && obj[regIndex] && tmp < currentLine) {
+                            obj.undo = true;
+                            nearPreLine = tmp;
                             break;
                         }
                     }
-                    delete self.doneSuffixReg[currentLine];
+                    self.doneSuffixReg[currentLine-1] = undefined;
                     nearPreLine > -1 && _checkPairPreReg(nearPreLine); //重新添加满足条件的行的class
                 }
             }
         }
         //检测当前行是否在多行匹配中
         function _checkLineIfInPair(currentLine) {
-            var lineKeys = Util.keys(self.donePreReg || {});
-            Util.arrToNumber(lineKeys);
-            lineKeys.sort();
-            for (var tmp = 0; tmp < lineKeys.length; tmp++) {
-                var line = lineKeys[tmp];
-                if (line < currentLine) {
-                    for (var regIndex in self.donePreReg[line]) {
-                        var className = pairReg[regIndex].className;
-                        var obj = self.donePreReg[line][regIndex].endSuffix;
-                        var line = obj ? obj.line : self.lines.length + 1;
-                        if (line - 1 >= currentLine) {
-                            self.linesDom[currentLine - 1].addClass(className);
+            for (var tmp = 1; tmp <= self.donePreReg.length; tmp++) {
+                if (tmp < currentLine) {
+                    if(self.donePreReg[tmp-1]){
+                        for (var regIndex in self.donePreReg[tmp-1]) {
+                            var className = pairReg[regIndex].className;
+                            var obj = self.donePreReg[tmp-1][regIndex].endSuffix;
+                            var line = obj ? obj.line : self.lines.length + 1;
+                            if (line - 1 >= currentLine) {
+                                self.linesDom[currentLine - 1].addClass(className);
+                            }
                         }
                     }
                 } else {
