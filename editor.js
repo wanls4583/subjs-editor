@@ -81,7 +81,7 @@
         options = options || {};
         this.currentNode = null; //光标所在的节点
         this.currentContent = ''; //光标所在的内容区域 
-        this.lines = ['']; //所有的行
+        this.lines = []; //所有的行
         this.lineNum = 0; //行号
         this.linesDom = [];
         this.pos = { line: 1, column: 0 };
@@ -110,7 +110,7 @@
         this.getCharWidth();
         this.creatTextarea();
         this.createCrusor();
-        this.addLine();
+        this.addLine(1, '');
         this.bindEvent();
     }
     _proto.bindEvent = function() {
@@ -145,7 +145,6 @@
                 if (left > maxWidth) {
                     left = maxWidth;
                 }
-                column = 0;
                 while (column > 0) {
                     var str = self.lines[line - 1].substring(0, column);
                     var match = str.match(self.fullAngleReg);
@@ -243,36 +242,28 @@
                     case 46: //delete
                         var str = self.lines[self.pos.line - 1];
                         str = str.substring(0, self.pos.column) + str.substr(self.pos.column + 1);
-                        self.lines[self.pos.line - 1] = str;
-                        self.updateLine();
+                        self.updateLine(self.pos.line, str);
                         break;
                     case 8: //backspace
                         var str = self.lines[self.pos.line - 1];
                         str = str.substring(0, self.pos.column - 1) + str.substr(self.pos.column);
-                        self.lines[self.pos.line - 1] = str;
                         if (self.pos.column > 0) {
                             self.pos.column--;
+                            self.updateLine(self.pos.line, str);
                         } else if (self.pos.line > 1) {
+                            var column = self.lines[self.pos.line - 2].length
+                            self.deleteLine(self.pos.line);
+                            self.pos.column = column;
                             self.pos.line--;
-                            self.pos.column = self.lines[self.pos.line - 1].length;
-                            self.lines[self.pos.line - 1] = self.lines[self.pos.line - 1] + self.lines[self.pos.line];
-                            self.lines.splice(self.pos.line, 1);
-                            self.deleteLine(self.pos.line + 1);
                         }
-                        self.updateLine();
                         break;
                     case 13: //换行
-                        // case 108: //数字键换行
+                    case 108: //数字键换行
                         var str = self.lines[self.pos.line - 1];
-                        self.lines[self.pos.line - 1] = str.substring(0, self.pos.column);
-                        self.updateLine();
+                        self.updateLine(self.pos.line, str.substring(0, self.pos.column));
+                        self.addLine(self.pos.line + 1, str.substr(self.pos.column));
                         self.pos.line++;
-                        self.lines.splice(self.pos.line - 1, 0, str.substr(self.pos.column));
                         self.pos.column = 0;
-                        self.addLine();
-                        setTimeout(function() {
-                            // self.$textarea.val('');
-                        }, 0);
                         break;
                     case 9: //tab
                         e.preventDefault();
@@ -300,14 +291,12 @@
                 var str = self.lines[self.pos.line - 1];
                 str = str.substring(0, self.pos.column) + val + str.substr(self.pos.column);
                 var strs = str.split(/\r\n|\r|\n/);
-                self.lines[self.pos.line - 1] = strs[0];
                 self.pos.column += val.length;
-                self.updateLine();
+                self.updateLine(self.pos.line, strs[0]);
                 for (var tmp = 1; tmp < strs.length; tmp++) { //粘贴操作可能存在换号符
+                    self.addLine(self.pos.line, strs[tmp]);
                     self.pos.line++;
-                    self.lines.splice(self.pos.line - 1, 0, strs[tmp]);
                     self.pos.column = strs[tmp].length;
-                    self.addLine();
                 }
                 // self.$textarea.val('');
                 self.updateCursorPos();
@@ -402,23 +391,21 @@
         this.$currentLineBg = this.linesDom[this.pos.line - 1].find('.current_line_bg').show();
     }
     //更新一行
-    _proto.updateLine = function() {
-        var $linePre = this.linesDom[this.pos.line - 1];
-        if ($linePre) {
-            $linePre.find('.code').html(this.highlight(this.pos.line))
-            this.pairHighlight(this.pos.line);
-        } else {
-            this.addLine();
-        }
+    _proto.updateLine = function(line, newConent) {
+        this.lines[line - 1] = newConent;
+        var $linePre = this.linesDom[line - 1];
+        $linePre.find('.code').html(this.highlight(line))
+        this.pairHighlight(line);
     }
-    _proto.addLine = function() {
-        var $linePre = $('.pre_code_line')[this.pos.line - 1];
+    _proto.addLine = function(line, newConent) {
+        this.lines.splice(line - 1, 0, newConent);
+        var $linePre = $('.pre_code_line')[line - 1];
         var marginL = Util.getStyleVal(this.$context[0], 'marginLeft');
         var marginR = Util.getStyleVal(this.$context[0], 'marginRight');
         var $dom = $('\
             <div style="position:relative;margin:0;height:' + this.charHight + 'px;" class="pre_code_line">\
                 <i class="current_line_bg" style="display:none;position:absolute;left:-45px;top:0;z-index:1;height:100%;width:100%;padding-left:' + marginL + ';padding-right:' + marginR + '"></i>\
-                <div class="code" style="position:relative;z-index:2;height:100%;white-space:pre">' + this.highlight(this.pos.line) + '</div>\
+                <div class="code" style="position:relative;z-index:2;height:100%;white-space:pre">' + this.highlight(line) + '</div>\
             </div>');
         if (!$linePre) {
             this.$context.append($dom);
@@ -437,7 +424,7 @@
             'font-size': this.fontSize
         })
         this.$leftNumBg.append($num);
-        this.linesDom.splice(this.pos.line - 1, 0, $dom);
+        this.linesDom.splice(line - 1, 0, $dom);
 
         var lineKeys = Util.keys(this.donePreReg || {});
         Util.arrToNumber(lineKeys);
@@ -445,7 +432,7 @@
         lineKeys.reverse();
         for (var tmp = 0; tmp < lineKeys.length; tmp++) {
             //多行匹配pre记录后移一位
-            if (lineKeys[tmp] > this.pos.line) {
+            if (lineKeys[tmp] > line - 1) {
                 this.donePreReg[lineKeys[tmp]] = this.donePreReg[lineKeys[tmp] - 1];
                 delete this.donePreReg[lineKeys[tmp] - 1]
             } else {
@@ -458,7 +445,7 @@
         lineKeys.reverse();
         for (var tmp = 0; tmp < lineKeys.length; tmp++) {
             //多行匹配suffix记录后移一位
-            if (lineKeys[tmp] > this.pos.line) {
+            if (lineKeys[tmp] > line - 1) {
                 this.doneSuffixReg[lineKeys[tmp]] = this.doneSuffixReg[lineKeys[tmp] - 1];
                 for (var regIndex in this.doneSuffixReg[lineKeys[tmp]]) {
                     this.doneSuffixReg[lineKeys[tmp]][regIndex].line = lineKeys[tmp];
@@ -469,11 +456,13 @@
             }
         }
 
-        this.pairHighlight(this.pos.line - 1);
-        this.pairHighlight(this.pos.line);
+        this.pairHighlight(line - 1);
+        this.pairHighlight(line);
     }
     //删除一行
     _proto.deleteLine = function(line) {
+        this.updateLine(line - 1, this.lines[line - 2] + this.lines[line - 1]);
+        this.lines.splice(line - 1, 1);
         this.linesDom[line - 1].remove();
         this.$leftNumBg.find('.line_num:last').remove();
         this.linesDom.splice(line - 1, 1);
@@ -484,7 +473,7 @@
         lineKeys.reverse();
         for (var tmp = 0; tmp < lineKeys.length; tmp++) {
             //多行匹配pre记录前移一位
-            if (lineKeys[tmp] > this.pos.line) {
+            if (lineKeys[tmp] > line - 1) {
                 this.donePreReg[lineKeys[tmp]] = this.donePreReg[lineKeys[tmp] + 1];
                 delete this.donePreReg[lineKeys[tmp] + 1]
             } else {
@@ -497,8 +486,8 @@
         lineKeys.sort();
         lineKeys.reverse();
         for (var tmp = 0; tmp < lineKeys.length; tmp++) {
-            //多行匹配suffix记录后移一位
-            if (lineKeys[tmp] > this.pos.line) {
+            //多行匹配suffix记录前移一位
+            if (lineKeys[tmp] > line - 1) {
                 this.doneSuffixReg[lineKeys[tmp]] = this.doneSuffixReg[lineKeys[tmp] + 1];
                 for (var regIndex in this.doneSuffixReg[lineKeys[tmp]]) {
                     this.doneSuffixReg[lineKeys[tmp]][regIndex].line = lineKeys[tmp];
