@@ -81,11 +81,9 @@
         options = options || {};
         this.currentNode = null; //光标所在的节点
         this.currentContent = ''; //光标所在的内容区域 
-        this.lines = []; //所有的行
-        this.lineNum = 0; //行号
-        this.linesDom = [];
-        this.pos = { line: 1, column: 0 };
-        this.syntax = options.syntax || 'javascript';
+        this.linesText = []; //所有的行
+        this.linesDom = []; //行对应的dom
+        this.cursorPos = { line: 1, column: 0 }; //光标位置
         this.donePreReg = []; //多行匹配开始记录
         this.doneSuffixReg = []; //多行匹配结束记录
         this.options = {}; //参数
@@ -119,8 +117,8 @@
             clearTimeout(self.textaTimer);
         });
         this.$context.on('mouseup', function(e) {
-            var column = self.pos.column;
-            var lien = self.pos.line;
+            var column = self.cursorPos.column;
+            var lien = self.cursorPos.line;
             if (e.target != self.$context[0]) {
                 if ($(e.target).parents('.pre_code_line')[0]) {
                     line = Math.floor($(e.target).parents('.pre_code_line')[0].offsetTop / self.charHight) + 1;
@@ -128,11 +126,11 @@
             } else {
                 line = Math.ceil(e.offsetY / self.charHight);
             }
-            if (line > self.lines.length) {
-                line = self.lines.length;
-                column = self.lines[self.lines.length - 1].length;
+            if (line > self.linesText.length) {
+                line = self.linesText.length;
+                column = self.linesText[self.linesText.length - 1].length;
             } else {
-                var str = self.lines[line - 1];
+                var str = self.linesText[line - 1];
                 column = Math.ceil(e.offsetX / self.charWidth);
                 column = column < 0 ? 0 : column;
                 column = column > str.length ? str.length : column;
@@ -146,7 +144,7 @@
                     left = maxWidth;
                 }
                 while (column > 0) {
-                    var str = self.lines[line - 1].substring(0, column);
+                    var str = self.linesText[line - 1].substring(0, column);
                     var match = str.match(self.fullAngleReg);
                     var _left = str.length * self.charWidth;
                     if (match) {
@@ -174,8 +172,8 @@
             })
 
             if (!Util.getSelectedText() && e.button != 2) { //单纯的点击
-                self.pos.line = line;
-                self.pos.column = column;
+                self.cursorPos.line = line;
+                self.cursorPos.column = column;
                 self.$textarea[0].focus();
                 self.$textWrap.css({
                     'z-index': '-1',
@@ -214,56 +212,56 @@
             } else {
                 switch (e.keyCode) {
                     case 37: //left arrow
-                        if (self.pos.column > 0) {
-                            self.pos.column--;
-                        } else if (self.pos.line > 1) {
-                            self.pos.line--;
-                            self.pos.column = self.lines[self.pos.line - 1].length;
+                        if (self.cursorPos.column > 0) {
+                            self.cursorPos.column--;
+                        } else if (self.cursorPos.line > 1) {
+                            self.cursorPos.line--;
+                            self.cursorPos.column = self.linesText[self.cursorPos.line - 1].length;
                         }
                         break;
                     case 38: //up arrow
-                        if (self.pos.line > 1) {
-                            self.pos.line--;
+                        if (self.cursorPos.line > 1) {
+                            self.cursorPos.line--;
                         }
                         break;
                     case 39: //right arrow
-                        if (self.pos.column < self.lines[self.pos.line - 1].length) {
-                            self.pos.column++;
-                        } else if (self.pos.line < self.lines.length) {
-                            self.pos.line++;
-                            self.pos.column = 0;
+                        if (self.cursorPos.column < self.linesText[self.cursorPos.line - 1].length) {
+                            self.cursorPos.column++;
+                        } else if (self.cursorPos.line < self.linesText.length) {
+                            self.cursorPos.line++;
+                            self.cursorPos.column = 0;
                         }
                         break;
                     case 40: //down arrow
-                        if (self.pos.line < self.lines.length) {
-                            self.pos.line++;
+                        if (self.cursorPos.line < self.linesText.length) {
+                            self.cursorPos.line++;
                         }
                         break;
                     case 46: //delete
-                        var str = self.lines[self.pos.line - 1];
-                        str = str.substring(0, self.pos.column) + str.substr(self.pos.column + 1);
-                        self.updateLine(self.pos.line, str);
+                        var str = self.linesText[self.cursorPos.line - 1];
+                        str = str.substring(0, self.cursorPos.column) + str.substr(self.cursorPos.column + 1);
+                        self.updateLine(self.cursorPos.line, str);
                         break;
                     case 8: //backspace
-                        var str = self.lines[self.pos.line - 1];
-                        str = str.substring(0, self.pos.column - 1) + str.substr(self.pos.column);
-                        if (self.pos.column > 0) {
-                            self.pos.column--;
-                            self.updateLine(self.pos.line, str);
-                        } else if (self.pos.line > 1) {
-                            var column = self.lines[self.pos.line - 2].length
-                            self.deleteLine(self.pos.line);
-                            self.pos.column = column;
-                            self.pos.line--;
+                        var str = self.linesText[self.cursorPos.line - 1];
+                        str = str.substring(0, self.cursorPos.column - 1) + str.substr(self.cursorPos.column);
+                        if (self.cursorPos.column > 0) {
+                            self.cursorPos.column--;
+                            self.updateLine(self.cursorPos.line, str);
+                        } else if (self.cursorPos.line > 1) {
+                            var column = self.linesText[self.cursorPos.line - 2].length
+                            self.deleteLine(self.cursorPos.line);
+                            self.cursorPos.column = column;
+                            self.cursorPos.line--;
                         }
                         break;
                     case 13: //换行
                     case 108: //数字键换行
-                        var str = self.lines[self.pos.line - 1];
-                        self.updateLine(self.pos.line, str.substring(0, self.pos.column));
-                        self.addLine(self.pos.line + 1, str.substr(self.pos.column));
-                        self.pos.line++;
-                        self.pos.column = 0;
+                        var str = self.linesText[self.cursorPos.line - 1];
+                        self.updateLine(self.cursorPos.line, str.substring(0, self.cursorPos.column));
+                        self.addLine(self.cursorPos.line + 1, str.substr(self.cursorPos.column));
+                        self.cursorPos.line++;
+                        self.cursorPos.column = 0;
                         break;
                     case 9: //tab
                         e.preventDefault();
@@ -288,15 +286,15 @@
             preCode = e.keyCode;
 
             function _update(val) {
-                var str = self.lines[self.pos.line - 1];
-                str = str.substring(0, self.pos.column) + val + str.substr(self.pos.column);
+                var str = self.linesText[self.cursorPos.line - 1];
+                str = str.substring(0, self.cursorPos.column) + val + str.substr(self.cursorPos.column);
                 var strs = str.split(/\r\n|\r|\n/);
-                self.pos.column += val.length;
-                self.updateLine(self.pos.line, strs[0]);
+                self.cursorPos.column += val.length;
+                self.updateLine(self.cursorPos.line, strs[0]);
                 for (var tmp = 1; tmp < strs.length; tmp++) { //粘贴操作可能存在换号符
-                    self.addLine(self.pos.line, strs[tmp]);
-                    self.pos.line++;
-                    self.pos.column = strs[tmp].length;
+                    self.addLine(self.cursorPos.line, strs[tmp]);
+                    self.cursorPos.line++;
+                    self.cursorPos.column = strs[tmp].length;
                 }
                 // self.$textarea.val('');
                 self.updateCursorPos();
@@ -368,8 +366,8 @@
     //更新光标坐标
     _proto.updateCursorPos = function() {
         var self = this;
-        var top = (this.pos.line - 1) * this.charHight;
-        var str = this.lines[this.pos.line - 1].substring(0, this.pos.column);
+        var top = (this.cursorPos.line - 1) * this.charHight;
+        var str = this.linesText[this.cursorPos.line - 1].substring(0, this.cursorPos.column);
         var match = str.match(this.fullAngleReg);
         var left = str.length * this.charWidth;
         var paddingTop = Util.getStyleVal(this.$context[0], 'paddingTop');
@@ -388,17 +386,17 @@
         if (this.$currentLineBg) {
             this.$currentLineBg.hide();
         }
-        this.$currentLineBg = this.linesDom[this.pos.line - 1].find('.current_line_bg').show();
+        this.$currentLineBg = this.linesDom[this.cursorPos.line - 1].find('.current_line_bg').show();
     }
     //更新一行
     _proto.updateLine = function(line, newConent) {
-        this.lines[line - 1] = newConent;
+        this.linesText[line - 1] = newConent;
         var $linePre = this.linesDom[line - 1];
         $linePre.find('.code').html(this.highlight(line))
         this.pairHighlight(line);
     }
     _proto.addLine = function(line, newConent) {
-        this.lines.splice(line - 1, 0, newConent);
+        this.linesText.splice(line - 1, 0, newConent);
         var $linePre = $('.pre_code_line')[line - 1];
         var marginL = Util.getStyleVal(this.$context[0], 'marginLeft');
         var marginR = Util.getStyleVal(this.$context[0], 'marginRight');
@@ -412,7 +410,7 @@
         } else {
             $dom.insertBefore($linePre)
         }
-        var $num = $('<span class="line_num">' + this.lines.length + '</span>')
+        var $num = $('<span class="line_num">' + this.linesText.length + '</span>')
         $num.css({
             'display': 'block',
             'height': this.charHight + 'px',
@@ -436,8 +434,8 @@
     }
     //删除一行
     _proto.deleteLine = function(line) {
-        this.updateLine(line - 1, this.lines[line - 2] + this.lines[line - 1]);
-        this.lines.splice(line - 1, 1);
+        this.updateLine(line - 1, this.linesText[line - 2] + this.linesText[line - 1]);
+        this.linesText.splice(line - 1, 1);
         this.linesDom[line - 1].remove();
         this.$leftNumBg.find('.line_num:last').remove();
         this.linesDom.splice(line - 1, 1);
@@ -447,12 +445,12 @@
         //多行匹配suffix记录前移一位
         this.doneSuffixReg.splice(line - 1, 1);
 
-        this.pairHighlight(this.pos.line);
+        this.pairHighlight(this.cursorPos.line);
     }
     //单行代码高亮
     _proto.highlight = function(currentLine) {
         var self = this;
-        var str = this.lines[currentLine - 1];
+        var str = this.linesText[currentLine - 1];
         var doneRangeOnline = []; //一行中已处理过的区域
         for (var i = 0; i < pairReg.length; i++) {
             _execPairReg(i, true);
@@ -569,7 +567,7 @@
                 var preObj = lineDonePreReg[regIndex];
                 var className = pairReg[regIndex].className;
                 if (preObj.undo) { //新匹配到preReg
-                    var endSuffix, endLine = self.lines.length + 1;
+                    var endSuffix, endLine = self.linesText.length + 1;
                     //寻找最近的匹配了suffixReg的行
                     for (var tmp = 1; tmp <= self.doneSuffixReg.length; tmp++) {
                         if (self.doneSuffixReg[tmp - 1] && self.doneSuffixReg[tmp - 1][regIndex] && tmp >= currentLine) {
@@ -585,7 +583,7 @@
                     preObj.undo = false;
                     preObj.endSuffix = endSuffix;
                 } else if (preObj.del) { //不再匹配preReg
-                    var line = preObj.endSuffix ? preObj.endSuffix.line : self.lines.length + 1;
+                    var line = preObj.endSuffix ? preObj.endSuffix.line : self.linesText.length + 1;
                     for (var tmp = currentLine; tmp <= line - 1; tmp++) {
                         self.linesDom[tmp - 1].removeClass(className);
                     }
@@ -601,7 +599,7 @@
                 var suffixObj = lineDoneSuffixReg[regIndex];
                 var className = pairReg[regIndex].className;
                 if (suffixObj.undo) { //匹配到新的suffixReg
-                    for (var tmp = currentLine; tmp <= self.lines.length; tmp++) {
+                    for (var tmp = currentLine; tmp <= self.linesText.length; tmp++) {
                         self.linesDom[tmp - 1].removeClass(className);
                     }
                     var nearPreLine = -1;
@@ -620,7 +618,7 @@
                     }
                     if (nearPreLine > -1) {
                         var tmp = self.donePreReg[nearPreLine - 1][regIndex].endSuffix;
-                        var line = tmp ? tmp.line : self.lines.length + 1;
+                        var line = tmp ? tmp.line : self.linesText.length + 1;
                         for (tmp = currentLine; tmp <= line - 1; tmp++) { //删除对应的class
                             self.linesDom[tmp - 1].removeClass(className);
                         }
@@ -651,7 +649,7 @@
                         for (var regIndex in self.donePreReg[tmp - 1]) {
                             var className = pairReg[regIndex].className;
                             var obj = self.donePreReg[tmp - 1][regIndex].endSuffix;
-                            var line = obj ? obj.line : self.lines.length + 1;
+                            var line = obj ? obj.line : self.linesText.length + 1;
                             if (line - 1 >= currentLine) {
                                 self.linesDom[currentLine - 1].addClass(className);
                             }
