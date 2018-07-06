@@ -470,10 +470,10 @@
                 className = pairReg[regIndex].className,
                 start, end;
             if (!match) {
-                if (ifPre && self.donePreReg[currentLine] && self.donePreReg[currentLine][regIndex]) {
-                    self.donePreReg[currentLine][regIndex] = { del: true, line: currentLine }
-                } else if (!ifPre && self.doneSuffixReg[currentLine] && self.doneSuffixReg[currentLine][regIndex]) {
-                    self.doneSuffixReg[currentLine][regIndex] = { del: true, line: currentLine }
+                if (ifPre && self.donePreReg[currentLine-1] && self.donePreReg[currentLine-1][regIndex]) {
+                    self.donePreReg[currentLine-1][regIndex] = { del: true, line: currentLine }
+                } else if (!ifPre && self.doneSuffixReg[currentLine-1] && self.doneSuffixReg[currentLine-1][regIndex]) {
+                    self.doneSuffixReg[currentLine-1][regIndex] = { del: true, line: currentLine }
                 }
                 return;
             }
@@ -486,12 +486,12 @@
             }
             if (ifPre) {
                 doneRangeOnline.push({ start: start, end: end, className: className });
-                self.donePreReg[currentLine] = self.donePreReg[currentLine] || {};
-                self.donePreReg[currentLine][regIndex] = { undo: true, line: currentLine }
+                self.donePreReg[currentLine-1] = self.donePreReg[currentLine-1] || {};
+                self.donePreReg[currentLine-1][regIndex] = { undo: true, line: currentLine }
             } else {
                 doneRangeOnline.push({ start: 0, end: end, className: 'flag__' + className });
-                self.doneSuffixReg[currentLine] = self.doneSuffixReg[currentLine] || {};
-                self.doneSuffixReg[currentLine][regIndex] = { undo: true, line: currentLine }
+                self.doneSuffixReg[currentLine-1] = self.doneSuffixReg[currentLine-1] || {};
+                self.doneSuffixReg[currentLine-1][regIndex] = { undo: true, line: currentLine }
             }
         }
         //单行匹配
@@ -553,26 +553,22 @@
 
         //检测当前行是否为匹配头
         function _checkPairPreReg(currentLine) {
-            var lineDonePreReg = self.donePreReg[currentLine] || {};
+            var lineDonePreReg = self.donePreReg[currentLine-1] || {};
             for (var regIndex in lineDonePreReg) { //处理preRegs
                 var preObj = lineDonePreReg[regIndex];
                 var className = pairReg[regIndex].className;
                 if (preObj.undo) { //新匹配到preReg
-                    var endLine = self.lines.length + 1,
-                        endSuffix;
+                    var endSuffix;
                     //寻找最近的匹配了suffixReg的行
                     for (var tmp = 1; tmp <= self.doneSuffixReg.length; tmp++) {
                         if (self.doneSuffixReg[tmp-1] && self.doneSuffixReg[tmp-1][regIndex] && tmp >= currentLine) {
-                            endLine = tmp;
                             endSuffix = self.doneSuffixReg[tmp-1][regIndex];
-                            self.linesDom[endLine - 1].find('.flag__' + className)
-                                .removeClass('flag__' + className)
-                                .addClass(className);
+                            self.linesDom[endSuffix.line - 1].find('.flag__' + className).removeClass('flag__' + className).addClass(className);
+                            for (var tmp = currentLine + 1; tmp <= endSuffix.line - 1; tmp++) {
+                                self.linesDom[tmp - 1].addClass(className);
+                            }
                             break;
                         }
-                    }
-                    for (var tmp = currentLine + 1; tmp <= endLine - 1; tmp++) {
-                        self.linesDom[tmp - 1].addClass(className);
                     }
                     preObj.undo = false;
                     preObj.endSuffix = endSuffix;
@@ -587,7 +583,7 @@
         }
         //检测匹配尾是否为匹配尾
         function _checkPairSuffixReg(currentLine) {
-            var lineDoneSuffixReg = self.doneSuffixReg[currentLine] || {};
+            var lineDoneSuffixReg = self.doneSuffixReg[currentLine-1] || {};
             for (var regIndex in lineDoneSuffixReg) { //处理suffixRegs
                 var suffixObj = lineDoneSuffixReg[regIndex];
                 var className = pairReg[regIndex].className;
@@ -600,8 +596,11 @@
                         //该行对应的前一个最近的未匹配到suffix的preReg行需要重新添加class
                         var obj = self.donePreReg[tmp-1];
                         if (tmp < currentLine && obj && obj[regIndex]) {
-                            obj.undo = true;
-                            obj.endSuffix = undefined;
+                            obj[regIndex].undo = true;
+                            if(obj[regIndex].endSuffix){
+                                self.linesDom[obj[regIndex].endSuffix.line - 1].find('.' + className).removeClass(className).addClass('flag__' + className);
+                            }
+                            obj[regIndex].endSuffix = undefined;
                             nearPreLine = tmp;
                             break;
                         }
@@ -621,7 +620,7 @@
                         //该行前一个对应preReg的最进的行需要重新添加class
                         var obj = self.donePreReg[tmp-1];
                         if (obj && obj[regIndex] && tmp < currentLine) {
-                            obj.undo = true;
+                            obj[regIndex].undo = true;
                             nearPreLine = tmp;
                             break;
                         }
