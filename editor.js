@@ -1,6 +1,6 @@
 ! function($) {
     var pairReg = [{
-        pre: /^(?:[^'"]*?|(?:[^'"]*?(?:'\w*'|"\w*")[^'"]*?)*?)(\/\*[^\n]*)(?:\*\/)?/,
+        pre: /^(?:[^'"]*?|(?:[^'"]*?(?:'\w*'|"\w*")[^'"]*?)*?)(\/\*[^\n]*)/,
         suffix: /\*\//,
         className: 'pair_comment'
     }]
@@ -427,9 +427,9 @@
         this.linesDom.splice(line - 1, 0, $dom);
 
         //多行匹配pre记录后移一位
-        this.donePreReg.splice(line-1,0,undefined);
+        this.donePreReg.splice(line - 1, 0, undefined);
         //多行匹配suffix记录后移一位
-        this.doneSuffixReg.splice(line-1,0,undefined);
+        this.doneSuffixReg.splice(line - 1, 0, undefined);
 
         this.pairHighlight(line - 1);
         this.pairHighlight(line);
@@ -443,9 +443,9 @@
         this.linesDom.splice(line - 1, 1);
 
         //多行匹配pre记录前移一位
-        this.donePreReg.splice(line-1,1);
+        this.donePreReg.splice(line - 1, 1);
         //多行匹配suffix记录前移一位
-        this.doneSuffixReg.splice(line-1,1);
+        this.doneSuffixReg.splice(line - 1, 1);
 
         this.pairHighlight(this.pos.line);
     }
@@ -470,10 +470,10 @@
                 className = pairReg[regIndex].className,
                 start, end;
             if (!match) {
-                if (ifPre && self.donePreReg[currentLine-1] && self.donePreReg[currentLine-1][regIndex]) {
-                    self.donePreReg[currentLine-1][regIndex] = { del: true, line: currentLine }
-                } else if (!ifPre && self.doneSuffixReg[currentLine-1] && self.doneSuffixReg[currentLine-1][regIndex]) {
-                    self.doneSuffixReg[currentLine-1][regIndex] = { del: true, line: currentLine }
+                if (ifPre && self.donePreReg[currentLine - 1] && self.donePreReg[currentLine - 1][regIndex]) {
+                    self.donePreReg[currentLine - 1][regIndex] = { del: true, line: currentLine }
+                } else if (!ifPre && self.doneSuffixReg[currentLine - 1] && self.doneSuffixReg[currentLine - 1][regIndex]) {
+                    self.doneSuffixReg[currentLine - 1][regIndex] = { del: true, line: currentLine }
                 }
                 return;
             }
@@ -486,12 +486,23 @@
             }
             if (ifPre) {
                 doneRangeOnline.push({ start: start, end: end, className: className });
-                self.donePreReg[currentLine-1] = self.donePreReg[currentLine-1] || {};
-                self.donePreReg[currentLine-1][regIndex] = { undo: true, line: currentLine }
+                self.donePreReg[currentLine - 1] = self.donePreReg[currentLine - 1] || {};
+                self.donePreReg[currentLine - 1][regIndex] = { undo: true, line: currentLine, rangeEnd: end}
             } else {
-                doneRangeOnline.push({ start: 0, end: end, className: 'flag__' + className });
-                self.doneSuffixReg[currentLine-1] = self.doneSuffixReg[currentLine-1] || {};
-                self.doneSuffixReg[currentLine-1][regIndex] = { undo: true, line: currentLine }
+                var start = 0,ifSuffix = true;
+                var preObj = self.donePreReg[currentLine - 1];
+                if( preObj && preObj[regIndex]){
+                    if(preObj[regIndex].rangeEnd < end){
+                        start = end-2;
+                    }else if(preObj[regIndex].rangeEnd == end){ // '/*/'
+                        ifSuffix = false;
+                    }
+                }
+                if(ifSuffix){
+                    doneRangeOnline.push({ start: start, end: end, className: 'flag__' + className });
+                    self.doneSuffixReg[currentLine - 1] = self.doneSuffixReg[currentLine - 1] || {};
+                    self.doneSuffixReg[currentLine - 1][regIndex] = { undo: true, line: currentLine }
+                }
             }
         }
         //单行匹配
@@ -553,22 +564,23 @@
 
         //检测当前行是否为匹配头
         function _checkPairPreReg(currentLine) {
-            var lineDonePreReg = self.donePreReg[currentLine-1] || {};
+            var lineDonePreReg = self.donePreReg[currentLine - 1] || {};
             for (var regIndex in lineDonePreReg) { //处理preRegs
                 var preObj = lineDonePreReg[regIndex];
                 var className = pairReg[regIndex].className;
                 if (preObj.undo) { //新匹配到preReg
-                    var endSuffix;
+                    var endSuffix, endLine = self.lines.length + 1;
                     //寻找最近的匹配了suffixReg的行
                     for (var tmp = 1; tmp <= self.doneSuffixReg.length; tmp++) {
-                        if (self.doneSuffixReg[tmp-1] && self.doneSuffixReg[tmp-1][regIndex] && tmp >= currentLine) {
-                            endSuffix = self.doneSuffixReg[tmp-1][regIndex];
+                        if (self.doneSuffixReg[tmp - 1] && self.doneSuffixReg[tmp - 1][regIndex] && tmp >= currentLine) {
+                            endSuffix = self.doneSuffixReg[tmp - 1][regIndex];
+                            endLine = endSuffix.line;
                             self.linesDom[endSuffix.line - 1].find('.flag__' + className).removeClass('flag__' + className).addClass(className);
-                            for (var tmp = currentLine + 1; tmp <= endSuffix.line - 1; tmp++) {
-                                self.linesDom[tmp - 1].addClass(className);
-                            }
                             break;
                         }
+                    }
+                    for (var tmp = currentLine + 1; tmp <= endLine - 1; tmp++) {
+                        self.linesDom[tmp - 1].addClass(className);
                     }
                     preObj.undo = false;
                     preObj.endSuffix = endSuffix;
@@ -577,13 +589,14 @@
                     for (var tmp = currentLine; tmp <= line - 1; tmp++) {
                         self.linesDom[tmp - 1].removeClass(className);
                     }
-                    preObj.del = false;
+                    self.linesDom[line - 1].find('.' + className).removeClass(className).addClass('flag__' + className);
+                    self.donePreReg[currentLine-1] = undefined;
                 }
             }
         }
         //检测匹配尾是否为匹配尾
         function _checkPairSuffixReg(currentLine) {
-            var lineDoneSuffixReg = self.doneSuffixReg[currentLine-1] || {};
+            var lineDoneSuffixReg = self.doneSuffixReg[currentLine - 1] || {};
             for (var regIndex in lineDoneSuffixReg) { //处理suffixRegs
                 var suffixObj = lineDoneSuffixReg[regIndex];
                 var className = pairReg[regIndex].className;
@@ -592,12 +605,12 @@
                         self.linesDom[tmp - 1].removeClass(className);
                     }
                     var nearPreLine = -1;
-                    for (var tmp = self.donePreReg.length; tmp >=1; tmp--) {
+                    for (var tmp = self.donePreReg.length; tmp >= 1; tmp--) {
                         //该行对应的前一个最近的未匹配到suffix的preReg行需要重新添加class
-                        var obj = self.donePreReg[tmp-1];
-                        if (tmp < currentLine && obj && obj[regIndex]) {
+                        var obj = self.donePreReg[tmp - 1];
+                        if (tmp <= currentLine && obj && obj[regIndex]) {
                             obj[regIndex].undo = true;
-                            if(obj[regIndex].endSuffix){
+                            if (obj[regIndex].endSuffix) {
                                 self.linesDom[obj[regIndex].endSuffix.line - 1].find('.' + className).removeClass(className).addClass('flag__' + className);
                             }
                             obj[regIndex].endSuffix = undefined;
@@ -606,7 +619,7 @@
                         }
                     }
                     if (nearPreLine > -1) {
-                        var tmp = self.donePreReg[nearPreLine-1][regIndex].endSuffix;
+                        var tmp = self.donePreReg[nearPreLine - 1][regIndex].endSuffix;
                         var line = tmp ? tmp.line : self.lines.length + 1;
                         for (tmp = currentLine; tmp <= line - 1; tmp++) { //删除对应的class
                             self.linesDom[tmp - 1].removeClass(className);
@@ -616,16 +629,16 @@
                     suffixObj.undo = false;
                 } else if (suffixObj.del) {
                     var nearPreLine = -1;
-                    for (var tmp = self.donePreReg.length; tmp >=1; tmp--) {
+                    for (var tmp = self.donePreReg.length; tmp >= 1; tmp--) {
                         //该行前一个对应preReg的最进的行需要重新添加class
-                        var obj = self.donePreReg[tmp-1];
+                        var obj = self.donePreReg[tmp - 1];
                         if (obj && obj[regIndex] && tmp < currentLine) {
                             obj[regIndex].undo = true;
                             nearPreLine = tmp;
                             break;
                         }
                     }
-                    self.doneSuffixReg[currentLine-1] = undefined;
+                    self.doneSuffixReg[currentLine - 1] = undefined;
                     nearPreLine > -1 && _checkPairPreReg(nearPreLine); //重新添加满足条件的行的class
                 }
             }
@@ -634,10 +647,10 @@
         function _checkLineIfInPair(currentLine) {
             for (var tmp = 1; tmp <= self.donePreReg.length; tmp++) {
                 if (tmp < currentLine) {
-                    if(self.donePreReg[tmp-1]){
-                        for (var regIndex in self.donePreReg[tmp-1]) {
+                    if (self.donePreReg[tmp - 1]) {
+                        for (var regIndex in self.donePreReg[tmp - 1]) {
                             var className = pairReg[regIndex].className;
-                            var obj = self.donePreReg[tmp-1][regIndex].endSuffix;
+                            var obj = self.donePreReg[tmp - 1][regIndex].endSuffix;
                             var line = obj ? obj.line : self.lines.length + 1;
                             if (line - 1 >= currentLine) {
                                 self.linesDom[currentLine - 1].addClass(className);
