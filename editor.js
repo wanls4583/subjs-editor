@@ -693,7 +693,7 @@
                                 preObj.endSuffix.undo = true;
                                 preObj.endSuffix.startPre = undefined;
                                 if (preObj.endSuffix.line > preObj.line) {
-                                    _delDecoration(self.linesDecoration[line - 1], { start: preObj.endSuffix.start, end: preObj.endSuffix.end });
+                                    _delDecoration(self.linesDecoration[line - 1], { start: preObj.endSuffix.start, end: preObj.endSuffix.end, className: className });
                                     self.linesDom[line - 1].find('.code').html(self.renderHTML(line));
                                 }
                             }
@@ -770,7 +770,7 @@
                                 preEndSuffix.undo = true;
                                 preEndSuffix.startPre = undefined;
                                 if (preEndSuffix.line > preObj.line) {
-                                    _delDecoration(self.linesDecoration[preEndSuffix.line - 1], { start: preEndSuffix.start, end: preEndSuffix.end });
+                                    _delDecoration(self.linesDecoration[preEndSuffix.line - 1], { start: preEndSuffix.start, end: preEndSuffix.end, className: className });
                                     self.linesDom[preEndSuffix.line - 1].find('.code').html(self.renderHTML(preEndSuffix.line));
                                 }
                             }
