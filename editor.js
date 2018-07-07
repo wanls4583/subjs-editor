@@ -1,17 +1,17 @@
 ! function($) {
     var pairReg = [{
-        pre: /(?:^)?(?:[^'"]*?|(?:[^'"]*?(?:'\w*'|"\w*")[^'"]*?)*?)(\/\*)/g,
-        suffix: /(?:^)?(?:[^'"]*?|(?:[^'"]*?(?:'\w*'|"\w*")[^'"]*?)*?)(\*\/)/g,
+        pre: /^(?:[^'"]*?|(?:[^'"]*?(?:'\w*'|"\w*")[^'"]*?)*?)(\/\*)/,
+        suffix: /^(?:[^'"]*?|(?:[^'"]*?(?:'\w*'|"\w*")[^'"]*?)*?)(\*\/)/,
         className: 'pair_comment'
     }]
 
     var reg = [
         /^(?:[^'"]*?|(?:[^'"]*?(?:'\w*'|"\w*")[^'"]*?)*?)(\/\/[^\n]*)/, //单行注释
-        /'[\s\S]*?'|"[\s\S]*?"/g, //字符串
-        /\b(?:break|continue|do|else|for|if|return|while|var|function|new|class)\b/g, //关键字
-        /\!==|\!=|==|=|\?|\&\&|\&=|\&|\|\||\|=|\||>=|>|<=|<|\+=|\+|\-=|\-|\*=|\*|\/=|\//g, //操作符
-        /\d+|\b(?:undefined|null)(?:[\b;]|$)/g, //数字
-        /[.]?([\w]+)(?=\()/g, //方法名
+        /'[\s\S]*?'|"[\s\S]*?"/, //字符串
+        /\b(?:break|continue|do|else|for|if|return|while|var|function|new|class)\b/, //关键字
+        /\!==|\!=|==|=|\?|\&\&|\&=|\&|\|\||\|=|\||>=|>|<=|<|\+=|\+|\-=|\-|\*=|\*|\/=|\//, //操作符
+        /\d+|\b(?:undefined|null)(?:[\b;]|$)/, //数字
+        /[.]?([\w]+)(?=\()/, //方法名
     ]
 
     var classNames = ['comment', 'string', 'key', 'oprator', 'number', 'method'];
@@ -452,16 +452,16 @@
 
         this.pairHighlight(this.cursorPos.line);
     }
-    _proto.resetDoneRegLine = function(index){
-        for(var i = index; i<this.linesText.length;i++){
-            for(var column in this.donePreReg[i]){
-                for(var regIndex in this.donePreReg[i][column]){
-                    this.donePreReg[i][column][regIndex].line = i+1;
+    _proto.resetDoneRegLine = function(index) {
+        for (var i = index; i < this.linesText.length; i++) {
+            for (var column in this.donePreReg[i]) {
+                for (var regIndex in this.donePreReg[i][column]) {
+                    this.donePreReg[i][column][regIndex].line = i + 1;
                 }
             }
-            for(var column in this.doneSuffixReg[i]){
-                for(var regIndex in this.doneSuffixReg[i][column]){
-                    this.doneSuffixReg[i][column][regIndex].line = i+1;
+            for (var column in this.doneSuffixReg[i]) {
+                for (var regIndex in this.doneSuffixReg[i][column]) {
+                    this.doneSuffixReg[i][column][regIndex].line = i + 1;
                 }
             }
         }
@@ -469,19 +469,20 @@
     //单行代码高亮
     _proto.highlight = function(currentLine) {
         var self = this;
-        var str = this.linesText[currentLine - 1];
         var lineDecoration = []; //一行中已处理过的区域
         //单行匹配
         for (var i = 0; i < reg.length; i++) {
-            var match = null;
-            var regObj = reg[i];
+            var match = null,
+                regObj = reg[i],
+                preIndex = 0,
+                str = this.linesText[currentLine - 1];
             while (match = regObj.exec(str)) {
                 var start, end;
                 if (!match[1]) {
-                    start = match.index;
+                    start = match.index + preIndex;
                     end = start + match[0].length - 1;
                 } else {
-                    start = match.index + match[0].indexOf(match[1]);
+                    start = match.index + match[0].indexOf(match[1]) + preIndex;
                     end = start + match[1].length - 1;
                 }
                 var className = classNames[i];
@@ -492,15 +493,14 @@
                         ifDo = false;
                     }
                 }
+                str = str.substr(end + 1);
+                preIndex = end + 1;
+                regObj.lastIndex = 0;
                 if (!ifDo) {
                     continue;
                 }
                 lineDecoration.push({ start: start, end: end, className: className });
-                if (!regObj.global) { //不是全局匹配
-                    break;
-                }
             }
-            regObj.lastIndex = 0;
         }
         lineDecoration.sort(function(arg1, arg2) {
             if (arg1.start < arg2.start) {
@@ -538,7 +538,6 @@
         _checkRender(currentLine);
         //进行多行匹配
         function _doMatch(currentLine) {
-            var str = self.linesText[currentLine - 1];
             for (var i = 0; i < pairReg.length; i++) {
                 _execPairReg(i, true);
                 _execPairReg(i, false);
@@ -551,19 +550,24 @@
                 } else {
                     regObj = pairReg[regIndex].suffix;
                 }
-                var match = null;
-                var matchs = {};
+                var match = null,
+                    matchs = {},
+                    str = self.linesText[currentLine - 1],
+                    preIndex = 0;
                 while (match = regObj.exec(str)) {
                     var className = pairReg[regIndex].className,
                         start, end;
                     if (!match[1]) {
-                        start = match.index;
+                        start = match.index + preIndex;
                         end = start + match[0].length - 1;
                     } else {
-                        start = match.index + match[0].indexOf(match[1]);
+                        start = match.index + match[0].indexOf(match[1]) + preIndex;
                         end = start + match[1].length - 1;
                     }
-                    matchs[start] = { line: currentLine, start: start, end: end, className: className} //start->end代表匹配的两端
+                    matchs[start] = { line: currentLine, start: start, end: end, className: className } //start->end代表匹配的两端
+                    str = str.substr(end + 1);
+                    preIndex = end + 1;
+                    regObj.lastIndex = 0;
                 }
                 var doneRegObj = null;
                 if (ifPre) {
@@ -579,9 +583,9 @@
                         doneRegObj[column][regIndex] = matchs[column];
                     }
                     if (Util.keys(doneRegObj).length) {
-                        if(ifPre){
+                        if (ifPre) {
                             self.donePreReg[currentLine - 1] = doneRegObj;
-                        }else{
+                        } else {
                             self.doneSuffixReg[currentLine - 1] = doneRegObj;
                         }
                     }
@@ -636,7 +640,7 @@
                         _renderLine(preObj);
                         //整行修饰
                         for (var tmp = currentLine + 1; tmp <= endLine - 1; tmp++) {
-                            self.linesDom[tmp - 1].find('.code').html(self.linesText[tmp-1]);
+                            self.linesDom[tmp - 1].find('.code').html(self.linesText[tmp - 1]);
                             self.linesDom[tmp - 1].find('.code').addClass(className);
                         }
                         preObj.undo = false;
@@ -686,7 +690,7 @@
                                     var preObj = lineDonePreReg[cArr[i]][regIndex];
                                     if (preObj && (!preObj.endSuffix || preObj.endSuffix.line > currentLine)) {
                                         startPre = preObj;
-                                        if(startPre.endSuffix){
+                                        if (startPre.endSuffix) {
                                             endLine = startPre.endSuffix.line;
                                         }
                                         startPre.endSuffix = suffixObj;
@@ -700,7 +704,7 @@
                         if (startPre) {
                             _renderLine(startPre);
                             hasRender = true;
-                            for (var i = currentLine+1; i <= endLine; i++) { //删除对应的修饰
+                            for (var i = currentLine + 1; i <= endLine; i++) { //删除对应的修饰
                                 self.highlight(i);
                                 self.linesDom[i - 1].find('.code').html(self.renderHTML(i));
                                 self.linesDom[i - 1].find('.code').removeClass(className);
@@ -712,7 +716,7 @@
                         suffixObj.startPre.endSuffix = undefined;
                         delete matchs[regIndex];
                         _checkPairPreReg(suffixObj.startPre.line); //重新检查
-                    } else if (suffixObj.startPre){
+                    } else if (suffixObj.startPre) {
                         _renderLine(suffixObj.startPre);
                         hasRender = true;
                     }
@@ -729,7 +733,7 @@
                             var regObj = lineDonePreReg[column][regIndex];
                             var className = regObj.className;
                             if (!regObj.endSuffix || regObj.endSuffix.line > currentLine) {
-                                self.linesDom[currentLine - 1].find('.code').html(self.linesText[currentLine-1]);
+                                self.linesDom[currentLine - 1].find('.code').html(self.linesText[currentLine - 1]);
                                 self.linesDom[currentLine - 1].find('.code').addClass(className);
                                 hasRender = true;
                             }
@@ -739,8 +743,8 @@
             }
         }
         //检查是否渲染过
-        function _checkRender(currentLine){
-            if(!hasRender){
+        function _checkRender(currentLine) {
+            if (!hasRender) {
                 self.linesDom[currentLine - 1].find('.code').html(self.renderHTML(currentLine));
             }
         }
