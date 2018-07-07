@@ -1,7 +1,7 @@
 ! function($) {
     var pairReg = [{
-        pre: /^(?:[^'"]*?|(?:[^'"]*?(?:'\w*'|"\w*")[^'"]*?)*?)(\/\*)/g,
-        suffix: /^(?:[^'"]*?|(?:[^'"]*?(?:'\w*'|"\w*")[^'"]*?)*?)(\*\/)/g,
+        pre: /(?:^)?(?:[^'"]*?|(?:[^'"]*?(?:'\w*'|"\w*")[^'"]*?)*?)(\/\*)/g,
+        suffix: /(?:^)?(?:[^'"]*?|(?:[^'"]*?(?:'\w*'|"\w*")[^'"]*?)*?)(\*\/)/g,
         className: 'pair_comment'
     }]
 
@@ -620,9 +620,9 @@
                                 Util.arrToNumber(cArr);
                                 cArr.sort();
                                 for (var i = 0; i < cArr.length; i++) {
-                                    var c = cArr[i];
-                                    if (lineDoneSuffixReg[c][regIndex]) {
-                                        endSuffix = lineDoneSuffixReg[c][regIndex];
+                                    var suffixObj = lineDoneSuffixReg[cArr[i]][regIndex];
+                                    if (suffixObj && suffixObj.start > preObj.end) {
+                                        endSuffix = suffixObj;
                                         endLine = endSuffix.line;
                                         endSuffix.undo = false;
                                         endSuffix.startPre = preObj;
