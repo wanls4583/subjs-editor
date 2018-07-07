@@ -450,7 +450,7 @@
         //重置行号
         this.resetDoneRegLine(line - 1);
 
-        this.pairHighlight(this.cursorPos.line);
+        this.pairHighlight(this.cursorPos.line-1);
     }
     _proto.resetDoneRegLine = function(index) {
         for (var i = index; i < this.linesText.length; i++) {
