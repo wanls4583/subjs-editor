@@ -450,7 +450,7 @@
         //重置行号
         this.resetDoneRegLine(line - 1);
 
-        this.pairHighlight(this.cursorPos.line-1);
+        this.pairHighlight(this.cursorPos.line - 1);
     }
     _proto.resetDoneRegLine = function(index) {
         for (var i = index; i < this.linesText.length; i++) {
@@ -493,7 +493,7 @@
                         ifDo = false;
                     }
                 }
-                str = str.substr(end + 1);
+                str = str.substr(end + 1 - preIndex);
                 preIndex = end + 1;
                 regObj.lastIndex = 0;
                 if (!ifDo) {
@@ -565,7 +565,7 @@
                         end = start + match[1].length - 1;
                     }
                     matchs[start] = { line: currentLine, start: start, end: end, className: className } //start->end代表匹配的两端
-                    str = str.substr(end + 1);
+                    str = str.substr(end + 1 - preIndex);
                     preIndex = end + 1;
                     regObj.lastIndex = 0;
                 }
@@ -625,7 +625,9 @@
                                 cArr.sort();
                                 for (var i = 0; i < cArr.length; i++) {
                                     var suffixObj = lineDoneSuffixReg[cArr[i]][regIndex];
-                                    if (suffixObj && suffixObj.start > preObj.end) {
+                                    //suffixObj是否可用
+                                    if (suffixObj && suffixObj.start > preObj.end &&
+                                        (!suffixObj.startPre || suffixObj.startPre.line > preObj.line)) {
                                         endSuffix = suffixObj;
                                         endLine = endSuffix.line;
                                         endSuffix.undo = false;
@@ -688,6 +690,7 @@
                                 cArr.sort();
                                 for (var i = cArr.length - 1; i >= 0; i--) {
                                     var preObj = lineDonePreReg[cArr[i]][regIndex];
+                                    //preObj是否可用
                                     if (preObj && (!preObj.endSuffix || preObj.endSuffix.line > currentLine)) {
                                         startPre = preObj;
                                         if (startPre.endSuffix) {
