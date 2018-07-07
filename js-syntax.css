@@ -38,6 +38,10 @@
     color: #999;
 }
 
+.code{
+    cursor: text;
+}
+
 .key {
     color: #7f0055;
 }
