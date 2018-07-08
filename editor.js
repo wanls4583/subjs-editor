@@ -621,15 +621,14 @@
                         var endLine = self.linesText.length,
                             startPre = null;
                         //寻找前一个最近的未匹配到suffix的preReg所在的行
-                        var flag = false;
-                        for (var i = currentLine; !flag && i >= 1; i--) {
+                        var ifDo = false;
+                        for (var i = currentLine; !ifDo && i >= 1; i--) {
                             var lineDonePreReg = self.donePreReg[i - 1];
                             if (lineDonePreReg) {
                                 var cArr = Util.keys(lineDonePreReg);
                                 Util.sortNum(cArr);
                                 for (var c = 0; c < cArr.length; c++) {
                                     var preObj = lineDonePreReg[cArr[c]][regIndex];
-                                    var ifDo = false;
                                     //preObj是否满足匹配条件
                                     if (preObj && !preObj.del && !preObj.plain) {
                                         //preReg和suffixReg存在同行和非同行两种情况
@@ -648,7 +647,6 @@
                                         if (checkPreRegArr.indexOf(preObj.line) == -1) {
                                             checkPreRegArr.push(preObj.line);
                                         }
-                                        flag = true;
                                         //过滤‘/*aaa/*aaa*/’中的‘/*’
                                         for(var _t = preObj.end+1; preObj.line == suffixObj.line && _t<suffixObj.start; _t++){
                                             if(lineDonePreReg[_t] && lineDonePreReg[_t][regIndex]){
@@ -733,12 +731,11 @@
                                 preEndLine = preEndSuffix.line;
                             }
                             //寻找最近的匹配了suffixReg的行
-                            var flag = false;
-                            for (var tmp = currentLine; !flag && tmp <= self.doneSuffixReg.length; tmp++) {
+                            var ifDo = false;
+                            for (var tmp = currentLine; !ifDo && tmp <= self.doneSuffixReg.length; tmp++) {
                                 var lineDoneSuffixReg = self.doneSuffixReg[tmp - 1];
                                 if (lineDoneSuffixReg) {
                                     var cArr = Util.keys(lineDoneSuffixReg),
-                                        ifDo = false,
                                         hasSuffix = false;
                                     Util.sortNum(cArr);
                                     for (var i = 0; i < cArr.length; i++) {
@@ -759,7 +756,6 @@
                                             endLine = endSuffix.line;
                                             endSuffix.undo = false;
                                             endSuffix.startPre = preObj;
-                                            flag = true;
                                             break;
                                         }
                                     }
