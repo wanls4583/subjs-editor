@@ -601,6 +601,9 @@
                     for (var column in doneRegObj) { //判断是否删除了
                         if (!matchs[column] && doneRegObj[column][regIndex]) {
                             doneRegObj[column][regIndex].del = true;
+                            if(doneRegObj[column][regIndex].plain){
+                                delete doneRegObj[column][regIndex];
+                            }
                         }
                     }
                 }
