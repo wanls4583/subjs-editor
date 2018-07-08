@@ -708,9 +708,6 @@
                                     self.linesDom[line - 1].find('.code').html(self.renderHTML(line));
                                 }
                             }
-                            //删除本行修饰
-                            _delDecoration(self.linesDecoration[preObj.line - 1], { start: preObj.start, end: preObj.end, className: className });
-                            self.linesDom[preObj.line - 1].find('.code').html(self.renderHTML(preObj.line));
                             delete matchs[regIndex];
                             if (Util.keys(matchs).length == 0) {
                                 delete lineDonePreReg[column];
