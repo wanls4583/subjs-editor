@@ -35,10 +35,10 @@
                 return arr;
             }
         },
-        arrToNumber: function(arr) {
-            for (var i = 0; i < arr.length; i++) {
-                arr[i] = Number(arr[i]);
-            }
+        sortNum: function(arr) {
+            arr.sort(function(arg1, arg2) {
+                return Number(arg1) - Number(arg2);
+            })
         },
         getSelectedText: function() {
             if (document.selection) {
@@ -623,8 +623,7 @@
                             var lineDonePreReg = self.donePreReg[i - 1];
                             if (lineDonePreReg) {
                                 var cArr = Util.keys(lineDonePreReg);
-                                Util.arrToNumber(cArr);
-                                cArr.sort();
+                                Util.sortNum(cArr);
                                 for (var c = cArr.length - 1; c >= 0; c--) {
                                     var preObj = lineDonePreReg[cArr[c]][regIndex];
                                     var ifDo = false;
@@ -643,8 +642,9 @@
                                     if (ifDo) {
                                         //重新检查preObj修饰
                                         preObj.undo = true;
-                                        checkPreRegArr.push(preObj.line);
-                                        checkPreRegArr.sort();
+                                        if(checkPreRegArr.indexOf(preObj.line) == -1){
+                                            checkPreRegArr.push(preObj.line);
+                                        }
                                         flag = true;
                                         break;
                                     }
@@ -656,9 +656,9 @@
                         if (suffixObj.startPre) {
                             //重新检查startPre修饰
                             suffixObj.startPre.undo = true;
-                            suffixObj.startPre.endSuffix = undefined;
-                            checkPreRegArr.push(suffixObj.startPre.line);
-                            checkPreRegArr.sort();
+                            if(checkPreRegArr.indexOf(suffixObj.startPre.line) == -1){
+                                checkPreRegArr.push(suffixObj.startPre.line);
+                            }
                         }
                         delete matchs[regIndex];
                         if (Util.keys(matchs).length == 0) {
@@ -673,6 +673,7 @@
         }
         //检测preReg
         function _checkPairPreReg() {
+            checkPreRegArr.sort();
             for (var _l = 0; _l < checkPreRegArr.length; _l++) {
                 var currentLine = checkPreRegArr[_l];
                 var lineDonePreReg = self.donePreReg[currentLine - 1] || {};
@@ -704,6 +705,7 @@
                             }
                             hasRender = true;
                         } else if (!preObj.undo) {
+                            //渲染当前行
                             _renderLine(preObj);
                             hasRender = true;
                         }
@@ -727,15 +729,16 @@
                                 var lineDoneSuffixReg = self.doneSuffixReg[tmp - 1];
                                 if (lineDoneSuffixReg) {
                                     var cArr = Util.keys(lineDoneSuffixReg),
-                                        ifDo = false;
-                                    Util.arrToNumber(cArr);
-                                    cArr.sort();
+                                        ifDo = false,
+                                        hasSuffix = false;
+                                    Util.sortNum(cArr);
                                     for (var i = 0; i < cArr.length; i++) {
                                         var suffixObj = lineDoneSuffixReg[cArr[i]][regIndex];
                                         //suffixObj是否满足匹配条件
                                         if (suffixObj && !suffixObj.del) {
                                             //suffixObj和preObj存在同行和非同行两种情况
                                             if (suffixObj.line > preObj.line || suffixObj.line == preObj.line && suffixObj.start > preObj.start) {
+                                                hasSuffix = true; //其后是否有suffix
                                                 if (!suffixObj.startPre || suffixObj.startPre.line > preObj.line ||
                                                     suffixObj.startPre.line == preObj.line && suffixObj.startPre.start > preObj.start) {
                                                     ifDo = true;
@@ -754,30 +757,35 @@
                                     }
                                 }
                             }
-                            _renderLine(preObj);
-                            //添加整行修饰
-                            for (var i = currentLine + 1; i <= endLine - 1; i++) {
-                                self.linesDom[i - 1].find('.code').html(self.linesText[i - 1]);
-                                self.linesDom[i - 1].find('.code').addClass(className);
-                            }
-                            //删除之前的整行修饰
-                            for (var i = endLine + 1; i <= preEndLine - 1; i++) {
-                                self.highlight(i);
-                                self.linesDom[i - 1].find('.code').html(self.renderHTML(i));
-                                self.linesDom[i - 1].find('.code').removeClass(className);
-                            }
-                            //之前对应的endSuffix
-                            if (preEndSuffix) {
-                                preEndSuffix.undo = true;
-                                preEndSuffix.startPre = undefined;
-                                if (preEndSuffix.line > preObj.line) {
-                                    _delDecoration(self.linesDecoration[preEndSuffix.line - 1], { start: preEndSuffix.start, end: preEndSuffix.end, className: className });
-                                    self.linesDom[preEndSuffix.line - 1].find('.code').html(self.renderHTML(preEndSuffix.line));
+                            //如果找到了满足条件的suffix，或者其后没有suffix，则需要添加修饰
+                            if (ifDo || !hasSuffix) {
+                                //之前对应的endSuffix
+                                if (preEndSuffix) {
+                                    preEndSuffix.undo = true;
+                                    preEndSuffix.startPre = undefined;
+                                    if (preEndSuffix.line > preObj.line && (!endSuffix || endSuffix.line != preEndSuffix.line)) {
+                                        _delDecoration(self.linesDecoration[preEndSuffix.line - 1], { start: preEndSuffix.start, end: preEndSuffix.end, className: className });
+                                        self.linesDom[preEndSuffix.line - 1].find('.code').html(self.renderHTML(preEndSuffix.line));
+                                    }
                                 }
+                                //渲染匹配的首尾行
+                                _renderLine(preObj);
+                                //添加整行修饰
+                                for (var i = currentLine + 1; i <= endLine - 1; i++) {
+                                    self.linesDom[i - 1].find('.code').html(self.linesText[i - 1]);
+                                    self.linesDom[i - 1].find('.code').addClass(className);
+                                }
+                                //删除之前的整行修饰
+                                for (var i = endLine + 1; i <= preEndLine - 1; i++) {
+                                    self.highlight(i);
+                                    self.linesDom[i - 1].find('.code').html(self.renderHTML(i));
+                                    self.linesDom[i - 1].find('.code').removeClass(className);
+                                }
+                                hasRender = true;
                             }
                             preObj.undo = false;
-                            hasRender = true;
                         } else if (!preObj.del) {
+                            //渲染当前行
                             _renderLine(preObj);
                             hasRender = true;
                         }
@@ -805,7 +813,7 @@
                 }
             }
         }
-        //检查是否渲染过
+        //检查当前行是否渲染过
         function _checkRender(currentLine) {
             if (!hasRender) {
                 self.linesDom[currentLine - 1].find('.code').html(self.renderHTML(currentLine));
@@ -813,6 +821,18 @@
         }
         //插入修饰
         function _insertDecoration(lineDecoration, decoration) {
+            var ifDo = true;
+            for (var i = 0; i < lineDecoration.length; i++) { //删除和decoration有交叉的修饰
+                var _l = lineDecoration[i];
+                if (decoration.className == _l.className && _l.start <= decoration.start &&
+                    _l.end >= decoration.end && _l.end - _l.start > decoration.end - decoration.start) {
+                    ifDo = false;
+                    break;
+                }
+            }
+            if (!ifDo) {
+                return;
+            }
             for (var i = 0; i < lineDecoration.length; i++) { //删除和decoration有交叉的修饰
                 var _l = lineDecoration[i];
                 if (!(_l.start > decoration.end || _l.end < decoration.start)) {
