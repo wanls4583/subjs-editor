@@ -630,18 +630,18 @@
                                     var ifDo = false;
                                     //preObj是否满足匹配条件
                                     if (preObj && !preObj.del) {
-                                        //preReg和suffixReg同一行的情况下
-                                        if (preObj.line == currentLine && suffixObj.start > preObj.end &&
-                                            (!preObj.endSuffix || preObj.endSuffix.start > suffixObj.start)) {
-                                            ifDo = true;
-                                            //preReg和suffixReg不同行的情况下
-                                        } else if (preObj.line < currentLine && (!preObj.endSuffix || preObj.endSuffix.line > suffixObj.line ||
-                                                preObj.endSuffix.line == suffixObj.line && preObj.endSuffix.start > suffixObj.start)) {
-                                            ifDo = true;
+                                        //preReg和suffixReg存在同行和非同行两种情况
+                                        if (preObj.line < currentLine || preObj.line == currentLine && suffixObj.start > preObj.end) {
+                                            //preObj.endSuffix不存在，或者preObj.endSuffix包含当前suffixObj区域，才可能被suffixObj所取代
+                                            if ((!preObj.endSuffix || preObj.endSuffix.line > currentLine ||
+                                                    preObj.endSuffix.line == currentLine && preObj.endSuffix.start > suffixObj.start)) {
+                                                ifDo = true;
+                                            }
                                         }
                                     }
                                     //preObj是否可用
                                     if (ifDo) {
+                                        //重新检查preObj修饰
                                         preObj.undo = true;
                                         checkPreRegArr.push(preObj.line);
                                         checkPreRegArr.sort();
@@ -654,6 +654,7 @@
                         suffixObj.undo = false;
                     } else if (suffixObj.del) {
                         if (suffixObj.startPre) {
+                            //重新检查startPre修饰
                             suffixObj.startPre.undo = true;
                             suffixObj.startPre.endSuffix = undefined;
                             checkPreRegArr.push(suffixObj.startPre.line);
@@ -733,12 +734,12 @@
                                         var suffixObj = lineDoneSuffixReg[cArr[i]][regIndex];
                                         //suffixObj是否满足匹配条件
                                         if (suffixObj && !suffixObj.del) {
-                                            if (suffixObj.line == preObj.line && suffixObj.start > preObj.start &&
-                                                (!suffixObj.startPre || suffixObj.startPre.start > preObj.start)) {
-                                                ifDo = true;
-                                            } else if (suffixObj.line > preObj.line && (!suffixObj.startPre || suffixObj.startPre.line > preObj.line ||
-                                                    suffixObj.startPre.line == preObj.line && suffixObj.startPre.start > preObj.start)) {
-                                                ifDo = true;
+                                            //suffixObj和preObj存在同行和非同行两种情况
+                                            if (suffixObj.line > preObj.line || suffixObj.line == preObj.line && suffixObj.start > preObj.start) {
+                                                if (!suffixObj.startPre || suffixObj.startPre.line > preObj.line ||
+                                                    suffixObj.startPre.line == preObj.line && suffixObj.startPre.start > preObj.start) {
+                                                    ifDo = true;
+                                                }
                                             }
                                         }
                                         if (ifDo) {
