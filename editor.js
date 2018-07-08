@@ -109,6 +109,7 @@
         this.getCharWidth();
         this.creatTextarea();
         this.createCrusor();
+        this.createScrollBar();
         this.addLine(1, '');
         this.bindEvent();
     }
@@ -319,11 +320,11 @@
     }
     _proto.creatContext = function() {
         this.$leftNumBg = $('<div class="line_num_bg" style="float:left;width:40px;min-height:100%;padding:5px 0;box-sizing:border-box"></div>');
-        this.$context = $('<div class="editor_context" style="position:relative;min-height:100%;margin:0 15px 0 45px;padding:5px 0;box-sizing:border-box"></div>');
+        this.$context = $('<div class="editor_context" style="position:absolute;top:0;min-height:100%;left:45px;right:15px;padding:5px 0;box-sizing:border-box"></div>');
         this.$wrapper = $('<div class="editor_wrap"></div>');
         this.$wrapper.append(this.$leftNumBg);
         this.$wrapper.append(this.$context);
-        this.$wrapper.css({ position: 'relative', overflow: 'auto', height: '100%' });
+        this.$wrapper.css({ position: 'relative', overflow: 'hidden', height: '100%' });
         this.options.$wrapper.append(this.$wrapper);
     }
     //创建输入框
@@ -366,6 +367,38 @@
     }
     //更新光标坐标
     _proto.updateCursorPos = function() {
+        var pos = this.posToPx();
+        this.$textWrap.css({
+            top: pos.top + 'px',
+            left: pos.left + 'px'
+        });
+        this.$cursor.css({
+            top: pos.top + 'px',
+            left: pos.left + 'px'
+        });
+        if (this.$currentLineBg) {
+            this.$currentLineBg.hide();
+        }
+        this.$currentLineBg = this.linesDom[this.cursorPos.line - 1].find('.current_line_bg').show();
+        this.updateScroll();
+    }
+    _proto.createScrollBar =  function(){
+        var vScollWrapStyle = 'position:absolute;top:0;bottom:0;right:0;width:10px;background-color:rgba(0,0,0,0.1);'
+        var vScollStyle = 'position:absolute;left:1px;right:1px;top:0;background-color:rgba(0,0,0,0.2)';
+        this.$vScroll = $('\
+            <div class="v_scroll_wrap" style="'+vScollWrapStyle+'">\
+                <div class="v_scroll" style="'+vScollStyle+'"></div>\
+            </div>');
+        this.$wrapper.append(this.$vScroll);
+        this.$vScroll = this.$vScroll.find('.v_scroll');
+    }
+    _proto.updateScroll = function(){
+        var wrapHeight = this.$wrapper[0].clientHeight;
+        var contentHeight = this.$context[0].scrollHeight;
+        var barHeight = Math.round(wrapHeight/contentHeight*wrapHeight);
+        this.$vScroll.css('height',barHeight+'px');
+    }
+    _proto.posToPx = function(){
         var self = this;
         var top = (this.cursorPos.line - 1) * this.charHight;
         var str = this.linesText[this.cursorPos.line - 1].substring(0, this.cursorPos.column);
@@ -376,18 +409,10 @@
         if (match) {
             left += match.length * (this.fullAngleCharWidth - this.charWidth);
         }
-        this.$textWrap.css({
-            top: top + paddingTop + 'px',
-            left: left + 'px'
-        });
-        this.$cursor.css({
-            top: top + paddingTop + 'px',
-            left: left + 'px'
-        });
-        if (this.$currentLineBg) {
-            this.$currentLineBg.hide();
+        return{
+            top: top + paddingTop,
+            left: left
         }
-        this.$currentLineBg = this.linesDom[this.cursorPos.line - 1].find('.current_line_bg').show();
     }
     //更新一行
     _proto.updateLine = function(line, newConent) {
@@ -402,7 +427,7 @@
         var marginR = Util.getStyleVal(this.$context[0], 'marginRight');
         var $dom = $('\
             <div style="position:relative;margin:0;height:' + this.charHight + 'px;" class="pre_code_line">\
-                <i class="current_line_bg" style="display:none;position:absolute;left:-45px;top:0;z-index:1;height:100%;width:100%;padding-left:' + marginL + ';padding-right:' + marginR + '"></i>\
+                <i class="current_line_bg" style="display:none;position:absolute;left:-45px;top:0;z-index:1;height:100%;right: -15px;padding-left:' + marginL + ';padding-right:' + marginR + '"></i>\
                 <div class="code" style="position:relative;z-index:2;height:100%;white-space:pre"></div>\
             </div>');
         if (!$linePre) {
