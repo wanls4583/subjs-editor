@@ -616,7 +616,7 @@
                     var className = pairReg[regIndex].className;
                     if (suffixObj.undo) { //匹配到新的suffixReg
                         var endLine = self.linesText.length,
-                            startPre;
+                            startPre = null;
                         //寻找前一个最近的未匹配到suffix的preReg所在的行
                         var flag = false;
                         for (var i = currentLine; !flag && i >= 1; i--) {
@@ -642,7 +642,7 @@
                                     if (ifDo) {
                                         //重新检查preObj修饰
                                         preObj.undo = true;
-                                        if(checkPreRegArr.indexOf(preObj.line) == -1){
+                                        if (checkPreRegArr.indexOf(preObj.line) == -1) {
                                             checkPreRegArr.push(preObj.line);
                                         }
                                         flag = true;
@@ -656,7 +656,7 @@
                         if (suffixObj.startPre) {
                             //重新检查startPre修饰
                             suffixObj.startPre.undo = true;
-                            if(checkPreRegArr.indexOf(suffixObj.startPre.line) == -1){
+                            if (checkPreRegArr.indexOf(suffixObj.startPre.line) == -1) {
                                 checkPreRegArr.push(suffixObj.startPre.line);
                             }
                         }
@@ -718,7 +718,7 @@
                         var preObj = matchs[regIndex];
                         var className = pairReg[regIndex].className;
                         if (preObj.undo) { //新匹配到preReg
-                            var endSuffix, preEndSuffix = preObj.endSuffix,
+                            var endSuffix = null, preEndSuffix = preObj.endSuffix,
                                 preEndLine = endLine = self.linesText.length + 1;
                             if (preEndSuffix) { //之前对应的suffix所在的行
                                 preEndLine = preEndSuffix.line;
@@ -750,39 +750,39 @@
                                             endLine = endSuffix.line;
                                             endSuffix.undo = false;
                                             endSuffix.startPre = preObj;
-                                            preObj.endSuffix = endSuffix;
                                             flag = true;
                                             break;
                                         }
                                     }
                                 }
                             }
-                            //如果找到了满足条件的suffix，或者其后没有suffix，则需要添加修饰
-                            if (ifDo || !hasSuffix) {
-                                //之前对应的endSuffix
-                                if (preEndSuffix) {
-                                    preEndSuffix.undo = true;
-                                    preEndSuffix.startPre = undefined;
-                                    if (preEndSuffix.line > preObj.line && (!endSuffix || endSuffix.line != preEndSuffix.line)) {
-                                        _delDecoration(self.linesDecoration[preEndSuffix.line - 1], { start: preEndSuffix.start, end: preEndSuffix.end, className: className });
-                                        self.linesDom[preEndSuffix.line - 1].find('.code').html(self.renderHTML(preEndSuffix.line));
-                                    }
+                            preObj.endSuffix = endSuffix;
+                            //之前对应的endSuffix
+                            if (preEndSuffix) {
+                                preEndSuffix.undo = true;
+                                preEndSuffix.startPre = undefined;
+                                if (preEndSuffix.line > preObj.line && (!endSuffix || endSuffix.line != preEndSuffix.line)) {
+                                    _delDecoration(self.linesDecoration[preEndSuffix.line - 1], { start: preEndSuffix.start, end: preEndSuffix.end, className: className });
+                                    self.linesDom[preEndSuffix.line - 1].find('.code').html(self.renderHTML(preEndSuffix.line));
                                 }
+                            }
+                            //过滤‘/*abcd/*1234*/’中间的的‘/*’
+                            if (ifDo || !hasSuffix) {
                                 //渲染匹配的首尾行
                                 _renderLine(preObj);
-                                //添加整行修饰
-                                for (var i = currentLine + 1; i <= endLine - 1; i++) {
-                                    self.linesDom[i - 1].find('.code').html(self.linesText[i - 1]);
-                                    self.linesDom[i - 1].find('.code').addClass(className);
-                                }
-                                //删除之前的整行修饰
-                                for (var i = endLine + 1; i <= preEndLine - 1; i++) {
-                                    self.highlight(i);
-                                    self.linesDom[i - 1].find('.code').html(self.renderHTML(i));
-                                    self.linesDom[i - 1].find('.code').removeClass(className);
-                                }
-                                hasRender = true;
                             }
+                            //添加整行修饰
+                            for (var i = currentLine + 1; i <= endLine - 1; i++) {
+                                self.linesDom[i - 1].find('.code').html(self.linesText[i - 1]);
+                                self.linesDom[i - 1].find('.code').addClass(className);
+                            }
+                            //删除之前的整行修饰
+                            for (var i = endLine + 1; i <= preEndLine - 1; i++) {
+                                self.highlight(i);
+                                self.linesDom[i - 1].find('.code').html(self.renderHTML(i));
+                                self.linesDom[i - 1].find('.code').removeClass(className);
+                            }
+                            hasRender = true;
                             preObj.undo = false;
                         } else if (!preObj.del) {
                             //渲染当前行
