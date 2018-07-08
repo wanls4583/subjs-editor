@@ -689,7 +689,7 @@
                     for (var regIndex in matchs) {
                         var preObj = matchs[regIndex];
                         var className = pairReg[regIndex].className;
-                        if (preObj.del) { //不再匹配preReg
+                        if (preObj.del && !preObj.plain) { //不再匹配preReg
                             var line = preObj.endSuffix ? preObj.endSuffix.line : self.linesText.length + 1;
                             for (var i = currentLine + 1; i <= line - 1; i++) {
                                 self.highlight(i);
@@ -726,7 +726,7 @@
                     for (var regIndex in matchs) {
                         var preObj = matchs[regIndex];
                         var className = pairReg[regIndex].className;
-                        if (preObj.undo) { //新匹配到preReg
+                        if (preObj.undo && !preObj.plain) { //新匹配到preReg
                             var endSuffix = null, preEndSuffix = preObj.endSuffix,
                                 preEndLine = endLine = self.linesText.length + 1;
                             if (preEndSuffix) { //之前对应的suffix所在的行
@@ -812,7 +812,7 @@
                         for (var regIndex in lineDonePreReg[column]) {
                             var regObj = lineDonePreReg[column][regIndex];
                             var className = regObj.className;
-                            if (!regObj.endSuffix || regObj.endSuffix.line > currentLine) {
+                            if (!regObj.plain && (!regObj.endSuffix || regObj.endSuffix.line > currentLine)) {
                                 self.linesDom[currentLine - 1].find('.code').html(self.linesText[currentLine - 1]);
                                 self.linesDom[currentLine - 1].find('.code').addClass(className);
                                 hasRender = true;
