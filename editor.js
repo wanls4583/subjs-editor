@@ -624,11 +624,11 @@
                             if (lineDonePreReg) {
                                 var cArr = Util.keys(lineDonePreReg);
                                 Util.sortNum(cArr);
-                                for (var c = cArr.length - 1; c >= 0; c--) {
+                                for (var c = 0; c < cArr.length; c++) {
                                     var preObj = lineDonePreReg[cArr[c]][regIndex];
                                     var ifDo = false;
                                     //preObj是否满足匹配条件
-                                    if (preObj && !preObj.del) {
+                                    if (preObj && !preObj.del && !preObj.plain) {
                                         //preReg和suffixReg存在同行和非同行两种情况
                                         if (preObj.line < currentLine || preObj.line == currentLine && suffixObj.start > preObj.end) {
                                             //preObj.endSuffix不存在，或者preObj.endSuffix包含当前suffixObj区域，才可能被suffixObj所取代
@@ -646,6 +646,12 @@
                                             checkPreRegArr.push(preObj.line);
                                         }
                                         flag = true;
+                                        //过滤‘/*aaa/*aaa*/’中的‘/*’
+                                        for(var _t = preObj.end+1; preObj.line == suffixObj.line && _t<suffixObj.start; _t++){
+                                            if(lineDonePreReg[_t] && lineDonePreReg[_t][regIndex]){
+                                                lineDonePreReg[_t][regIndex].plain = true; //普通字符
+                                            }
+                                        }
                                         break;
                                     }
                                 }
@@ -664,7 +670,7 @@
                         if (Util.keys(matchs).length == 0) {
                             delete lineDoneSuffixReg[column];
                         }
-                    } else if (suffixObj.startPre) {
+                    } else if (suffixObj.startPre && !suffixObj.startPre.plain) {
                         _renderLine(suffixObj.startPre);
                         hasRender = true;
                     }
@@ -699,12 +705,15 @@
                                     self.linesDom[line - 1].find('.code').html(self.renderHTML(line));
                                 }
                             }
+                            //删除本行修饰
+                            _delDecoration(self.linesDecoration[preObj.line - 1], { start: preObj.start, end: preObj.end, className: className });
+                            self.linesDom[preObj.line - 1].find('.code').html(self.renderHTML(preObj.line));
                             delete matchs[regIndex];
                             if (Util.keys(matchs).length == 0) {
                                 delete lineDonePreReg[column];
                             }
                             hasRender = true;
-                        } else if (!preObj.undo) {
+                        } else if (!preObj.undo && !preObj.plain) {
                             //渲染当前行
                             _renderLine(preObj);
                             hasRender = true;
@@ -784,7 +793,7 @@
                             }
                             hasRender = true;
                             preObj.undo = false;
-                        } else if (!preObj.del) {
+                        } else if (!preObj.del && !preObj.plain) {
                             //渲染当前行
                             _renderLine(preObj);
                             hasRender = true;
