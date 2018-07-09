@@ -149,6 +149,7 @@
         this.getCharWidth();
         this.creatTextarea();
         this.createCrusor();
+        this.createLeftNumBg();
         this.createLineBg();
         this.addLine(1, '');
         this.bindEvent();
@@ -343,6 +344,10 @@
 
             self.updateCursorPos();
         })
+        //滚动条事件
+        this.$context.on('scroll',function(e){
+            self.$leftNumBg.css('top', -this.scrollTop + 'px');
+        })
     }
     //获取字符宽度
     _proto.getCharWidth = function() {
@@ -357,14 +362,18 @@
         this.$context[0].innerHTML = '';
         console.log('charSize', this.charWidth, this.fullAngleCharWidth, this.charHight);
     }
+    //输入框区域
     _proto.creatContext = function() {
-        this.$leftNumBg = $('<div class="line_num_bg" style="float:left;width:40px;min-height:100%;padding:5px 0;box-sizing:border-box"></div>');
         this.$context = $('<div class="editor_context" style="position:relative;overflow:auto;margin-left:40px;height:100%;padding:5px 0 0 5px;box-sizing:border-box"></div>');
         this.$wrapper = $('<div class="editor_wrap"></div>');
-        this.$wrapper.append(this.$leftNumBg);
         this.$wrapper.append(this.$context);
         this.$wrapper.css({ position: 'relative', overflow: 'hidden', height: '100%' });
         this.options.$wrapper.append(this.$wrapper);
+    }
+    //左侧行号
+    _proto.createLeftNumBg = function() {
+        this.$leftNumBg = $('<div class="line_num_bg" style="position:absolute;left:0;top:0;width:40px;min-height:100%;padding:5px 0;box-sizing:border-box"></div>');
+        this.$wrapper.append(this.$leftNumBg);
     }
     //创建输入框
     _proto.creatTextarea = function() {
@@ -385,8 +394,8 @@
         });
     }
     //创建当前行背景
-    _proto.createLineBg = function(){
-        this.$lineBg = $('<div class="current_line_bg" style="display:none;position.absolute;left:0;right:0;background-color:rgba(0,0,0,0.1);height:'+this.charHight+'px"></div>');
+    _proto.createLineBg = function() {
+        this.$lineBg = $('<div class="current_line_bg" style="display:none;position.absolute;left:0;right:0;background-color:rgba(0,0,0,0.1);height:' + this.charHight + 'px"></div>');
         this.$wrapper.append(this.$lineBg);
     }
     //创建光标
@@ -429,23 +438,19 @@
     }
     _proto.updateScroll = function() {
         var context = this.$context[0];
-        var rect = Util.getRect(this.$cursor[0]);
-        if(rect.offsetTop <= this.$context[0].scrollTop){
-            this.$context[0].scrollTop = rect.offsetTop;
-        }else if(rect.offsetTop + this.charHight >= this.$context[0].scrollTop + this.$wrapper[0].clientHeight){
-            context.scrollTop  = rect.offsetTop  + this.charHight - this.$wrapper[0].clientHeight;
+        var cRect = Util.getRect(this.$cursor[0]);
+        var lRect = Util.getRect(this.$leftNumBg[0]);
+        if (cRect.offsetTop <= this.$context[0].scrollTop) {
+            context.scrollTop = cRect.offsetTop;
+        } else if (cRect.offsetTop + this.charHight >= context.scrollTop + this.$wrapper[0].clientHeight) {
+            context.scrollTop = cRect.offsetTop + this.charHight - this.$wrapper[0].clientHeight;
         }
-        if(rect.offsetLeft <= this.$context[0].scrollLeft){
-            this.$context[0].scrollLeft = rect.offsetLeft;
-        }else if(rect.offsetLeft + this.charWidth*2 + 30 >= this.$context[0].scrollLeft + (this.$wrapper[0].clientWidth-this.$context[0].offsetLeft)){
-            context.scrollLeft  = rect.offsetLeft  + this.charWidth*2 + 30 - (this.$wrapper[0].clientWidth-this.$context[0].offsetLeft);
+        if (cRect.offsetLeft - this.charWidth <= context.scrollLeft) {
+            context.scrollLeft = cRect.offsetLeft;
+        } else if (cRect.offsetLeft + this.charWidth * 2 + 30 >= context.scrollLeft + (this.$wrapper[0].clientWidth - context.offsetLeft)) {
+            context.scrollLeft = cRect.offsetLeft + this.charWidth * 2 + 30 - (this.$wrapper[0].clientWidth - context.offsetLeft);
         }
-        // if(this.cursorPos.column == 0){
-        //     context.scrollLeft = 0;
-        // }else if(this.cursorPos.column == this.linesText[this.cursorPos.line - 1].length
-        //     && this.$cursor[0].offsetLeft + 30 > context.scrollWidth){
-        //     context.scrollLeft  = context.scrollWidth - context.clientWidth;
-        // }
+        this.$leftNumBg.css('top', -context.scrollTop + 'px');
     }
     _proto.posToPx = function() {
         var self = this;
