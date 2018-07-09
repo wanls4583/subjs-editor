@@ -347,6 +347,9 @@
         //滚动条事件
         this.$context.on('scroll',function(e){
             self.$leftNumBg.css('top', -this.scrollTop + 'px');
+            self.$lineBg.css({
+                top: self.linesDom[self.cursorPos.line-1][0].offsetTop - self.$context[0].scrollTop + 'px',
+            });
         })
     }
     //获取字符宽度
