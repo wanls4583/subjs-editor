@@ -74,6 +74,46 @@
                     callback();
                 }, 0);
             }
+        },
+        getRect: function(dom) {
+            var _r = dom.getBoundingClientRect();
+
+            var _pt = this.getStyleVal(dom, 'paddingTop');
+            _pt = parseInt(_pt.substring(0, _pt.length - 2));
+            var _pb = Util.getStyleVal(dom, 'paddingBottom');
+            _pb = parseInt(_pb.substring(0, _pb.length - 2));
+            var _pl = this.getStyleVal(dom, 'paddingLeft');
+            _pl = parseInt(_pl.substring(0, _pl.length - 2));
+            var _pr = this.getStyleVal(dom, 'paddingRight');
+            _pr = parseInt(_pr.substring(0, _pr.length - 2));
+
+            var _mt = this.getStyleVal(dom, 'marginTop');
+            _mt = parseInt(_mt.substring(0, _mt.length - 2));
+            var _mb = Util.getStyleVal(dom, 'marginBottom');
+            _mb = parseInt(_mb.substring(0, _mb.length - 2));
+            var _ml = this.getStyleVal(dom, 'marginLeft');
+            _ml = parseInt(_ml.substring(0, _ml.length - 2));
+            var _mr = this.getStyleVal(dom, 'marginRight');
+            _mr = parseInt(_mr.substring(0, _mr.length - 2));
+
+            return {
+                top: _r.top,
+                bottom: _r.bottom,
+                left: _r.left,
+                right: _r.right,
+                paddingTop: _pt,
+                paddingBottom: _pb,
+                paddingLeft: _pl,
+                paddingRight: _pr,
+                marginTop: _mt,
+                marginBottom: _mb,
+                marginLeft: _ml,
+                marginRight: _mr,
+                offsetTop: dom.offsetTop,
+                offsetBottom: dom.offsetBottom,
+                offsetLeft: dom.offsetLeft,
+                offsetRight: dom.offsetRight,
+            }
         }
     }
 
@@ -109,7 +149,7 @@
         this.getCharWidth();
         this.creatTextarea();
         this.createCrusor();
-        this.createScrollBar();
+        this.createLineBg();
         this.addLine(1, '');
         this.bindEvent();
     }
@@ -163,8 +203,7 @@
             self.$textarea.val(Util.getSelectedText());
             self.$cursor.hide();
 
-            var paddingTop = Util.getStyleVal(self.$context[0], 'paddingTop');
-            paddingTop = parseInt(paddingTop.substring(0, paddingTop.length - 2));
+            var paddingTop = Util.getRect(self.$context[0]).paddingTop;
             var top = paddingTop + (line - 1) * self.charHight;
 
             self.$textWrap.css({
@@ -320,7 +359,7 @@
     }
     _proto.creatContext = function() {
         this.$leftNumBg = $('<div class="line_num_bg" style="float:left;width:40px;min-height:100%;padding:5px 0;box-sizing:border-box"></div>');
-        this.$context = $('<div class="editor_context" style="position:absolute;top:0;min-height:100%;left:45px;right:15px;padding:5px 0;box-sizing:border-box"></div>');
+        this.$context = $('<div class="editor_context" style="position:relative;overflow:auto;margin-left:40px;height:100%;padding:5px 0 0 5px;box-sizing:border-box"></div>');
         this.$wrapper = $('<div class="editor_wrap"></div>');
         this.$wrapper.append(this.$leftNumBg);
         this.$wrapper.append(this.$context);
@@ -344,6 +383,11 @@
         this.$textarea.on('blur', function() {
             self.$cursor.hide();
         });
+    }
+    //创建当前行背景
+    _proto.createLineBg = function(){
+        this.$lineBg = $('<div class="current_line_bg" style="display:none;position.absolute;left:0;right:0;background-color:rgba(0,0,0,0.1);height:'+this.charHight+'px"></div>');
+        this.$wrapper.append(this.$lineBg);
     }
     //创建光标
     _proto.createCrusor = function() {
@@ -376,42 +420,46 @@
             top: pos.top + 'px',
             left: pos.left + 'px'
         });
-        if (this.$currentLineBg) {
-            this.$currentLineBg.hide();
-        }
-        this.$currentLineBg = this.linesDom[this.cursorPos.line - 1].find('.current_line_bg').show();
+        this.$lineBg.css({
+            top: pos.top - this.$context[0].scrollTop + 'px',
+        });
+
+        this.$lineBg.show();
         this.updateScroll();
     }
-    _proto.createScrollBar =  function(){
-        var vScollWrapStyle = 'position:absolute;top:0;bottom:0;right:0;width:10px;background-color:rgba(0,0,0,0.1);'
-        var vScollStyle = 'position:absolute;left:1px;right:1px;top:0;background-color:rgba(0,0,0,0.2)';
-        this.$vScroll = $('\
-            <div class="v_scroll_wrap" style="'+vScollWrapStyle+'">\
-                <div class="v_scroll" style="'+vScollStyle+'"></div>\
-            </div>');
-        this.$wrapper.append(this.$vScroll);
-        this.$vScroll = this.$vScroll.find('.v_scroll');
+    _proto.updateScroll = function() {
+        var context = this.$context[0];
+        var rect = Util.getRect(this.$cursor[0]);
+        if(rect.offsetTop <= this.$context[0].scrollTop){
+            this.$context[0].scrollTop = rect.offsetTop;
+        }else if(rect.offsetTop + this.charHight >= this.$context[0].scrollTop + this.$wrapper[0].clientHeight){
+            context.scrollTop  = rect.offsetTop  + this.charHight - this.$wrapper[0].clientHeight;
+        }
+        if(rect.offsetLeft <= this.$context[0].scrollLeft){
+            this.$context[0].scrollLeft = rect.offsetLeft;
+        }else if(rect.offsetLeft + this.charWidth*2 + 30 >= this.$context[0].scrollLeft + (this.$wrapper[0].clientWidth-this.$context[0].offsetLeft)){
+            context.scrollLeft  = rect.offsetLeft  + this.charWidth*2 + 30 - (this.$wrapper[0].clientWidth-this.$context[0].offsetLeft);
+        }
+        // if(this.cursorPos.column == 0){
+        //     context.scrollLeft = 0;
+        // }else if(this.cursorPos.column == this.linesText[this.cursorPos.line - 1].length
+        //     && this.$cursor[0].offsetLeft + 30 > context.scrollWidth){
+        //     context.scrollLeft  = context.scrollWidth - context.clientWidth;
+        // }
     }
-    _proto.updateScroll = function(){
-        var wrapHeight = this.$wrapper[0].clientHeight;
-        var contentHeight = this.$context[0].scrollHeight;
-        var barHeight = Math.round(wrapHeight/contentHeight*wrapHeight);
-        this.$vScroll.css('height',barHeight+'px');
-    }
-    _proto.posToPx = function(){
+    _proto.posToPx = function() {
         var self = this;
         var top = (this.cursorPos.line - 1) * this.charHight;
         var str = this.linesText[this.cursorPos.line - 1].substring(0, this.cursorPos.column);
         var match = str.match(this.fullAngleReg);
         var left = str.length * this.charWidth;
-        var paddingTop = Util.getStyleVal(this.$context[0], 'paddingTop');
-        paddingTop = parseInt(paddingTop.substring(0, paddingTop.length - 2));
+        var rect = Util.getRect(this.$context[0]);
         if (match) {
             left += match.length * (this.fullAngleCharWidth - this.charWidth);
         }
-        return{
-            top: top + paddingTop,
-            left: left
+        return {
+            top: top + rect.paddingTop,
+            left: left + rect.paddingLeft
         }
     }
     //更新一行
@@ -423,17 +471,14 @@
     _proto.addLine = function(line, newConent) {
         this.linesText.splice(line - 1, 0, newConent);
         var $linePre = $('.pre_code_line')[line - 1];
-        var marginL = Util.getStyleVal(this.$context[0], 'marginLeft');
-        var marginR = Util.getStyleVal(this.$context[0], 'marginRight');
         var $dom = $('\
-            <div style="position:relative;margin:0;height:' + this.charHight + 'px;" class="pre_code_line">\
-                <i class="current_line_bg" style="display:none;position:absolute;left:-45px;top:0;z-index:1;height:100%;right: -15px;padding-left:' + marginL + ';padding-right:' + marginR + '"></i>\
-                <div class="code" style="position:relative;z-index:2;height:100%;white-space:pre"></div>\
+            <div style="position:relative;margin:0;padding-right:15px;height:' + this.charHight + 'px;" class="pre_code_line">\
+                <div class="code" style="display:inline-block;position:relative;z-index:2;height:100%;min-width:100%;box-sizing:border-box;padding-right:10px;white-space:pre"></div>\
             </div>');
         if (!$linePre) {
             this.$context.append($dom);
         } else {
-            $dom.insertBefore($linePre)
+            $dom.insertBefore($linePre);
         }
         var $num = $('<span class="line_num">' + this.linesText.length + '</span>')
         $num.css({
@@ -626,7 +671,7 @@
                     for (var column in doneRegObj) { //判断是否删除了
                         if (!matchs[column] && doneRegObj[column][regIndex]) {
                             doneRegObj[column][regIndex].del = true;
-                            if(doneRegObj[column][regIndex].plain){
+                            if (doneRegObj[column][regIndex].plain) {
                                 delete doneRegObj[column][regIndex];
                             }
                         }
@@ -673,8 +718,8 @@
                                             checkPreRegArr.push(preObj.line);
                                         }
                                         //过滤‘/*aaa/*aaa*/’中的‘/*’
-                                        for(var _t = preObj.end+1; preObj.line == suffixObj.line && _t<suffixObj.start; _t++){
-                                            if(lineDonePreReg[_t] && lineDonePreReg[_t][regIndex]){
+                                        for (var _t = preObj.end + 1; preObj.line == suffixObj.line && _t < suffixObj.start; _t++) {
+                                            if (lineDonePreReg[_t] && lineDonePreReg[_t][regIndex]) {
                                                 lineDonePreReg[_t][regIndex].plain = true; //普通字符
                                             }
                                         }
@@ -750,7 +795,8 @@
                         var preObj = matchs[regIndex];
                         var className = pairReg[regIndex].className;
                         if (preObj.undo && !preObj.plain) { //新匹配到preReg
-                            var endSuffix = null, preEndSuffix = preObj.endSuffix,
+                            var endSuffix = null,
+                                preEndSuffix = preObj.endSuffix,
                                 preEndLine = endLine = self.linesText.length + 1;
                             if (preEndSuffix) { //之前对应的suffix所在的行
                                 preEndLine = preEndSuffix.line;
