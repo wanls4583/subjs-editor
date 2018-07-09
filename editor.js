@@ -345,10 +345,10 @@
             self.updateCursorPos();
         })
         //滚动条事件
-        this.$context.on('scroll',function(e){
+        this.$scroller.on('scroll', function(e) {
             self.$leftNumBg.css('top', -this.scrollTop + 'px');
             self.$lineBg.css({
-                top: self.linesDom[self.cursorPos.line-1][0].offsetTop - self.$context[0].scrollTop + 'px',
+                top: self.linesDom[self.cursorPos.line - 1][0].offsetTop - self.$scroller[0].scrollTop + 'px',
             });
         })
     }
@@ -367,15 +367,19 @@
     }
     //输入框区域
     _proto.creatContext = function() {
-        this.$context = $('<div class="editor_context" style="position:relative;overflow:auto;margin-left:40px;height:100%;padding:5px 0 0 5px;box-sizing:border-box"></div>');
+        this.$scroller =
+            $('<div class="editor_scroller" style="position:relative;overflow:auto;margin-left:40px;height:100%;padding:5px 0 0 5px;box-sizing:border-box">\
+                <div class="editor_context" style="min-height:100%;"></div>\
+            </div>');
         this.$wrapper = $('<div class="editor_wrap"></div>');
-        this.$wrapper.append(this.$context);
+        this.$wrapper.append(this.$scroller);
+        this.$context = this.$scroller.find('.editor_context');
         this.$wrapper.css({ position: 'relative', overflow: 'hidden', height: '100%' });
         this.options.$wrapper.append(this.$wrapper);
     }
     //左侧行号
     _proto.createLeftNumBg = function() {
-        this.$leftNumBg = $('<div class="line_num_bg" style="position:absolute;left:0;top:0;width:40px;min-height:100%;padding:5px 0;box-sizing:border-box"></div>');
+        this.$leftNumBg = $('<div class="line_num_bg" style="position:absolute;left:0;top:0;width:40px;min-height:100%;padding:5px 0;padding-bottom:'+this.charHight+'px;box-sizing:border-box"></div>');
         this.$wrapper.append(this.$leftNumBg);
     }
     //创建输入框
@@ -383,12 +387,12 @@
         var self = this;
         var wrapStyle = 'position:absolute;top:0;left:0;z-index:-1;overflow:hidden;opacity:0;width:3px;height:' + (self.charHight + 2) + 'px'
         var areaStyle = 'height:100%;width:100%;padding:0;outline:none;border-style:none;resize:none;overflow:hidden;background-color:transparent;color:transparent'
-        this.$context[0].innerHTML = '\
+        this.$textWrap = $('\
             <div id="subjs_editor_textarea_wrap" style="' + wrapStyle + '">\
                 <textarea id="subjs_editor_textarea" style="' + areaStyle + '"></textarea>\
-            </div>';
-        this.$textarea = this.$context.find('#subjs_editor_textarea');
-        this.$textWrap = this.$context.find('#subjs_editor_textarea_wrap');
+            </div>');
+        this.$scroller.append(this.$textWrap);
+        this.$textarea = this.$scroller.find('#subjs_editor_textarea');
         this.$textarea.on('focus', function() {
             self.$cursor.show();
         });
@@ -398,13 +402,13 @@
     }
     //创建当前行背景
     _proto.createLineBg = function() {
-        this.$lineBg = $('<div class="current_line_bg" style="display:none;position:absolute;left:0;right:0;background-color:rgba(0,0,0,0.1);height:' + this.charHight + 'px"></div>');
+        this.$lineBg = $('<div class="current_line_bg" style="display:none;position:absolute;left:0;right:0;z-index:-1;background-color:rgba(0,0,0,0.1);height:' + this.charHight + 'px"></div>');
         this.$wrapper.append(this.$lineBg);
     }
     //创建光标
     _proto.createCrusor = function() {
         this.$cursor = $('<i class="cursor" style="display:none;position:absolute;width:2px;height:' + this.charHight + 'px;background-color:#333"></i>');
-        this.$context.append(this.$cursor);
+        this.$scroller.append(this.$cursor);
         var show = true;
         var self = this;
 
@@ -436,10 +440,10 @@
         this.updateScroll();
     }
     _proto.updateScroll = function() {
-        var context = this.$context[0];
+        var context = this.$scroller[0];
         var cRect = Util.getRect(this.$cursor[0]);
         var lRect = Util.getRect(this.$leftNumBg[0]);
-        if (cRect.offsetTop <= this.$context[0].scrollTop) {
+        if (cRect.offsetTop <= this.$scroller[0].scrollTop) {
             context.scrollTop = cRect.offsetTop;
         } else if (cRect.offsetTop + this.charHight >= context.scrollTop + this.$wrapper[0].clientHeight) {
             context.scrollTop = cRect.offsetTop + this.charHight - this.$wrapper[0].clientHeight;
@@ -451,7 +455,7 @@
         }
         this.$leftNumBg.css('top', -context.scrollTop + 'px');
         this.$lineBg.css({
-            top: this.linesDom[this.cursorPos.line-1][0].offsetTop - context.scrollTop + 'px',
+            top: this.linesDom[this.cursorPos.line - 1][0].offsetTop - context.scrollTop + 'px',
         });
     }
     _proto.posToPx = function() {
@@ -460,7 +464,7 @@
         var str = this.linesText[this.cursorPos.line - 1].substring(0, this.cursorPos.column);
         var match = str.match(this.fullAngleReg);
         var left = str.length * this.charWidth;
-        var rect = Util.getRect(this.$context[0]);
+        var rect = Util.getRect(this.$scroller[0]);
         if (match) {
             left += match.length * (this.fullAngleCharWidth - this.charWidth);
         }
@@ -483,7 +487,7 @@
                 <div class="code" style="display:inline-block;position:relative;z-index:2;height:100%;min-width:100%;box-sizing:border-box;padding-right:10px;white-space:pre"></div>\
             </div>');
         if (!$linePre) {
-            this.$context.append($dom);
+            this.$scroller.find('.editor_context').append($dom);
         } else {
             $dom.insertBefore($linePre);
         }
@@ -524,7 +528,7 @@
         this.donePreReg.splice(line - 1, 1);
         //多行匹配suffix记录前移一位
         this.doneSuffixReg.splice(line - 1, 1);
-        //重置行号
+        //重置多行匹配对象的行号
         this.resetDoneRegLine(line - 1);
 
         this.pairHighlight(this.cursorPos.line - 1);
