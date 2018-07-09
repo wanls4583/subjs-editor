@@ -395,7 +395,7 @@
     }
     //创建当前行背景
     _proto.createLineBg = function() {
-        this.$lineBg = $('<div class="current_line_bg" style="display:none;position.absolute;left:0;right:0;background-color:rgba(0,0,0,0.1);height:' + this.charHight + 'px"></div>');
+        this.$lineBg = $('<div class="current_line_bg" style="display:none;position:absolute;left:0;right:0;background-color:rgba(0,0,0,0.1);height:' + this.charHight + 'px"></div>');
         this.$wrapper.append(this.$lineBg);
     }
     //创建光标
@@ -429,10 +429,6 @@
             top: pos.top + 'px',
             left: pos.left + 'px'
         });
-        this.$lineBg.css({
-            top: pos.top - this.$context[0].scrollTop + 'px',
-        });
-
         this.$lineBg.show();
         this.updateScroll();
     }
@@ -451,6 +447,9 @@
             context.scrollLeft = cRect.offsetLeft + this.charWidth * 2 + 30 - (this.$wrapper[0].clientWidth - context.offsetLeft);
         }
         this.$leftNumBg.css('top', -context.scrollTop + 'px');
+        this.$lineBg.css({
+            top: this.linesDom[this.cursorPos.line-1][0].offsetTop - context.scrollTop + 'px',
+        });
     }
     _proto.posToPx = function() {
         var self = this;
