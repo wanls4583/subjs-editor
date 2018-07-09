@@ -446,7 +446,7 @@
             context.scrollTop = cRect.offsetTop + this.charHight - this.$wrapper[0].clientHeight;
         }
         if (cRect.offsetLeft - this.charWidth <= context.scrollLeft) {
-            context.scrollLeft = cRect.offsetLeft;
+            context.scrollLeft = cRect.offsetLeft - this.charWidth;
         } else if (cRect.offsetLeft + this.charWidth * 2 + 30 >= context.scrollLeft + (this.$wrapper[0].clientWidth - context.offsetLeft)) {
             context.scrollLeft = cRect.offsetLeft + this.charWidth * 2 + 30 - (this.$wrapper[0].clientWidth - context.offsetLeft);
         }
