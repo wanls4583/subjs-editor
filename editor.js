@@ -612,10 +612,12 @@
         }
         var self = this,
             hasRender = false,
+            renderArr = [],
             checkPreRegArr = [currentLine]
         _doMatch(currentLine);
         _checkPairSuffixReg(currentLine);
         _checkPairPreReg(currentLine);
+        _renderPair();
         _checkLineIfInPair(currentLine);
         _checkRender(currentLine);
         //进行多行匹配
@@ -753,8 +755,9 @@
                             delete lineDoneSuffixReg[column];
                         }
                     } else if (suffixObj.startPre && !suffixObj.startPre.plain) {
-                        _renderLine(suffixObj.startPre);
-                        hasRender = true;
+                        if(renderArr.indexOf(suffixObj.startPre) == -1){
+                            renderArr.push(suffixObj.startPre);
+                        }
                     }
                 }
             }
@@ -783,10 +786,13 @@
                                 preObj.endSuffix.undo = true;
                                 preObj.endSuffix.startPre = undefined;
                                 if (preObj.endSuffix.line > preObj.line) {
-                                    _delDecoration(self.linesDecoration[line - 1], { start: preObj.endSuffix.start, end: preObj.endSuffix.end, className: className });
+                                    _delDecoration(self.linesDecoration[line - 1], { start: preObj.endSuffix.decoStart, end: preObj.endSuffix.end, className: className });
                                     self.linesDom[line - 1].find('.code').html(self.renderHTML(line));
                                 }
                             }
+                            //删除本行修饰
+                            _delDecoration(self.linesDecoration[currentLine - 1], { start: preObj.start, end: preObj.decoEnd, className: className });
+                            self.linesDom[currentLine - 1].find('.code').html(self.renderHTML(currentLine));
                             delete matchs[regIndex];
                             if (Util.keys(matchs).length == 0) {
                                 delete lineDonePreReg[column];
@@ -794,8 +800,9 @@
                             hasRender = true;
                         } else if (!preObj.undo && !preObj.plain) {
                             //渲染当前行
-                            _renderLine(preObj);
-                            hasRender = true;
+                            if(renderArr.indexOf(preObj) == -1){
+                                renderArr.push(preObj);
+                            }
                         }
                     }
                 }
@@ -849,14 +856,16 @@
                                 preEndSuffix.undo = true;
                                 preEndSuffix.startPre = undefined;
                                 if (preEndSuffix.line > preObj.line && (!endSuffix || endSuffix.line != preEndSuffix.line)) {
-                                    _delDecoration(self.linesDecoration[preEndSuffix.line - 1], { start: preEndSuffix.start, end: preEndSuffix.end, className: className });
+                                    _delDecoration(self.linesDecoration[preEndSuffix.line - 1], { start: preEndSuffix.decoStart, end: preEndSuffix.end, className: className });
                                     self.linesDom[preEndSuffix.line - 1].find('.code').html(self.renderHTML(preEndSuffix.line));
                                 }
                             }
                             //过滤‘/*abcd/*1234*/’中间的的‘/*’
                             if (ifDo || !hasSuffix) {
                                 //渲染匹配的首尾行
-                                _renderLine(preObj);
+                                if(renderArr.indexOf(preObj) == -1){
+                                    renderArr.push(preObj);
+                                }
                             }
                             //添加整行修饰
                             for (var i = currentLine + 1; i <= endLine - 1; i++) {
@@ -873,13 +882,21 @@
                             preObj.undo = false;
                         } else if (!preObj.del && !preObj.plain) {
                             //渲染当前行
-                            _renderLine(preObj);
-                            hasRender = true;
+                            if(renderArr.indexOf(preObj) == -1){
+                                renderArr.push(preObj);
+                            }
                         }
                     }
                 }
             }
 
+        }
+        //渲染首尾行
+        function _renderPair(){
+            for(var i=0; i<renderArr.length; i++){
+                _renderLine(renderArr[i]);
+                hasRender = true;
+            }
         }
         //检测当前行是否在多行修饰中
         function _checkLineIfInPair(currentLine) {
@@ -942,9 +959,9 @@
         function _delDecoration(lineDecoration, decoration) {
             for (var i = 0; i < lineDecoration.length; i++) { //删除和decoration有交叉的修饰
                 var _l = lineDecoration[i];
-                if (!(_l.start > decoration.end || _l.end < decoration.start)) {
+                if (decoration.start == _l.start && decoration.end == _l.end) {
                     lineDecoration.splice(i, 1);
-                    i--;
+                    break;
                 }
             }
         }
@@ -954,14 +971,19 @@
             if (endSuffix && startPre.line == endSuffix.line) {
                 _insertDecoration(self.linesDecoration[startPre.line - 1], { start: startPre.start, end: endSuffix.end, className: startPre.className })
                 self.linesDom[startPre.line - 1].find('.code').html(self.renderHTML(startPre.line)).removeClass(startPre.className);
+                startPre.decoEnd = endSuffix.end;
+                endSuffix.decoStart = startPre.start;
             } else if (!endSuffix) {
                 _insertDecoration(self.linesDecoration[startPre.line - 1], { start: startPre.start, end: self.linesText[startPre.line - 1].length - 1, className: startPre.className })
                 self.linesDom[startPre.line - 1].find('.code').html(self.renderHTML(startPre.line)).removeClass(startPre.className);
+                startPre.decoEnd = self.linesText[startPre.line - 1].length - 1;
             } else if (endSuffix) {
                 _insertDecoration(self.linesDecoration[startPre.line - 1], { start: startPre.start, end: self.linesText[startPre.line - 1].length - 1, className: startPre.className })
                 _insertDecoration(self.linesDecoration[endSuffix.line - 1], { start: 0, end: endSuffix.end, className: startPre.className })
                 self.linesDom[startPre.line - 1].find('.code').html(self.renderHTML(startPre.line)).removeClass(startPre.className);
                 self.linesDom[endSuffix.line - 1].find('.code').html(self.renderHTML(endSuffix.line)).removeClass(startPre.className);
+                startPre.decoEnd = self.linesText[startPre.line - 1].length - 1;
+                endSuffix.decoStart = 0;
             }
         }
     }
