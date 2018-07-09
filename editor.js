@@ -684,9 +684,6 @@
                     for (var column in doneRegObj) { //判断是否删除了
                         if (!matchs[column] && doneRegObj[column][regIndex]) {
                             doneRegObj[column][regIndex].del = true;
-                            if (doneRegObj[column][regIndex].plain) {
-                                delete doneRegObj[column][regIndex];
-                            }
                         }
                     }
                 }
@@ -713,7 +710,7 @@
                                 for (var c = 0; c < cArr.length; c++) {
                                     var preObj = lineDonePreReg[cArr[c]][regIndex];
                                     //preObj是否满足匹配条件
-                                    if (preObj && !preObj.del && !preObj.plain) {
+                                    if (preObj && !preObj.del) {
                                         //preReg和suffixReg存在同行和非同行两种情况
                                         if (preObj.line < currentLine || preObj.line == currentLine && suffixObj.start > preObj.end) {
                                             //preObj.endSuffix不存在，或者preObj.endSuffix包含当前suffixObj区域，才可能被suffixObj所取代
@@ -731,11 +728,11 @@
                                             checkPreRegArr.push(preObj.line);
                                         }
                                         //过滤‘/*aaa/*aaa*/’中的‘/*’
-                                        for (var _t = preObj.end + 1; preObj.line == suffixObj.line && _t < suffixObj.start; _t++) {
-                                            if (lineDonePreReg[_t] && lineDonePreReg[_t][regIndex]) {
-                                                lineDonePreReg[_t][regIndex].plain = true; //普通字符
-                                            }
-                                        }
+                                        // for (var _t = preObj.end + 1; preObj.line == suffixObj.line && _t < suffixObj.start; _t++) {
+                                        //     if (lineDonePreReg[_t] && lineDonePreReg[_t][regIndex]) {
+                                        //         lineDonePreReg[_t][regIndex].plain = true; //普通字符
+                                        //     }
+                                        // }
                                         break;
                                     }
                                 }
@@ -754,7 +751,7 @@
                         if (Util.keys(matchs).length == 0) {
                             delete lineDoneSuffixReg[column];
                         }
-                    } else if (suffixObj.startPre && !suffixObj.startPre.plain) {
+                    } else if (suffixObj.startPre) {
                         if(renderArr.indexOf(suffixObj.startPre) == -1){
                             renderArr.push(suffixObj.startPre);
                         }
@@ -774,7 +771,7 @@
                     for (var regIndex in matchs) {
                         var preObj = matchs[regIndex];
                         var className = pairReg[regIndex].className;
-                        if (preObj.del && !preObj.plain) { //不再匹配preReg
+                        if (preObj.del) { //不再匹配preReg
                             var line = preObj.endSuffix ? preObj.endSuffix.line : self.linesText.length + 1;
                             for (var i = currentLine + 1; i <= line - 1; i++) {
                                 self.highlight(i);
@@ -798,7 +795,7 @@
                                 delete lineDonePreReg[column];
                             }
                             hasRender = true;
-                        } else if (!preObj.undo && !preObj.plain) {
+                        } else if (!preObj.undo) {
                             //渲染当前行
                             if(renderArr.indexOf(preObj) == -1){
                                 renderArr.push(preObj);
@@ -812,7 +809,7 @@
                     for (var regIndex in matchs) {
                         var preObj = matchs[regIndex];
                         var className = pairReg[regIndex].className;
-                        if (preObj.undo && !preObj.plain) { //新匹配到preReg
+                        if (preObj.undo) { //新匹配到preReg
                             var endSuffix = null,
                                 preEndSuffix = preObj.endSuffix,
                                 preEndLine = endLine = self.linesText.length + 1;
@@ -880,7 +877,7 @@
                             }
                             hasRender = true;
                             preObj.undo = false;
-                        } else if (!preObj.del && !preObj.plain) {
+                        } else if (!preObj.del) {
                             //渲染当前行
                             if(renderArr.indexOf(preObj) == -1){
                                 renderArr.push(preObj);
@@ -907,7 +904,7 @@
                         for (var regIndex in lineDonePreReg[column]) {
                             var regObj = lineDonePreReg[column][regIndex];
                             var className = regObj.className;
-                            if (!regObj.plain && (!regObj.endSuffix || regObj.endSuffix.line > currentLine)) {
+                            if (!regObj.endSuffix || regObj.endSuffix.line > currentLine) {
                                 self.linesDom[currentLine - 1].find('.code').html(self.linesText[currentLine - 1]);
                                 self.linesDom[currentLine - 1].find('.code').addClass(className);
                                 hasRender = true;
