@@ -111,10 +111,10 @@
             }
         },
         getStrWidth: function(str, charW, fullCharW, start, end) {
-            if (start) {
+            if (typeof start != 'undefined') {
                 str = str.substr(start);
             }
-            if (end) {
+            if (typeof end != 'undefined') {
                 str = str.substring(0, end - start);
             }
             var match = str.match(this.fullAngleReg);
@@ -546,7 +546,6 @@
                         _left += match.length * (this.fullAngleCharWidth - this.charWidth);
                     }
                     if (Math.abs(_left - left) < this.charWidth) {
-                        column = column;
                         break;
                     }
                     column--;
