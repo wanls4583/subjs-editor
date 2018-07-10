@@ -4,19 +4,17 @@
         suffix: /^(?:[^'"]*?|(?:[^'"]*?(?:'\w*'|"\w*")[^'"]*?)*?)(\*\/)/,
         className: 'pair_comment'
     }]
-
-    var reg = [
-        /^(?:[^'"]*?|(?:[^'"]*?(?:'\w*'|"\w*")[^'"]*?)*?)(\/\/[^\n]*)/, //单行注释
+    var reg = [/^(?:[^'"]*?|(?:[^'"]*?(?:'\w*'|"\w*")[^'"]*?)*?)(\/\/[^\n]*)/, //单行注释
         /'[\s\S]*?'|"[\s\S]*?"/, //字符串
         /\b(?:break|continue|do|else|for|if|return|while|var|function|new|class)\b/, //关键字
         /\!==|\!=|==|=|\?|\&\&|\&=|\&|\|\||\|=|\||>=|>|<=|<|\+=|\+|\-=|\-|\*=|\*|\/=|\//, //操作符
         /\d+|\b(?:undefined|null)(?:[\b;]|$)/, //数字
         /[.]?([\w]+)(?=\()/, //方法名
     ]
-
     var classNames = ['comment', 'string', 'key', 'oprator', 'number', 'method'];
-
     var Util = {
+        //全角符号和中文字符
+        fullAngleReg: /[\x00-\x1f\x80-\xa0\xad\u1680\u180E\u2000-\u200f\u2028\u2029\u202F\u205F\u3000\uFEFF\uFFF9-\uFFFC]|[\u1100-\u115F\u11A3-\u11A7\u11FA-\u11FF\u2329-\u232A\u2E80-\u2E99\u2E9B-\u2EF3\u2F00-\u2FD5\u2FF0-\u2FFB\u3000-\u303E\u3041-\u3096\u3099-\u30FF\u3105-\u312D\u3131-\u318E\u3190-\u31BA\u31C0-\u31E3\u31F0-\u321E\u3220-\u3247\u3250-\u32FE\u3300-\u4DBF\u4E00-\uA48C\uA490-\uA4C6\uA960-\uA97C\uAC00-\uD7A3\uD7B0-\uD7C6\uD7CB-\uD7FB\uF900-\uFAFF\uFE10-\uFE19\uFE30-\uFE52\uFE54-\uFE66\uFE68-\uFE6B\uFF01-\uFF60\uFFE0-\uFFE6]|[\uD800-\uDBFF][\uDC00-\uDFFF]/g,
         insertStr: function(str, index, cont) {
             return str.substring(0, index) + cont + str.substr(index);
         },
@@ -77,7 +75,6 @@
         },
         getRect: function(dom) {
             var _r = dom.getBoundingClientRect();
-
             var _pt = this.getStyleVal(dom, 'paddingTop');
             _pt = parseInt(_pt.substring(0, _pt.length - 2));
             var _pb = Util.getStyleVal(dom, 'paddingBottom');
@@ -86,7 +83,6 @@
             _pl = parseInt(_pl.substring(0, _pl.length - 2));
             var _pr = this.getStyleVal(dom, 'paddingRight');
             _pr = parseInt(_pr.substring(0, _pr.length - 2));
-
             var _mt = this.getStyleVal(dom, 'marginTop');
             _mt = parseInt(_mt.substring(0, _mt.length - 2));
             var _mb = Util.getStyleVal(dom, 'marginBottom');
@@ -95,7 +91,6 @@
             _ml = parseInt(_ml.substring(0, _ml.length - 2));
             var _mr = this.getStyleVal(dom, 'marginRight');
             _mr = parseInt(_mr.substring(0, _mr.length - 2));
-
             return {
                 top: _r.top,
                 bottom: _r.bottom,
@@ -114,6 +109,20 @@
                 offsetLeft: dom.offsetLeft,
                 offsetRight: dom.offsetRight,
             }
+        },
+        getStrWidth: function(str, charW, fullCharW, start, end) {
+            if (start) {
+                str = str.substr(start);
+            }
+            if (end) {
+                str = str.substring(0, end - start);
+            }
+            var match = str.match(this.fullAngleReg);
+            var width = str.length * charW;
+            if (match) {
+                width += match.length * (fullCharW - charW);
+            }
+            return width;
         }
     }
 
@@ -138,13 +147,9 @@
         this.options.tabsize = options.tabsize || 4;
         this._init();
     }
-
     var _proto = SubJs.prototype;
-
     _proto._init = function() {
         var self = this;
-        //全角符号和中文字符
-        this.fullAngleReg = /[\x00-\x1f\x80-\xa0\xad\u1680\u180E\u2000-\u200f\u2028\u2029\u202F\u205F\u3000\uFEFF\uFFF9-\uFFFC]|[\u1100-\u115F\u11A3-\u11A7\u11FA-\u11FF\u2329-\u232A\u2E80-\u2E99\u2E9B-\u2EF3\u2F00-\u2FD5\u2FF0-\u2FFB\u3000-\u303E\u3041-\u3096\u3099-\u30FF\u3105-\u312D\u3131-\u318E\u3190-\u31BA\u31C0-\u31E3\u31F0-\u321E\u3220-\u3247\u3250-\u32FE\u3300-\u4DBF\u4E00-\uA48C\uA490-\uA4C6\uA960-\uA97C\uAC00-\uD7A3\uD7B0-\uD7C6\uD7CB-\uD7FB\uF900-\uFAFF\uFE10-\uFE19\uFE30-\uFE52\uFE54-\uFE66\uFE68-\uFE6B\uFF01-\uFF60\uFFE0-\uFFE6]|[\uD800-\uDBFF][\uDC00-\uDFFF]/g;
         this.creatContext();
         this.getCharWidth();
         this.creatTextarea();
@@ -155,26 +160,104 @@
         this.bindEvent();
     }
     _proto.bindEvent = function() {
+        this.bindCursorEvent();
+        this.bindInputEvent();
+        this.bindScrollEvent();
+        this.bindSelectEvent();
+    }
+    //选中事件
+    _proto.bindSelectEvent = function() {
         var self = this;
-        this.$context.on('mousedown', function() {
-            clearTimeout(self.textaTimer);
+        var startPx = {};
+        var endPx = {};
+        var rect = Util.getRect(self.$scroller[0]);
+        var scrollTop = self.$scroller[0].scrollTop;
+        var select = false;
+        this.$wrapper.on('mousedown', function(e) {
+            var top = e.clientY - rect.top + scrollTop - rect.paddingTop;
+            var left = e.offsetX - rect.paddingLeft;
+            startPx = { top: top, left: left };
+            if(e.button!=2){
+                self.$selectBg.html('');
+                select = true;
+            }
         });
+        this.$wrapper.on('mousemove', function(e) {
+            if(select){
+                //阻止浏览器默认选中文字
+                e.preventDefault();
+                var top = e.clientY - rect.top + scrollTop - rect.paddingTop;
+                var left = e.offsetX - rect.paddingLeft;
+                endPx = { top: top, left: left };
+                _renderSelectBg();
+            }
+        });
+        this.$wrapper.on('mouseup',function(e){
+            select = false;
+        })
+        //渲染选中背景
+        function _renderSelectBg() {
+            var startPos = self.pxToPos(startPx.top, startPx.left);
+            var endPos = self.pxToPos(endPx.top, endPx.left);
+            self.$selectBg.html('');
+            if (startPos.line > endPos.line) {
+                var _tmp = startPos;
+                startPos = endPos;
+                endPos = _tmp;
+            } else if (startPos.line == endPos.line && startPos.column > endPos.column) {
+                var _tmp = startPos.column;
+                startPos.column = endPos.column;
+                endPos.column = _tmp;
+            }
+            if (startPos.line == endPos.line) {
+                if(Math.abs(endPx.left - startPx.left) > self.charWidth){
+                    var _width = Util.getStrWidth(self.linesText[startPos.line - 1], self.charWidth, self.fullAngleCharWidth, startPos.column, endPos.column);
+                    var _px = self.posToPx(startPos.line, startPos.column);
+                    _renderRange(_px.top, _px.left,_width);
+                }
+            } else {
+                var _maxWidth = self.$context[0].scrollWidth;
+                var _width = Util.getStrWidth(self.linesText[startPos.line - 1], self.charWidth, self.fullAngleCharWidth, 0, startPos.column);
+                var _px = self.posToPx(startPos.line, startPos.column);
+                _renderRange(_px.top, _px.left, _maxWidth - _width);
+                _width = Util.getStrWidth(self.linesText[endPos.line - 1], self.charWidth, self.fullAngleCharWidth, 0, endPos.column);
+                _px = self.posToPx(endPos.line, 0);
+                _renderRange(_px.top, _px.left, _width);
+                for (var _l = startPos.line + 1; _l < endPos.line; _l++) {
+                    _px = self.posToPx(_l, 0);
+                    _renderRange(_px.top,rect.paddingLeft, _maxWidth);
+                }
+            }
+
+            function _renderRange(_top, _left, _width) {
+                self.$selectBg.append('<div class="select_line_bg" style="position:absolute;top:' + _top + 'px;left:' + _left + 'px;width:' + _width + 'px;height:' + self.charHight + 'px;background-color:rgba(0,0,0,0.3)"></div>');
+            }
+        }
+    }
+    //滚动条事件
+    _proto.bindScrollEvent = function() {
+        var self = this;
+        this.$scroller.on('scroll', function(e) {
+            self.$leftNumBg.css('top', -this.scrollTop + 'px');
+            self.$lineBg.css({
+                top: self.linesDom[self.cursorPos.line - 1][0].offsetTop - self.$scroller[0].scrollTop + 'px',
+            });
+        })
+    }
+    //光标事件
+    _proto.bindCursorEvent = function() {
+        var self = this;
         this.$context.on('mouseup', function(e) {
-            var top = e.clientY - Util.getRect(self.$scroller[0]).top + self.$scroller[0].scrollTop;
-            var _px = self.pxToPos(top,e.offsetX);
+            var rect = Util.getRect(self.$scroller[0]);
+            var top = e.clientY - rect.top + self.$scroller[0].scrollTop - rect.paddingTop;
+            var _px = self.pxToPos(top, e.offsetX - rect.paddingLeft);
             var line = _px.line;
             var column = _px.column;
-
             self.$textarea.val(Util.getSelectedText());
             self.$cursor.hide();
-
-            var paddingTop = Util.getRect(self.$context[0]).paddingTop;
-            var top = paddingTop + (line - 1) * self.charHight;
-
             self.$textWrap.css({
                 'z-index': '1'
             })
-
             if (!Util.getSelectedText() && e.button != 2) { //单纯的点击
                 self.cursorPos.line = line;
                 self.cursorPos.column = column;
@@ -187,7 +270,6 @@
                 var rangge = window.getSelection().getRangeAt(0);
                 self.$textarea[0].focus();
                 self.$textarea[0].select();
-
                 Util.nextFrame(function() {
                     window.getSelection().removeAllRanges();
                     window.getSelection().addRange(rangge);
@@ -203,6 +285,10 @@
                 })
             }
         })
+    }
+    //输入事件
+    _proto.bindInputEvent = function() {
+        var self = this;
         var preCode = 0;
         this.$textarea.on('keydown', function(e) {
             self.$textarea.val('');
@@ -226,7 +312,7 @@
                     case 38: //up arrow
                         if (self.cursorPos.line > 1) {
                             self.cursorPos.line--;
-                            self.cursorPos.column = self.pxToPos(self.cursorPos.line,self.cursorPos.left,true).column;
+                            self.cursorPos.column = self.pxToPos(self.cursorPos.line, self.cursorPos.left, true).column;
                         }
                         break;
                     case 39: //right arrow
@@ -240,7 +326,7 @@
                     case 40: //down arrow
                         if (self.cursorPos.line < self.linesText.length) {
                             self.cursorPos.line++;
-                            self.cursorPos.column = self.pxToPos(self.cursorPos.line,self.cursorPos.left,true).column;
+                            self.cursorPos.column = self.pxToPos(self.cursorPos.line, self.cursorPos.left, true).column;
                         }
                         break;
                     case 46: //delete
@@ -305,15 +391,7 @@
                 // self.$textarea.val('');
                 self.updateCursorPos();
             }
-
             self.updateCursorPos();
-        })
-        //滚动条事件
-        this.$scroller.on('scroll', function(e) {
-            self.$leftNumBg.css('top', -this.scrollTop + 'px');
-            self.$lineBg.css({
-                top: self.linesDom[self.cursorPos.line - 1][0].offsetTop - self.$scroller[0].scrollTop + 'px',
-            });
         })
     }
     //获取字符宽度
@@ -331,13 +409,14 @@
     }
     //输入框区域
     _proto.creatContext = function() {
-        this.$scroller =
-            $('<div class="editor_scroller" style="position:relative;overflow:auto;margin-left:40px;height:100%;padding:5px 0 0 5px;box-sizing:border-box">\
+        this.$scroller = $('<div class="editor_scroller" style="position:relative;overflow:auto;margin-left:40px;height:100%;padding:5px 0 0 5px;box-sizing:border-box">\
                 <div class="editor_context" style="min-height:100%;cursor:text;"></div>\
+                <div class="editor_bg" style="position:absolute;left:0;top:0;z-index:-1"></div>\
             </div>');
         this.$wrapper = $('<div class="editor_wrap"></div>');
         this.$wrapper.append(this.$scroller);
         this.$context = this.$scroller.find('.editor_context');
+        this.$selectBg = this.$scroller.find('.editor_bg');
         this.$wrapper.css({ position: 'relative', overflow: 'hidden', height: '100%' });
         this.options.$wrapper.append(this.$wrapper);
     }
@@ -355,8 +434,8 @@
             <div id="subjs_editor_textarea_wrap" style="' + wrapStyle + '">\
                 <textarea id="subjs_editor_textarea" style="' + areaStyle + '"></textarea>\
             </div>');
-        this.$scroller.append(this.$textWrap);
-        this.$textarea = this.$scroller.find('#subjs_editor_textarea');
+        this.$wrapper.append(this.$textWrap);
+        this.$textarea = this.$wrapper.find('#subjs_editor_textarea');
         this.$textarea.on('focus', function() {
             self.$cursor.show();
         });
@@ -391,7 +470,7 @@
     }
     //更新光标坐标
     _proto.updateCursorPos = function() {
-        var pos = this.posToPx(this.cursorPos.line,this.cursorPos.column);
+        var pos = this.posToPx(this.cursorPos.line, this.cursorPos.column);
         this.$cursor.css({
             top: pos.top + 'px',
             left: pos.left + 'px'
@@ -420,11 +499,11 @@
             top: this.linesDom[this.cursorPos.line - 1][0].offsetTop - context.scrollTop + 'px',
         });
     }
-    _proto.posToPx = function(line,column) {
+    _proto.posToPx = function(line, column) {
         var self = this;
         var top = (line - 1) * this.charHight;
         var str = this.linesText[line - 1].substring(0, column);
-        var match = str.match(this.fullAngleReg);
+        var match = str.match(Util.fullAngleReg);
         var left = str.length * this.charWidth;
         var rect = Util.getRect(this.$scroller[0]);
         if (match) {
@@ -435,15 +514,14 @@
             left: left + rect.paddingLeft
         }
     }
-    _proto.pxToPos = function(top,left,ifLine){
+    _proto.pxToPos = function(top, left, ifLine) {
         var column = this.cursorPos.column;
         var rect = Util.getRect(this.$scroller[0]);
         var line = top;
-        left -= rect.paddingLeft;
-        top -= rect.paddingTop;
-        if(!ifLine){
+        if (!ifLine) {
             line = Math.ceil(top / this.charHight);
         }
+        line = line < 1 ? 1: line;
         if (line > this.linesText.length) {
             line = this.linesText.length;
             column = this.linesText[this.linesText.length - 1].length;
@@ -452,18 +530,17 @@
             column = Math.ceil(left / this.charWidth);
             column = column < 0 ? 0 : column;
             column = column > str.length ? str.length : column;
-
-            var match = str.match(this.fullAngleReg);
+            var match = str.match(Util.fullAngleReg);
             var maxWidth = str.length * this.charWidth;
             if (match) {
                 maxWidth += match.length * (this.fullAngleCharWidth - this.charWidth);
             }
             if (left > maxWidth) {
                 left = maxWidth;
-            }else{
+            } else {
                 while (column > 0) {
                     var str = this.linesText[line - 1].substring(0, column);
-                    var match = str.match(this.fullAngleReg);
+                    var match = str.match(Util.fullAngleReg);
                     var _left = str.length * this.charWidth;
                     if (match) {
                         _left += match.length * (this.fullAngleCharWidth - this.charWidth);
@@ -512,14 +589,12 @@
         })
         this.$leftNumBg.append($num);
         this.linesDom.splice(line - 1, 0, $dom);
-
         //多行匹配pre记录后移一位
         this.donePreReg.splice(line - 1, 0, undefined);
         //多行匹配suffix记录后移一位
         this.doneSuffixReg.splice(line - 1, 0, undefined);
         //重置行号
         this.resetDoneRegLine(line - 1);
-
         this.highlight(line);
         this.pairHighlight(line - 1);
         this.pairHighlight(line);
@@ -531,14 +606,12 @@
         this.linesDom[line - 1].remove();
         this.$leftNumBg.find('.line_num:last').remove();
         this.linesDom.splice(line - 1, 1);
-
         //多行匹配pre记录前移一位
         this.donePreReg.splice(line - 1, 1);
         //多行匹配suffix记录前移一位
         this.doneSuffixReg.splice(line - 1, 1);
         //重置多行匹配对象的行号
         this.resetDoneRegLine(line - 1);
-
         this.pairHighlight(this.cursorPos.line - 1);
     }
     _proto.resetDoneRegLine = function(index) {
@@ -577,8 +650,7 @@
                 var className = classNames[i];
                 var ifDo = true;
                 for (var tmp = 0; tmp < lineDecoration.length; tmp++) {
-                    if (start >= lineDecoration[tmp].start && start <= lineDecoration[tmp].end ||
-                        end >= lineDecoration[tmp].start && end <= lineDecoration[tmp].end) {
+                    if (start >= lineDecoration[tmp].start && start <= lineDecoration[tmp].end || end >= lineDecoration[tmp].start && end <= lineDecoration[tmp].end) {
                         ifDo = false;
                     }
                 }
@@ -711,8 +783,7 @@
                                         //preReg和suffixReg存在同行和非同行两种情况
                                         if (preObj.line < currentLine || preObj.line == currentLine && suffixObj.start > preObj.end) {
                                             //preObj.endSuffix不存在、已删除，或者preObj.endSuffix包含当前suffixObj区域，才可能被suffixObj所取代
-                                            if ((!preObj.endSuffix || preObj.endSuffix.del || preObj.endSuffix.line > currentLine ||
-                                                    preObj.endSuffix.line == currentLine && preObj.endSuffix.start > suffixObj.start)) {
+                                            if ((!preObj.endSuffix || preObj.endSuffix.del || preObj.endSuffix.line > currentLine || preObj.endSuffix.line == currentLine && preObj.endSuffix.start > suffixObj.start)) {
                                                 ifDo = true;
                                             }
                                         }
@@ -826,8 +897,7 @@
                                             //suffixObj和preObj存在同行和非同行两种情况
                                             if (suffixObj.line > preObj.line || suffixObj.line == preObj.line && suffixObj.start > preObj.start) {
                                                 hasSuffix = true; //其后是否有suffix
-                                                if (!suffixObj.startPre || suffixObj.startPre.line > preObj.line ||
-                                                    suffixObj.startPre.line == preObj.line && suffixObj.startPre.start > preObj.start) {
+                                                if (!suffixObj.startPre || suffixObj.startPre.line > preObj.line || suffixObj.startPre.line == preObj.line && suffixObj.startPre.start > preObj.start) {
                                                     ifDo = true;
                                                 }
                                             }
@@ -860,8 +930,7 @@
                                     /*.....
                                 中间的‘/*’
                              */
-                            if ((ifDo || !hasSuffix) && (endSuffix || !endSuffix && (!self.lineEndPreReg || preObj.line < self.lineEndPreReg.line ||
-                                    preObj.line == self.lineEndPreReg.line && preObj.start < self.lineEndPreReg.start))) {
+                            if ((ifDo || !hasSuffix) && (endSuffix || !endSuffix && (!self.lineEndPreReg || preObj.line < self.lineEndPreReg.line || preObj.line == self.lineEndPreReg.line && preObj.start < self.lineEndPreReg.start))) {
                                 //渲染匹配的首尾行
                                 if (renderArr.indexOf(preObj) == -1) {
                                     renderArr.push(preObj);
@@ -896,7 +965,6 @@
                     }
                 }
             }
-
         }
         //渲染首尾行
         function _renderPair() {
@@ -935,8 +1003,7 @@
             var ifDo = true;
             for (var i = 0; i < lineDecoration.length; i++) { //删除和decoration有交叉的修饰
                 var _l = lineDecoration[i];
-                if (decoration.className == _l.className && _l.start <= decoration.start &&
-                    _l.end >= decoration.end && _l.end - _l.start > decoration.end - decoration.start) {
+                if (decoration.className == _l.className && _l.start <= decoration.start && _l.end >= decoration.end && _l.end - _l.start > decoration.end - decoration.start) {
                     ifDo = false;
                     break;
                 }
@@ -993,6 +1060,7 @@
                 endSuffix.decoStart = 0;
             }
         }
+
         function renderHTML(line) {
             var str = self.linesText[line - 1];
             var doneRangeOnline = self.linesDecoration[line - 1];
