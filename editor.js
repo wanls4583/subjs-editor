@@ -57,6 +57,18 @@
                 window.getSelection().addRange(range);
             }
         },
+        copy: function(value){
+            var element = document.createElement('SPAN');
+            element.textContent = value;
+            document.body.appendChild(element);
+            this.select(element);
+            if(document.execCommand){
+                document.execCommand('copy');
+            }else{
+                 window.clipboardData.setData('text', value);
+            }
+            element.remove ? element.remove() : element.removeNode(true);
+        },
         getStyleVal: function(dom, prop) {
             if (window.getComputedStyle) {
                 return window.getComputedStyle(dom, null)[prop];
@@ -136,6 +148,7 @@
         this.cursorPos = { line: 1, column: 0 }; //光标位置
         this.donePreReg = []; //多行匹配开始记录
         this.doneSuffixReg = []; //多行匹配结束记录
+        this.selectText = '';
         this.options = {}; //参数
         if (typeof options.$wrapper == 'string') {
             this.options.$wrapper = $(options.$wrapper);
@@ -156,8 +169,9 @@
         this.createCrusor();
         this.createLeftNumBg();
         this.createLineBg();
-        this.addLine(1, '');
         this.bindEvent();
+        this.bindEditorEvent();
+        this.addLine(1, '');
     }
     _proto.bindEvent = function() {
         this.bindCursorEvent();
@@ -177,13 +191,14 @@
             var top = e.clientY - rect.top + scrollTop - rect.paddingTop;
             var left = e.offsetX - rect.paddingLeft;
             startPx = { top: top, left: left };
-            if(e.button!=2){
+            if (e.button != 2) {
+                self.selectText = '';
                 self.$selectBg.html('');
                 select = true;
             }
         });
         this.$wrapper.on('mousemove', function(e) {
-            if(select){
+            if (select) {
                 //阻止浏览器默认选中文字
                 e.preventDefault();
                 var top = e.clientY - rect.top + scrollTop - rect.paddingTop;
@@ -192,7 +207,7 @@
                 _renderSelectBg();
             }
         });
-        this.$wrapper.on('mouseup',function(e){
+        this.$wrapper.on('mouseup', function(e) {
             select = false;
         })
         //渲染选中背景
@@ -210,29 +225,55 @@
                 endPos.column = _tmp;
             }
             if (startPos.line == endPos.line) {
-                if(Math.abs(endPx.left - startPx.left) > self.charWidth){
-                    var _width = Util.getStrWidth(self.linesText[startPos.line - 1], self.charWidth, self.fullAngleCharWidth, startPos.column, endPos.column);
+                if (Math.abs(endPx.left - startPx.left) > self.charWidth) {
+                    var _str = self.linesText[startPos.line - 1];
+                    var _width = Util.getStrWidth(_str, self.charWidth, self.fullAngleCharWidth, startPos.column, endPos.column);
                     var _px = self.posToPx(startPos.line, startPos.column);
-                    _renderRange(_px.top, _px.left,_width);
+                    _renderRange(_px.top, _px.left, _width);
+                    self.selectText = _str.substring(startPos.column, endPos.column);
                 }
             } else {
+                var _str = self.linesText[startPos.line - 1];
                 var _maxWidth = self.$context[0].scrollWidth;
-                var _width = Util.getStrWidth(self.linesText[startPos.line - 1], self.charWidth, self.fullAngleCharWidth, 0, startPos.column);
+                var _width = Util.getStrWidth(_str, self.charWidth, self.fullAngleCharWidth, 0, startPos.column);
                 var _px = self.posToPx(startPos.line, startPos.column);
                 _renderRange(_px.top, _px.left, _maxWidth - _width);
-                _width = Util.getStrWidth(self.linesText[endPos.line - 1], self.charWidth, self.fullAngleCharWidth, 0, endPos.column);
-                _px = self.posToPx(endPos.line, 0);
-                _renderRange(_px.top, _px.left, _width);
+                self.selectText = _str;
                 for (var _l = startPos.line + 1; _l < endPos.line; _l++) {
                     _px = self.posToPx(_l, 0);
-                    _renderRange(_px.top,rect.paddingLeft, _maxWidth);
+                    _renderRange(_px.top, rect.paddingLeft, _maxWidth);
+                    self.selectText += '\n'
+                    self.linesText[_l - 1];
                 }
+                _str = self.linesText[endPos.line - 1];
+                _width = Util.getStrWidth(_str, self.charWidth, self.fullAngleCharWidth, 0, endPos.column);
+                _px = self.posToPx(endPos.line, 0);
+                _renderRange(_px.top, _px.left, _width);
+                self.selectText += '\n' + _str.substring(0, endPos.column);
             }
 
             function _renderRange(_top, _left, _width) {
                 self.$selectBg.append('<div class="select_line_bg" style="position:absolute;top:' + _top + 'px;left:' + _left + 'px;width:' + _width + 'px;height:' + self.charHight + 'px;background-color:rgba(0,0,0,0.3)"></div>');
             }
         }
+    }
+    //鼠标编辑事件
+    _proto.bindEditorEvent = function() {
+        var self = this;
+        this.$textarea.on('copy', function() {
+            self.copyText = self.selectText;
+            Util.copy(self.copyText);
+            console.log('copy',self.copyText)
+        })
+        this.$textarea.on('paste', function() {
+            self.insertOnLine(self.copyText);
+            console.log('paste',self.copyText)
+        })
+        this.$textarea.on('cut', function() {
+            self.copyText = self.selectText;
+            Util.copy(self.copyText);
+            console.log('cut',self.copyText)
+        })
     }
     //滚动条事件
     _proto.bindScrollEvent = function() {
@@ -253,12 +294,12 @@
             var _px = self.pxToPos(top, e.offsetX - rect.paddingLeft);
             var line = _px.line;
             var column = _px.column;
-            self.$textarea.val(Util.getSelectedText());
+            self.$textarea.val(self.selectText);
             self.$cursor.hide();
             self.$textWrap.css({
                 'z-index': '1'
             })
-            if (!Util.getSelectedText() && e.button != 2) { //单纯的点击
+            if (e.button != 2) { //单纯的点击
                 self.cursorPos.line = line;
                 self.cursorPos.column = column;
                 self.$textarea[0].focus();
@@ -266,18 +307,9 @@
                     'z-index': '-1',
                 });
                 self.updateCursorPos();
-            } else if (e.button == 2) {
-                var rangge = window.getSelection().getRangeAt(0);
+            } else {
                 self.$textarea[0].focus();
                 self.$textarea[0].select();
-                Util.nextFrame(function() {
-                    window.getSelection().removeAllRanges();
-                    window.getSelection().addRange(rangge);
-                    self.$textWrap.css({
-                        'z-index': '-1'
-                    });
-                })
-            } else {
                 Util.nextFrame(function() {
                     self.$textWrap.css({
                         'z-index': '-1'
@@ -294,11 +326,6 @@
             self.$textarea.val('');
             if (e.ctrlKey && e.keyCode == 65) { //ctrl+a
                 e.preventDefault();
-                self.$textWrap.hide();
-                Util.select(self.$context[0]);
-                setTimeout(function() {
-                    self.$textWrap.show();
-                }, 50);
             } else {
                 switch (e.keyCode) {
                     case 37: //left arrow
@@ -359,38 +386,23 @@
                         e.preventDefault();
                         var val = '';
                         for (var tmp = 0; tmp < self.options.tabsize; tmp++) { val += ' ' };
-                        _update(val);
+                        self.insertOnLine(val);
                         break;
                     default:
                         if (preCode > 222 && e.keyCode == 16) { //中文输入后shift延迟较大
                             setTimeout(function() {
                                 var val = self.$textarea.val();
-                                val && _update(val);
-                            }, 100);
+                                val && self.insertOnLine(val);
+                            }, 150);
                         } else {
                             setTimeout(function() {
                                 var val = self.$textarea.val();
-                                val && _update(val);
+                                val && self.insertOnLine(val);
                             }, 0)
                         }
                 }
             }
             preCode = e.keyCode;
-
-            function _update(val) {
-                var str = self.linesText[self.cursorPos.line - 1];
-                str = str.substring(0, self.cursorPos.column) + val + str.substr(self.cursorPos.column);
-                var strs = str.split(/\r\n|\r|\n/);
-                self.cursorPos.column += val.length;
-                self.updateLine(self.cursorPos.line, strs[0]);
-                for (var tmp = 1; tmp < strs.length; tmp++) { //粘贴操作可能存在换号符
-                    self.addLine(self.cursorPos.line, strs[tmp]);
-                    self.cursorPos.line++;
-                    self.cursorPos.column = strs[tmp].length;
-                }
-                // self.$textarea.val('');
-                self.updateCursorPos();
-            }
             self.updateCursorPos();
         })
     }
@@ -521,7 +533,7 @@
         if (!ifLine) {
             line = Math.ceil(top / this.charHight);
         }
-        line = line < 1 ? 1: line;
+        line = line < 1 ? 1 : line;
         if (line > this.linesText.length) {
             line = this.linesText.length;
             column = this.linesText[this.linesText.length - 1].length;
@@ -562,6 +574,20 @@
         this.linesText[line - 1] = newConent;
         this.highlight(line);
         this.pairHighlight(line);
+    }
+    //插入内容
+    _proto.insertOnLine = function(val) {
+        var str = this.linesText[this.cursorPos.line - 1];
+        str = str.substring(0, this.cursorPos.column) + val + str.substr(this.cursorPos.column);
+        var strs = str.split(/\r\n|\r|\n/);
+        this.cursorPos.column += val.length;
+        this.updateLine(this.cursorPos.line, strs[0]);
+        for (var tmp = 1; tmp < strs.length; tmp++) { //粘贴操作可能存在换号符
+            this.addLine(this.cursorPos.line, strs[tmp]);
+            this.cursorPos.line++;
+            this.cursorPos.column = strs[tmp].length;
+        }
+        this.updateCursorPos();
     }
     _proto.addLine = function(line, newConent) {
         this.linesText.splice(line - 1, 0, newConent);
