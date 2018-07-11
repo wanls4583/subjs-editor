@@ -187,9 +187,13 @@
         var rect = Util.getRect(self.$scroller[0]);
         var scrollTop = self.$scroller[0].scrollTop;
         var select = false;
+        this.$wrapper.on('selectstart', function(e) {
+            //阻止浏览器默认选中文字
+            e.preventDefault();
+        })
         this.$wrapper.on('mousedown', function(e) {
-            var top = e.clientY - rect.top + scrollTop - rect.paddingTop;
-            var left = e.offsetX - rect.paddingLeft;
+            var top = e.clientY - rect.top + scrollTop;
+            var left = e.clientX - rect.left + scrollTop;
             startPx = { top: top, left: left };
             if (e.button != 2) {
                 self.selection.selectText = '';
@@ -206,10 +210,8 @@
         });
         this.$wrapper.on('mousemove', function(e) {
             if (select) {
-                //阻止浏览器默认选中文字
-                e.preventDefault();
-                var top = e.clientY - rect.top + scrollTop - rect.paddingTop;
-                var left = e.offsetX - rect.paddingLeft;
+                var top = e.clientY - rect.top + scrollTop;
+                var left = e.clientX - rect.left + scrollTop;
                 endPx = { top: top, left: left };
                 _renderSelectBg();
             }
@@ -271,8 +273,8 @@
             self.$textarea.select();
         })
         this.$textarea.on('paste', function(e) {
-            if(self.selection.startPos){
-                self.deleteMutilLine(self.selection.startPos,self.selection.endPos);
+            if (self.selection.startPos) {
+                self.deleteMutilLine(self.selection.startPos, self.selection.endPos);
             }
             if (!self.copyText) {
                 if (e.originalEvent.clipboardData) {
@@ -289,8 +291,8 @@
             self.copyText = self.selection.selectText;
             self.$textarea.val(self.copyText);
             self.$textarea.select();
-            if(self.selection.startPos){
-                self.deleteMutilLine(self.selection.startPos,self.selection.endPos);
+            if (self.selection.startPos) {
+                self.deleteMutilLine(self.selection.startPos, self.selection.endPos);
             }
             self.$selectBg.html('');
             self.selection = {};
@@ -329,8 +331,8 @@
         var self = this;
         this.$context.on('mouseup', function(e) {
             var rect = Util.getRect(self.$scroller[0]);
-            var top = e.clientY - rect.top + self.$scroller[0].scrollTop - rect.paddingTop;
-            var _px = self.pxToPos(top, e.offsetX - rect.paddingLeft);
+            var top = e.clientY - rect.top + self.$scroller[0].scrollTop;
+            var _px = self.pxToPos(top, e.clientX - rect.left + self.$scroller[0].scrollTop);
             var line = _px.line;
             var column = _px.column;
             self.$cursor.hide();
@@ -404,18 +406,19 @@
                         self.updateLine(self.cursorPos.line, str);
                         break;
                     case 8: //backspace
-                        if(self.selection.startPos){
-                            self.deleteMutilLine(self.selection.startPos,self.selection.endPos);
+                        if (self.selection.startPos) {
+                            self.deleteMutilLine(self.selection.startPos, self.selection.endPos);
                             self.$selectBg.html('');
                             self.selection = {};
-                        }else{
+                        } else {
                             var str = self.linesText[self.cursorPos.line - 1];
                             str = str.substring(0, self.cursorPos.column - 1) + str.substr(self.cursorPos.column);
                             if (self.cursorPos.column > 0) {
                                 self.cursorPos.column--;
                                 self.updateLine(self.cursorPos.line, str);
                             } else if (self.cursorPos.line > 1) {
-                                var column = self.linesText[self.cursorPos.line - 2].length
+                                var column = self.linesText[self.cursorPos.line - 2].length;
+                                self.updateLine(self.cursorPos.line - 1, self.linesText[self.cursorPos.line - 2] + self.linesText[self.cursorPos.line - 1]);
                                 self.deleteLine(self.cursorPos.line);
                                 self.cursorPos.column = column;
                                 self.cursorPos.line--;
@@ -578,7 +581,9 @@
         var column = this.cursorPos.column;
         var rect = Util.getRect(this.$scroller[0]);
         var line = top;
+        left -= rect.paddingLeft;
         if (!ifLine) {
+            top -= rect.paddingTop;
             line = Math.ceil(top / this.charHight);
         }
         line = line < 1 ? 1 : line;
@@ -673,7 +678,6 @@
     }
     //删除一行
     _proto.deleteLine = function(line) {
-        this.updateLine(line - 1, this.linesText[line - 2] + this.linesText[line - 1]);
         this.linesText.splice(line - 1, 1);
         this.linesDom[line - 1].remove();
         this.$leftNumBg.find('.line_num:last').remove();
@@ -694,9 +698,9 @@
             this.cursorPos.column = startPos.column;
         } else {
             var str = this.linesText[startPos.line - 1].substring(0, startPos.column) + this.linesText[endPos.line - 1].substring(endPos.column);
-            this.updateLine(startPos.line,str);
-            for (var i = startPos.line+1; i <= endPos.line; i++) {
-                this.deleteLine(startPos.line+1);
+            this.updateLine(startPos.line, str);
+            for (var i = startPos.line + 1; i <= endPos.line; i++) {
+                this.deleteLine(startPos.line + 1);
             }
             this.cursorPos.line = startPos.line;
             this.cursorPos.column = startPos.column;
@@ -727,6 +731,8 @@
             this.selection.selectText += this.linesText[i - 1] + '\n';
         }
         this.selection.selectText = this.selection.selectText.substring(0, this.selection.selectText.length - 1);
+        this.selection.startPos = { line: 1, column: 0 };
+        this.selection.endPos = { line: this.linesText.length, column: this.linesText[this.linesText.length - 1].length }
     }
     //渲染选中背景
     _proto.renderRange = function(_top, _left, _width) {
