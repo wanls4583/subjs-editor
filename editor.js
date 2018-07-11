@@ -263,16 +263,25 @@
         this.$textarea.on('copy', function() {
             self.copyText = self.selectText;
             Util.copy(self.copyText);
-            console.log('copy',self.copyText)
         })
-        this.$textarea.on('paste', function() {
-            self.insertOnLine(self.copyText);
-            console.log('paste',self.copyText)
+        this.$textarea.on('paste', function(e) {
+            if(!self.copyText){
+                if(e.originalEvent.clipboardData){
+                    self.copyText = e.originalEvent.clipboardData.getData('text');
+                    self.insertOnLine(self.copyText);
+                }else{
+                    Util.nextFrame(function(){
+                        self.copyText = self.$textarea.val();
+                        self.insertOnLine(self.copyText);
+                    })
+                }
+            }else{
+                self.insertOnLine(self.copyText);
+            }
         })
         this.$textarea.on('cut', function() {
             self.copyText = self.selectText;
             Util.copy(self.copyText);
-            console.log('cut',self.copyText)
         })
     }
     //滚动条事件
