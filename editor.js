@@ -221,40 +221,40 @@
             self.selection.endPos = endPos;
             self.$selectBg.html('');
             if (startPos.line > endPos.line) {
-                var _tmp = startPos;
+                var tmp = startPos;
                 startPos = endPos;
-                endPos = _tmp;
+                endPos = tmp;
             } else if (startPos.line == endPos.line && startPos.column > endPos.column) {
-                var _tmp = startPos.column;
+                var tmp = startPos.column;
                 startPos.column = endPos.column;
-                endPos.column = _tmp;
+                endPos.column = tmp;
             }
             if (startPos.line == endPos.line) {
                 if (Math.abs(endPx.left - startPx.left) > self.charWidth) {
-                    var _str = self.linesText[startPos.line - 1];
-                    var _width = Util.getStrWidth(_str, self.charWidth, self.fullAngleCharWidth, startPos.column, endPos.column);
-                    var _px = self.posToPx(startPos.line, startPos.column);
-                    self.renderRange(_px.top, _px.left, _width);
-                    self.selection.selectText = _str.substring(startPos.column, endPos.column);
+                    var str = self.linesText[startPos.line - 1];
+                    var width = Util.getStrWidth(str, self.charWidth, self.fullAngleCharWidth, startPos.column, endPos.column);
+                    var px = self.posToPx(startPos.line, startPos.column);
+                    self.renderRange(px.top, px.left, width);
+                    self.selection.selectText = str.substring(startPos.column, endPos.column);
                 }
             } else {
-                var _str = self.linesText[startPos.line - 1];
-                var _maxWidth = self.$context[0].scrollWidth;
-                var _width = Util.getStrWidth(_str, self.charWidth, self.fullAngleCharWidth, 0, startPos.column);
-                var _px = self.posToPx(startPos.line, startPos.column);
-                self.renderRange(_px.top, _px.left, _maxWidth - _width);
-                self.selection.selectText = _str;
-                for (var _l = startPos.line + 1; _l < endPos.line; _l++) {
-                    _px = self.posToPx(_l, 0);
-                    self.renderRange(_px.top, rect.paddingLeft, _maxWidth);
+                var str = self.linesText[startPos.line - 1];
+                var maxWidth = self.$context[0].scrollWidth;
+                var width = Util.getStrWidth(str, self.charWidth, self.fullAngleCharWidth, 0, startPos.column);
+                var px = self.posToPx(startPos.line, startPos.column);
+                self.renderRange(px.top, px.left, maxWidth - width);
+                self.selection.selectText = str;
+                for (var l = startPos.line + 1; l < endPos.line; l++) {
+                    px = self.posToPx(l, 0);
+                    self.renderRange(px.top, rect.paddingLeft, maxWidth);
                     self.selection.selectText += '\n'
-                    self.linesText[_l - 1];
+                    self.linesText[l - 1];
                 }
-                _str = self.linesText[endPos.line - 1];
-                _width = Util.getStrWidth(_str, self.charWidth, self.fullAngleCharWidth, 0, endPos.column);
-                _px = self.posToPx(endPos.line, 0);
-                self.renderRange(_px.top, _px.left, _width);
-                self.selection.selectText += '\n' + _str.substring(0, endPos.column);
+                str = self.linesText[endPos.line - 1];
+                width = Util.getStrWidth(str, self.charWidth, self.fullAngleCharWidth, 0, endPos.column);
+                px = self.posToPx(endPos.line, 0);
+                self.renderRange(px.top, px.left, width);
+                self.selection.selectText += '\n' + str.substring(0, endPos.column);
             }
         }
     }
@@ -492,6 +492,7 @@
         this.$scroller.append(this.$cursor);
         var show = true;
         var self = this;
+
         function flicker() {
             if (show) {
                 self.$cursor.css('visibility', 'visible');
@@ -503,7 +504,7 @@
                 flicker();
             }, 350);
         }
-        if(!self.flickerTimer){
+        if (!self.flickerTimer) {
             flicker();
         }
     }
@@ -870,7 +871,7 @@
                                         //preReg和suffixReg存在同行和非同行两种情况
                                         if (preObj.line < currentLine || preObj.line == currentLine && suffixObj.start > preObj.end) {
                                             //preObj.endSuffix不存在、已删除，或者preObj.endSuffix包含当前suffixObj区域，才可能被suffixObj所取代
-                                            if ((!preObj.endSuffix || preObj.endSuffix.del || preObj.endSuffix.line > currentLine || preObj.endSuffix.line == currentLine && preObj.endSuffix.start > suffixObj.start)) {
+                                            if (!preObj.endSuffix && preObj == self.lineEndPreReg || preObj.endSuffix && (preObj.endSuffix.del || preObj.endSuffix.line > currentLine || preObj.endSuffix.line == currentLine && preObj.endSuffix.start > suffixObj.start)) {
                                                 ifDo = true;
                                             }
                                         }
@@ -911,8 +912,8 @@
         //检测preReg
         function _checkPairPreReg() {
             checkPreRegArr.sort();
-            for (var _l = 0; _l < checkPreRegArr.length; _l++) {
-                var currentLine = checkPreRegArr[_l];
+            for (var l = 0; l < checkPreRegArr.length; l++) {
+                var currentLine = checkPreRegArr[l];
                 var lineDonePreReg = self.donePreReg[currentLine - 1] || {};
                 //先处理需要删除的修饰，避免删掉新增的修饰
                 for (var column in lineDonePreReg) {
@@ -935,6 +936,39 @@
                                 if (preObj.endSuffix.line > preObj.line) {
                                     _delDecoration(self.linesDecoration[line - 1], { start: preObj.endSuffix.decoStart, end: preObj.endSuffix.end, className: className });
                                     self.linesDom[line - 1].find('.code').html(renderHTML(line));
+                                }
+                                //寻找其修饰的区域是否存储plain preReg
+                                var sf = preObj.endSuffix;
+                                for (var i = currentLine; i <= sf.line; i++) {
+                                    var ldpr = self.donePreReg[i - 1];
+                                    for (var c in ldpr) {
+                                        var pr = ldpr[c][regIndex];
+                                        if (pr && pr.plain && (i > currentLine && i < sf.line || i == currentLine && i < sf.line && pr.start > preObj.start || i > currentLine && i == sf.line && pr.start < sf.start || currentLine == sf.line && pr.start > preObj.starat && pr.start < sf.start)) {
+                                            pr.plain = false;
+                                            pr.undo = true;
+                                            if (checkPreRegArr.indexOf(i) == -1) {
+                                                checkPreRegArr.push(i);
+                                                checkPreRegArr.sort();
+                                            }
+                                        }
+                                    }
+                                }
+                            } else if (!preObj.plain) {
+                                //寻找其修饰的区域是否存储plain preReg
+                                var sf = preObj.endSuffix;
+                                for (var i = currentLine; i <= self.linesText.length; i++) {
+                                    var ldpr = self.donePreReg[i - 1];
+                                    for (var c in ldpr) {
+                                        var pr = ldpr[c][regIndex];
+                                        if (pr && pr.plain && (i > currentLine || i == currentLine && i < sf.line && pr.start > preObj.start)) {
+                                            pr.plain = false;
+                                            pr.undo = true;
+                                            if (checkPreRegArr.indexOf(i) == -1) {
+                                                checkPreRegArr.push(i);
+                                                checkPreRegArr.sort();
+                                            }
+                                        }
+                                    }
                                 }
                             }
                             //删除本行修饰
@@ -1062,8 +1096,8 @@
         }
         //检测当前行是否在多行修饰中
         function _checkLineIfInPair(currentLine) {
-            for (var tmp = 1; tmp < currentLine; tmp++) {
-                var lineDonePreReg = self.donePreReg[tmp - 1];
+            for (var i = 1; i < currentLine; i++) {
+                var lineDonePreReg = self.donePreReg[i - 1];
                 if (lineDonePreReg) {
                     for (var column in lineDonePreReg) {
                         for (var regIndex in lineDonePreReg[column]) {
@@ -1089,8 +1123,8 @@
         function _insertDecoration(lineDecoration, decoration) {
             var ifDo = true;
             for (var i = 0; i < lineDecoration.length; i++) { //删除和decoration有交叉的修饰
-                var _l = lineDecoration[i];
-                if (decoration.className == _l.className && _l.start <= decoration.start && _l.end >= decoration.end && _l.end - _l.start > decoration.end - decoration.start) {
+                var l = lineDecoration[i];
+                if (decoration.className == l.className && l.start <= decoration.start && l.end >= decoration.end && l.end - l.start > decoration.end - decoration.start) {
                     ifDo = false;
                     break;
                 }
@@ -1099,8 +1133,8 @@
                 return;
             }
             for (var i = 0; i < lineDecoration.length; i++) { //删除和decoration有交叉的修饰
-                var _l = lineDecoration[i];
-                if (!(_l.start > decoration.end || _l.end < decoration.start)) {
+                var l = lineDecoration[i];
+                if (!(l.start > decoration.end || l.end < decoration.start)) {
                     lineDecoration.splice(i, 1);
                     i--;
                 }
