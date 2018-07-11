@@ -882,6 +882,7 @@
                                         if (checkPreRegArr.indexOf(preObj.line) == -1) {
                                             checkPreRegArr.push(preObj.line);
                                         }
+                                        __getNextNearPreReg(preObj,suffixObj,regIndex);
                                         break;
                                     }
                                 }
@@ -895,6 +896,7 @@
                             if (checkPreRegArr.indexOf(suffixObj.startPre.line) == -1) {
                                 checkPreRegArr.push(suffixObj.startPre.line);
                             }
+                            __getNextNearPreReg(suffixObj.startPre,suffixObj,regIndex);
                         }
                         delete matchs[regIndex];
                         if (Util.keys(matchs).length == 0) {
@@ -903,6 +905,23 @@
                     } else if (suffixObj.startPre) {
                         if (renderArr.indexOf(suffixObj.startPre) == -1) {
                             renderArr.push(suffixObj.startPre);
+                        }
+                    }
+                }
+            }
+            //获取将要处理的preReg之后最近的一个preReg，这个最近的preReg可能受到影响
+            function __getNextNearPreReg(preReg,endSuffix,regIndex){
+                if(endSuffix){
+                    for(var i=endSuffix.line; i<=self.linesText.length; i++){
+                        var ldpr = self.donePreReg[i-1];
+                        for(var c in ldpr){
+                            var pr = ldpr[c][regIndex]
+                            if(pr && (pr.line > endSuffix.line || pr.line == endSuffix.line && pr.start > endSuffix.start)){
+                                pr.undo = true;
+                                if (checkPreRegArr.indexOf(pr.startPre) == -1) {
+                                    checkPreRegArr.push(pr.line);
+                                }
+                            }
                         }
                     }
                 }
