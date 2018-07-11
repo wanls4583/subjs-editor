@@ -292,6 +292,8 @@
             if(self.selection.startPos){
                 self.deleteMutilLine(self.selection.startPos,self.selection.endPos);
             }
+            self.$selectBg.html('');
+            self.selection = {};
         })
         this.$textarea.on('select', function() {
             //全选
@@ -402,16 +404,22 @@
                         self.updateLine(self.cursorPos.line, str);
                         break;
                     case 8: //backspace
-                        var str = self.linesText[self.cursorPos.line - 1];
-                        str = str.substring(0, self.cursorPos.column - 1) + str.substr(self.cursorPos.column);
-                        if (self.cursorPos.column > 0) {
-                            self.cursorPos.column--;
-                            self.updateLine(self.cursorPos.line, str);
-                        } else if (self.cursorPos.line > 1) {
-                            var column = self.linesText[self.cursorPos.line - 2].length
-                            self.deleteLine(self.cursorPos.line);
-                            self.cursorPos.column = column;
-                            self.cursorPos.line--;
+                        if(self.selection.startPos){
+                            self.deleteMutilLine(self.selection.startPos,self.selection.endPos);
+                            self.$selectBg.html('');
+                            self.selection = {};
+                        }else{
+                            var str = self.linesText[self.cursorPos.line - 1];
+                            str = str.substring(0, self.cursorPos.column - 1) + str.substr(self.cursorPos.column);
+                            if (self.cursorPos.column > 0) {
+                                self.cursorPos.column--;
+                                self.updateLine(self.cursorPos.line, str);
+                            } else if (self.cursorPos.line > 1) {
+                                var column = self.linesText[self.cursorPos.line - 2].length
+                                self.deleteLine(self.cursorPos.line);
+                                self.cursorPos.column = column;
+                                self.cursorPos.line--;
+                            }
                         }
                         break;
                     case 13: //换行
@@ -687,8 +695,8 @@
         } else {
             var str = this.linesText[startPos.line - 1].substring(0, startPos.column) + this.linesText[endPos.line - 1].substring(endPos.column);
             this.updateLine(startPos.line,str);
-            for (var i = startPos.line + 1; i <= endPos.line; i++) {
-                this.deleteLine(i);
+            for (var i = startPos.line+1; i <= endPos.line; i++) {
+                this.deleteLine(startPos.line);
             }
             this.cursorPos.line = startPos.line;
             this.cursorPos.column = startPos.column;
