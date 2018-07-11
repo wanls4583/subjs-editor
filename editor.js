@@ -217,8 +217,6 @@
         function _renderSelectBg() {
             var startPos = self.pxToPos(startPx.top, startPx.left);
             var endPos = self.pxToPos(endPx.top, endPx.left);
-            self.selection.startPos = startPos;
-            self.selection.endPos = endPos;
             self.$selectBg.html('');
             if (startPos.line > endPos.line) {
                 var tmp = startPos;
@@ -229,6 +227,8 @@
                 startPos.column = endPos.column;
                 endPos.column = tmp;
             }
+            self.selection.startPos = startPos;
+            self.selection.endPos = endPos;
             if (startPos.line == endPos.line) {
                 if (Math.abs(endPx.left - startPx.left) > self.charWidth) {
                     var str = self.linesText[startPos.line - 1];
