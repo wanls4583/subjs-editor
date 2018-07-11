@@ -57,15 +57,15 @@
                 window.getSelection().addRange(range);
             }
         },
-        copy: function(value){
+        copy: function(value) {
             var element = document.createElement('SPAN');
             element.textContent = value;
             document.body.appendChild(element);
             this.select(element);
-            if(document.execCommand){
+            if (document.execCommand) {
                 document.execCommand('copy');
-            }else{
-                 window.clipboardData.setData('text', value);
+            } else {
+                window.clipboardData.setData('text', value);
             }
             element.remove ? element.remove() : element.removeNode(true);
         },
@@ -263,37 +263,41 @@
         var self = this;
         this.$textarea.on('copy', function() {
             self.copyText = self.selectText;
-            Util.copy(self.copyText);
-            console.log('copy')
+            self.$textarea.val(self.copyText);
+            self.$textarea.select();
         })
         this.$textarea.on('paste', function(e) {
-            if(!self.copyText){
-                if(e.originalEvent.clipboardData){
+            if (!self.copyText) {
+                if (e.originalEvent.clipboardData) {
                     self.copyText = e.originalEvent.clipboardData.getData('text');
                     self.insertOnLine(self.copyText);
                 }
-            }else{
+            } else {
                 self.insertOnLine(self.copyText);
             }
         })
         this.$textarea.on('cut', function() {
             self.copyText = self.selectText;
-            Util.copy(self.copyText);
+            self.$textarea.val(self.copyText);
+            self.$textarea.select();
         })
         this.$textarea.on('select', function() {
             //全选
-            if(Util.getSelectedText() == self.selectAllText){
-                self.selectText = '';
-                self.$selectBg.html('');
-                var width = self.$context[0].scrollWidth;
-                for(var i=1;i<=self.linesText.length;i++){
-                    var px = self.posToPx(i,0);
-                    self.renderRange(px.top,px.left,width);
-                    self.selectText+=self.linesText[i-1]+'\n';
-                }
-                self.selectText.substring(0,self.selectText.length-1);
-                self.$textarea.val('');//防止下次触发全选
+            if (Util.getSelectedText() == self.selectAllText) {
+                self.selectAll();
+                self.$textarea.val(''); //防止下次触发全选
             }
+        })
+        this.$textarea.on('mousedown', function() {
+            self.$textarea[0].focus();
+            if (self.selectText) {
+                self.$textarea.val(self.selectText);
+                self.$textarea[0].select();
+            }
+            Util.nextFrame(function() {
+                self.selectAllText = Math.random();
+                self.$textarea.val(self.selectAllText); //触发全选
+            });
         })
     }
     //滚动条事件
@@ -326,11 +330,11 @@
                     'z-index': '1'
                 })
                 self.$textarea[0].focus();
-                if(self.selectText){
+                if (self.selectText) {
                     self.$textarea.val(self.selectText);
                     self.$textarea[0].select();
                 }
-                Util.nextFrame(function(){
+                Util.nextFrame(function() {
                     self.selectAllText = Math.random();
                     self.$textarea.val(self.selectAllText); //触发全选
                 });
@@ -345,6 +349,11 @@
             self.$textarea.val('');
             if (e.ctrlKey && e.keyCode == 65) { //ctrl+a
                 e.preventDefault();
+                self.selectAll();
+            } else if (e.ctrlKey && e.keyCode == 67) { //ctrl+c
+                self.$textarea.val('');
+            } else if (e.ctrlKey && e.keyCode == 86) { //ctrl+v
+                self.$textarea.val('');
             } else {
                 switch (e.keyCode) {
                     case 37: //left arrow
@@ -607,6 +616,17 @@
             this.cursorPos.column = strs[tmp].length;
         }
         this.updateCursorPos();
+    }
+    _proto.selectAll = function() {
+        this.selectText = '';
+        this.$selectBg.html('');
+        var width = this.$context[0].scrollWidth;
+        for (var i = 1; i <= this.linesText.length; i++) {
+            var px = this.posToPx(i, 0);
+            this.renderRange(px.top, px.left, width);
+            this.selectText += this.linesText[i - 1] + '\n';
+        }
+        this.selectText = this.selectText.substring(0, this.selectText.length - 1);
     }
     //渲染选中背景
     _proto.renderRange = function(_top, _left, _width) {
@@ -1122,4 +1142,5 @@
         }
     }
     window.SubJs = SubJs;
+    window.Util = Util;
 }($)
