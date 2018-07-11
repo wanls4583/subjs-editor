@@ -148,7 +148,7 @@
         this.cursorPos = { line: 1, column: 0 }; //光标位置
         this.donePreReg = []; //多行匹配开始记录
         this.doneSuffixReg = []; //多行匹配结束记录
-        this.selectText = '';
+        this.selection = {};
         this.options = {}; //参数
         if (typeof options.$wrapper == 'string') {
             this.options.$wrapper = $(options.$wrapper);
@@ -192,7 +192,9 @@
             var left = e.offsetX - rect.paddingLeft;
             startPx = { top: top, left: left };
             if (e.button != 2) {
-                self.selectText = '';
+                self.selection.selectText = '';
+                self.selection.startPos = null;
+                self.selection.endPos = null;
                 self.$selectBg.html('');
                 select = true;
                 Util.nextFrame(function() {
@@ -219,6 +221,8 @@
         function _renderSelectBg() {
             var startPos = self.pxToPos(startPx.top, startPx.left);
             var endPos = self.pxToPos(endPx.top, endPx.left);
+            self.selection.startPos = startPos;
+            self.selection.endPos = endPos;
             self.$selectBg.html('');
             if (startPos.line > endPos.line) {
                 var _tmp = startPos;
@@ -235,7 +239,7 @@
                     var _width = Util.getStrWidth(_str, self.charWidth, self.fullAngleCharWidth, startPos.column, endPos.column);
                     var _px = self.posToPx(startPos.line, startPos.column);
                     self.renderRange(_px.top, _px.left, _width);
-                    self.selectText = _str.substring(startPos.column, endPos.column);
+                    self.selection.selectText = _str.substring(startPos.column, endPos.column);
                 }
             } else {
                 var _str = self.linesText[startPos.line - 1];
@@ -243,18 +247,18 @@
                 var _width = Util.getStrWidth(_str, self.charWidth, self.fullAngleCharWidth, 0, startPos.column);
                 var _px = self.posToPx(startPos.line, startPos.column);
                 self.renderRange(_px.top, _px.left, _maxWidth - _width);
-                self.selectText = _str;
+                self.selection.selectText = _str;
                 for (var _l = startPos.line + 1; _l < endPos.line; _l++) {
                     _px = self.posToPx(_l, 0);
                     self.renderRange(_px.top, rect.paddingLeft, _maxWidth);
-                    self.selectText += '\n'
+                    self.selection.selectText += '\n'
                     self.linesText[_l - 1];
                 }
                 _str = self.linesText[endPos.line - 1];
                 _width = Util.getStrWidth(_str, self.charWidth, self.fullAngleCharWidth, 0, endPos.column);
                 _px = self.posToPx(endPos.line, 0);
                 self.renderRange(_px.top, _px.left, _width);
-                self.selectText += '\n' + _str.substring(0, endPos.column);
+                self.selection.selectText += '\n' + _str.substring(0, endPos.column);
             }
         }
     }
@@ -262,11 +266,14 @@
     _proto.bindEditorEvent = function() {
         var self = this;
         this.$textarea.on('copy', function() {
-            self.copyText = self.selectText;
+            self.copyText = self.selection.selectText;
             self.$textarea.val(self.copyText);
             self.$textarea.select();
         })
         this.$textarea.on('paste', function(e) {
+            if(self.selection.startPos){
+                self.deleteMutilLine(self.selection.startPos,self.selection.endPos);
+            }
             if (!self.copyText) {
                 if (e.originalEvent.clipboardData) {
                     self.copyText = e.originalEvent.clipboardData.getData('text');
@@ -275,11 +282,16 @@
             } else {
                 self.insertOnLine(self.copyText);
             }
+            self.$selectBg.html('');
+            self.selection = {};
         })
         this.$textarea.on('cut', function() {
-            self.copyText = self.selectText;
+            self.copyText = self.selection.selectText;
             self.$textarea.val(self.copyText);
             self.$textarea.select();
+            if(self.selection.startPos){
+                self.deleteMutilLine(self.selection.startPos,self.selection.endPos);
+            }
         })
         this.$textarea.on('select', function() {
             //全选
@@ -290,8 +302,8 @@
         })
         this.$textarea.on('mousedown', function() {
             self.$textarea[0].focus();
-            if (self.selectText) {
-                self.$textarea.val(self.selectText);
+            if (self.selection.selectText) {
+                self.$textarea.val(self.selection.selectText);
                 self.$textarea[0].select();
             }
             Util.nextFrame(function() {
@@ -330,8 +342,8 @@
                     'z-index': '1'
                 })
                 self.$textarea[0].focus();
-                if (self.selectText) {
-                    self.$textarea.val(self.selectText);
+                if (self.selection.selectText) {
+                    self.$textarea.val(self.selection.selectText);
                     self.$textarea[0].select();
                 }
                 Util.nextFrame(function() {
@@ -617,21 +629,6 @@
         }
         this.updateCursorPos();
     }
-    _proto.selectAll = function() {
-        this.selectText = '';
-        this.$selectBg.html('');
-        var width = this.$context[0].scrollWidth;
-        for (var i = 1; i <= this.linesText.length; i++) {
-            var px = this.posToPx(i, 0);
-            this.renderRange(px.top, px.left, width);
-            this.selectText += this.linesText[i - 1] + '\n';
-        }
-        this.selectText = this.selectText.substring(0, this.selectText.length - 1);
-    }
-    //渲染选中背景
-    _proto.renderRange = function(_top, _left, _width) {
-        this.$selectBg.append('<div class="select_line_bg" style="position:absolute;top:' + _top + 'px;left:' + _left + 'px;width:' + _width + 'px;height:' + this.charHight + 'px;background-color:rgba(0,0,0,0.3)"></div>');
-    }
     _proto.addLine = function(line, newConent) {
         this.linesText.splice(line - 1, 0, newConent);
         var $linePre = $('.pre_code_line')[line - 1];
@@ -664,7 +661,6 @@
         //重置行号
         this.resetDoneRegLine(line - 1);
         this.highlight(line);
-        this.pairHighlight(line - 1);
         this.pairHighlight(line);
     }
     //删除一行
@@ -682,6 +678,22 @@
         this.resetDoneRegLine(line - 1);
         this.pairHighlight(this.cursorPos.line - 1);
     }
+    //删除多行
+    _proto.deleteMutilLine = function(startPos, endPos) {
+        if (startPos.line == endPos.line) {
+            var str = this.linesText[startPos.line - 1];
+            this.updateLine(startPos.line, str.substring(0, startPos.column) + str.substring(endPos.column));
+            this.cursorPos.column = startPos.column;
+        } else {
+            var str = this.linesText[startPos.line - 1].substring(0, startPos.column) + this.linesText[endPos.line - 1].substring(endPos.column);
+            this.updateLine(startPos.line,str);
+            for (var i = startPos.line + 1; i <= endPos.line; i++) {
+                this.deleteLine(i);
+            }
+            this.cursorPos.line = startPos.line;
+            this.cursorPos.column = startPos.column;
+        }
+    }
     _proto.resetDoneRegLine = function(index) {
         for (var i = index; i < this.linesText.length; i++) {
             for (var column in this.donePreReg[i]) {
@@ -695,6 +707,22 @@
                 }
             }
         }
+    }
+    //全选
+    _proto.selectAll = function() {
+        this.selection.selectText = '';
+        this.$selectBg.html('');
+        var width = this.$context[0].scrollWidth;
+        for (var i = 1; i <= this.linesText.length; i++) {
+            var px = this.posToPx(i, 0);
+            this.renderRange(px.top, px.left, width);
+            this.selection.selectText += this.linesText[i - 1] + '\n';
+        }
+        this.selection.selectText = this.selection.selectText.substring(0, this.selection.selectText.length - 1);
+    }
+    //渲染选中背景
+    _proto.renderRange = function(_top, _left, _width) {
+        this.$selectBg.append('<div class="select_line_bg" style="position:absolute;top:' + _top + 'px;left:' + _left + 'px;width:' + _width + 'px;height:' + this.charHight + 'px;background-color:rgba(0,0,0,0.3)"></div>');
     }
     //单行代码高亮
     _proto.highlight = function(currentLine) {
