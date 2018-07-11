@@ -195,6 +195,11 @@
                 self.selectText = '';
                 self.$selectBg.html('');
                 select = true;
+                Util.nextFrame(function() {
+                    self.$textWrap.css({
+                        'z-index': '-1'
+                    });
+                })
             }
         });
         this.$wrapper.on('mousemove', function(e) {
@@ -229,7 +234,7 @@
                     var _str = self.linesText[startPos.line - 1];
                     var _width = Util.getStrWidth(_str, self.charWidth, self.fullAngleCharWidth, startPos.column, endPos.column);
                     var _px = self.posToPx(startPos.line, startPos.column);
-                    _renderRange(_px.top, _px.left, _width);
+                    self.renderRange(_px.top, _px.left, _width);
                     self.selectText = _str.substring(startPos.column, endPos.column);
                 }
             } else {
@@ -237,23 +242,19 @@
                 var _maxWidth = self.$context[0].scrollWidth;
                 var _width = Util.getStrWidth(_str, self.charWidth, self.fullAngleCharWidth, 0, startPos.column);
                 var _px = self.posToPx(startPos.line, startPos.column);
-                _renderRange(_px.top, _px.left, _maxWidth - _width);
+                self.renderRange(_px.top, _px.left, _maxWidth - _width);
                 self.selectText = _str;
                 for (var _l = startPos.line + 1; _l < endPos.line; _l++) {
                     _px = self.posToPx(_l, 0);
-                    _renderRange(_px.top, rect.paddingLeft, _maxWidth);
+                    self.renderRange(_px.top, rect.paddingLeft, _maxWidth);
                     self.selectText += '\n'
                     self.linesText[_l - 1];
                 }
                 _str = self.linesText[endPos.line - 1];
                 _width = Util.getStrWidth(_str, self.charWidth, self.fullAngleCharWidth, 0, endPos.column);
                 _px = self.posToPx(endPos.line, 0);
-                _renderRange(_px.top, _px.left, _width);
+                self.renderRange(_px.top, _px.left, _width);
                 self.selectText += '\n' + _str.substring(0, endPos.column);
-            }
-
-            function _renderRange(_top, _left, _width) {
-                self.$selectBg.append('<div class="select_line_bg" style="position:absolute;top:' + _top + 'px;left:' + _left + 'px;width:' + _width + 'px;height:' + self.charHight + 'px;background-color:rgba(0,0,0,0.3)"></div>');
             }
         }
     }
@@ -263,17 +264,13 @@
         this.$textarea.on('copy', function() {
             self.copyText = self.selectText;
             Util.copy(self.copyText);
+            console.log('copy')
         })
         this.$textarea.on('paste', function(e) {
             if(!self.copyText){
                 if(e.originalEvent.clipboardData){
                     self.copyText = e.originalEvent.clipboardData.getData('text');
                     self.insertOnLine(self.copyText);
-                }else{
-                    Util.nextFrame(function(){
-                        self.copyText = self.$textarea.val();
-                        self.insertOnLine(self.copyText);
-                    })
                 }
             }else{
                 self.insertOnLine(self.copyText);
@@ -282,6 +279,21 @@
         this.$textarea.on('cut', function() {
             self.copyText = self.selectText;
             Util.copy(self.copyText);
+        })
+        this.$textarea.on('select', function() {
+            //全选
+            if(Util.getSelectedText() == self.selectAllText){
+                self.selectText = '';
+                self.$selectBg.html('');
+                var width = self.$context[0].scrollWidth;
+                for(var i=1;i<=self.linesText.length;i++){
+                    var px = self.posToPx(i,0);
+                    self.renderRange(px.top,px.left,width);
+                    self.selectText+=self.linesText[i-1]+'\n';
+                }
+                self.selectText.substring(0,self.selectText.length-1);
+                self.$textarea.val('');//防止下次触发全选
+            }
         })
     }
     //滚动条事件
@@ -303,27 +315,25 @@
             var _px = self.pxToPos(top, e.offsetX - rect.paddingLeft);
             var line = _px.line;
             var column = _px.column;
-            self.$textarea.val(self.selectText);
             self.$cursor.hide();
-            self.$textWrap.css({
-                'z-index': '1'
-            })
             if (e.button != 2) { //单纯的点击
                 self.cursorPos.line = line;
                 self.cursorPos.column = column;
                 self.$textarea[0].focus();
-                self.$textWrap.css({
-                    'z-index': '-1',
-                });
                 self.updateCursorPos();
             } else {
-                self.$textarea[0].focus();
-                self.$textarea[0].select();
-                Util.nextFrame(function() {
-                    self.$textWrap.css({
-                        'z-index': '-1'
-                    });
+                self.$textWrap.css({
+                    'z-index': '1'
                 })
+                self.$textarea[0].focus();
+                if(self.selectText){
+                    self.$textarea.val(self.selectText);
+                    self.$textarea[0].select();
+                }
+                Util.nextFrame(function(){
+                    self.selectAllText = Math.random();
+                    self.$textarea.val(self.selectAllText); //触发全选
+                });
             }
         })
     }
@@ -597,6 +607,10 @@
             this.cursorPos.column = strs[tmp].length;
         }
         this.updateCursorPos();
+    }
+    //渲染选中背景
+    _proto.renderRange = function(_top, _left, _width) {
+        this.$selectBg.append('<div class="select_line_bg" style="position:absolute;top:' + _top + 'px;left:' + _left + 'px;width:' + _width + 'px;height:' + this.charHight + 'px;background-color:rgba(0,0,0,0.3)"></div>');
     }
     _proto.addLine = function(line, newConent) {
         this.linesText.splice(line - 1, 0, newConent);
