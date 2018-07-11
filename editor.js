@@ -174,7 +174,6 @@
         this.addLine(1, '');
     }
     _proto.bindEvent = function() {
-        this.bindCursorEvent();
         this.bindInputEvent();
         this.bindScrollEvent();
         this.bindSelectEvent();
@@ -201,11 +200,6 @@
                 self.selection.endPos = null;
                 self.$selectBg.html('');
                 select = true;
-                Util.nextFrame(function() {
-                    self.$textWrap.css({
-                        'z-index': '-1'
-                    });
-                })
             }
         });
         this.$wrapper.on('mousemove', function(e) {
@@ -304,47 +298,18 @@
                 self.$textarea.val(''); //防止下次触发全选
             }
         })
-        this.$textarea.on('mousedown', function() {
-            self.$textarea[0].focus();
-            if (self.selection.selectText) {
-                self.$textarea.val(self.selection.selectText);
-                self.$textarea[0].select();
-            }
-            Util.nextFrame(function() {
-                self.selectAllText = Math.random();
-                self.$textarea.val(self.selectAllText); //触发全选
-            });
-        })
-    }
-    //滚动条事件
-    _proto.bindScrollEvent = function() {
-        var self = this;
-        this.$scroller.on('scroll', function(e) {
-            self.$leftNumBg.css('top', -this.scrollTop + 'px');
-            self.$lineBg.css({
-                top: self.linesDom[self.cursorPos.line - 1][0].offsetTop - self.$scroller[0].scrollTop + 'px',
-            });
-        })
-    }
-    //光标事件
-    _proto.bindCursorEvent = function() {
-        var self = this;
-        this.$context.on('mouseup', function(e) {
+        this.$textarea.on('mouseup', function(e) {
             var rect = Util.getRect(self.$scroller[0]);
             var top = e.clientY - rect.top + self.$scroller[0].scrollTop;
             var _px = self.pxToPos(top, e.clientX - rect.left + self.$scroller[0].scrollTop);
             var line = _px.line;
             var column = _px.column;
-            self.$cursor.hide();
             if (e.button != 2) { //单纯的点击
                 self.cursorPos.line = line;
                 self.cursorPos.column = column;
                 self.$textarea[0].focus();
                 self.updateCursorPos();
             } else {
-                self.$textWrap.css({
-                    'z-index': '1'
-                })
                 self.$textarea[0].focus();
                 if (self.selection.selectText) {
                     self.$textarea.val(self.selection.selectText);
@@ -355,6 +320,16 @@
                     self.$textarea.val(self.selectAllText); //触发全选
                 });
             }
+        })
+    }
+    //滚动条事件
+    _proto.bindScrollEvent = function() {
+        var self = this;
+        this.$scroller.on('scroll', function(e) {
+            self.$leftNumBg.css('top', -this.scrollTop + 'px');
+            self.$lineBg.css({
+                top: self.linesDom[self.cursorPos.line - 1][0].offsetTop - self.$scroller[0].scrollTop + 'px',
+            });
         })
     }
     //输入事件
@@ -485,13 +460,13 @@
     }
     //左侧行号
     _proto.createLeftNumBg = function() {
-        this.$leftNumBg = $('<div class="line_num_bg" style="position:absolute;left:0;top:0;width:40px;min-height:100%;padding:5px 0;padding-bottom:' + this.charHight + 'px;box-sizing:border-box"></div>');
+        this.$leftNumBg = $('<div class="line_num_bg" style="position:absolute;left:0;top:0;z-index:2;width:40px;min-height:100%;padding:5px 0;padding-bottom:' + this.charHight + 'px;box-sizing:border-box"></div>');
         this.$wrapper.append(this.$leftNumBg);
     }
     //创建输入框
     _proto.creatTextarea = function() {
         var self = this;
-        var wrapStyle = 'position:absolute;top:0;left:0;right:0;bottom:0;z-index:-1;overflow:hidden;opacity:0;'
+        var wrapStyle = 'position:absolute;top:0;left:0;right:0;bottom:0;z-index:3;overflow:hidden;opacity:0;'
         var areaStyle = 'height:100%;width:100%;padding:0;outline:none;border-style:none;resize:none;overflow:hidden;background-color:transparent;color:transparent'
         this.$textWrap = $('\
             <div id="subjs_editor_textarea_wrap" style="' + wrapStyle + '">\
@@ -508,7 +483,7 @@
     }
     //创建当前行背景
     _proto.createLineBg = function() {
-        this.$lineBg = $('<div class="current_line_bg" style="display:none;position:absolute;left:0;right:0;z-index:-1;background-color:rgba(0,0,0,0.1);height:' + this.charHight + 'px"></div>');
+        this.$lineBg = $('<div class="current_line_bg" style="display:none;position:absolute;left:0;right:0;z-index:1;background-color:rgba(0,0,0,0.1);height:' + this.charHight + 'px"></div>');
         this.$wrapper.append(this.$lineBg);
     }
     //创建光标
@@ -517,7 +492,6 @@
         this.$scroller.append(this.$cursor);
         var show = true;
         var self = this;
-
         function flicker() {
             if (show) {
                 self.$cursor.css('visibility', 'visible');
@@ -525,11 +499,13 @@
                 self.$cursor.css('visibility', 'hidden');
             }
             show = !show;
-            setTimeout(function() {
+            self.flickerTimer = setTimeout(function() {
                 flicker();
             }, 350);
         }
-        flicker();
+        if(!self.flickerTimer){
+            flicker();
+        }
     }
     //更新光标坐标
     _proto.updateCursorPos = function() {
@@ -705,6 +681,7 @@
             this.cursorPos.line = startPos.line;
             this.cursorPos.column = startPos.column;
         }
+        this.updateCursorPos();
     }
     _proto.resetDoneRegLine = function(index) {
         for (var i = index; i < this.linesText.length; i++) {
