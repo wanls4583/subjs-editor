@@ -247,8 +247,7 @@
                 for (var l = startPos.line + 1; l < endPos.line; l++) {
                     px = self.posToPx(l, 0);
                     self.renderRange(px.top, rect.paddingLeft, maxWidth);
-                    self.selection.selectText += '\n'
-                    self.linesText[l - 1];
+                    self.selection.selectText += '\n' + self.linesText[l - 1];
                 }
                 str = self.linesText[endPos.line - 1];
                 width = Util.getStrWidth(str, self.charWidth, self.fullAngleCharWidth, 0, endPos.column);
