@@ -684,7 +684,7 @@
         this.doneSuffixReg.splice(line - 1, 1);
         //重置多行匹配对象的行号
         this.resetDoneRegLine(line - 1);
-        this.pairHighlight(this.cursorPos.line - 1);
+        this.pairHighlight(line - 1);
     }
     //删除多行
     _proto.deleteMutilLine = function(startPos, endPos) {
@@ -696,7 +696,7 @@
             var str = this.linesText[startPos.line - 1].substring(0, startPos.column) + this.linesText[endPos.line - 1].substring(endPos.column);
             this.updateLine(startPos.line,str);
             for (var i = startPos.line+1; i <= endPos.line; i++) {
-                this.deleteLine(startPos.line);
+                this.deleteLine(startPos.line+1);
             }
             this.cursorPos.line = startPos.line;
             this.cursorPos.column = startPos.column;
