@@ -613,8 +613,8 @@
         this.cursorPos.column += val.length;
         this.updateLine(this.cursorPos.line, strs[0]);
         for (var tmp = 1; tmp < strs.length; tmp++) { //粘贴操作可能存在换号符
-            this.addLine(this.cursorPos.line, strs[tmp]);
             this.cursorPos.line++;
+            this.addLine(this.cursorPos.line, strs[tmp]);
             this.cursorPos.column = strs[tmp].length;
         }
         this.updateCursorPos();
