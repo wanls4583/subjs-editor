@@ -278,8 +278,6 @@
             } else {
                 self.insertOnLine(self.copyText);
             }
-            self.$selectBg.html('');
-            self.selection = {};
         })
         this.$textarea.on('cut', function() {
             self.copyText = self.selection.selectText;
@@ -288,8 +286,6 @@
             if (self.selection.startPos) {
                 self.deleteMutilLine(self.selection.startPos, self.selection.endPos);
             }
-            self.$selectBg.html('');
-            self.selection = {};
         })
         this.$textarea.on('select', function() {
             //全选
@@ -304,6 +300,7 @@
             var _px = self.pxToPos(top, e.clientX - rect.left + self.$scroller[0].scrollTop);
             var line = _px.line;
             var column = _px.column;
+            self.$textarea.val(self.selection.selectText);
             if (e.button != 2) { //单纯的点击
                 self.cursorPos.line = line;
                 self.cursorPos.column = column;
@@ -312,7 +309,6 @@
             } else {
                 self.$textarea[0].focus();
                 if (self.selection.selectText) {
-                    self.$textarea.val(self.selection.selectText);
                     self.$textarea[0].select();
                 }
                 Util.nextFrame(function() {
@@ -383,8 +379,6 @@
                     case 8: //backspace
                         if (self.selection.startPos) {
                             self.deleteMutilLine(self.selection.startPos, self.selection.endPos);
-                            self.$selectBg.html('');
-                            self.selection = {};
                         } else {
                             var str = self.linesText[self.cursorPos.line - 1];
                             str = str.substring(0, self.cursorPos.column - 1) + str.substr(self.cursorPos.column);
@@ -417,15 +411,22 @@
                     default:
                         if (preCode > 222 && e.keyCode == 16) { //中文输入后shift延迟较大
                             setTimeout(function() {
-                                var val = self.$textarea.val();
-                                val && self.insertOnLine(val);
+                                _insertOnLine();
                             }, 150);
                         } else {
                             setTimeout(function() {
-                                var val = self.$textarea.val();
-                                val && self.insertOnLine(val);
+                                _insertOnLine();
                             }, 0)
                         }
+                }
+            }
+            function _insertOnLine(){
+                var val = self.$textarea.val();
+                if(val){
+                    if (self.selection.startPos) {
+                        self.deleteMutilLine(self.selection.startPos, self.selection.endPos);
+                    }
+                    self.insertOnLine(val);
                 }
             }
             preCode = e.keyCode;
@@ -690,6 +691,8 @@
             this.cursorPos.line = startPos.line;
             this.cursorPos.column = startPos.column;
         }
+        this.$selectBg.html('');
+        this.selection = {};
         this.updateCursorPos();
     }
     _proto.resetDoneRegLine = function(index) {
