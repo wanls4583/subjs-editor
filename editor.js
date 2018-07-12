@@ -232,15 +232,19 @@
             self.$textarea.select();
         })
         this.$textarea.on('paste', function(e) {
+            var copyText = ''; 
             if (self.selection.startPos) {
                 self.deleteMutilLine(self.selection.startPos, self.selection.endPos);
             }
-            if (!self.copyText) {
-                if (e.originalEvent.clipboardData) {
-                    self.copyText = e.originalEvent.clipboardData.getData('text');
-                    self.insertOnLine(self.copyText);
-                }
-            } else {
+            if (e.originalEvent.clipboardData) {
+                copyText = e.originalEvent.clipboardData.getData('text');
+            }
+            if(!copyText){
+                copyText = self.copyText;
+            }else{
+                self.copyText = copyText;
+            }
+            if(copyText){
                 self.insertOnLine(self.copyText);
             }
         })

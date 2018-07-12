@@ -107,7 +107,7 @@
         var self = this,
             hasRender = false,
             renderArr = [],
-            checkPreRegArr = [currentLine]
+            checkLines = [currentLine]
         _doMatch(currentLine);
         _checkPairSuffixReg(currentLine);
         _checkPairPreReg(currentLine);
@@ -217,10 +217,13 @@
                                     if (ifDo) {
                                         //重新检查preObj修饰
                                         preObj.undo = true;
-                                        if (checkPreRegArr.indexOf(preObj.line) == -1) {
-                                            checkPreRegArr.push(preObj.line);
+                                        if (checkLines.indexOf(preObj.line) == -1) {
+                                            checkLines.push(preObj.line);
                                         }
-                                        __getNextNearPreReg(preObj, suffixObj, regIndex);
+                                        if(suffixObj.startPre){
+                                        	suffixObj.startPre.endSuffix = undefined;
+                                        	suffixObj.startPre.plain = true;
+                                        }
                                         break;
                                     }
                                 }
@@ -231,10 +234,9 @@
                         if (suffixObj.startPre) {
                             //重新检查startPre修饰
                             suffixObj.startPre.undo = true;
-                            if (checkPreRegArr.indexOf(suffixObj.startPre.line) == -1) {
-                                checkPreRegArr.push(suffixObj.startPre.line);
+                            if (checkLines.indexOf(suffixObj.startPre.line) == -1) {
+                                checkLines.push(suffixObj.startPre.line);
                             }
-                            __getNextNearPreReg(suffixObj.startPre, suffixObj, regIndex);
                         }
                         delete matchs[regIndex];
                         if (Util.keys(matchs).length == 0) {
@@ -247,29 +249,12 @@
                     }
                 }
             }
-            //获取将要处理的preReg之后最近的一个preReg，这个最近的preReg可能受到影响
-            function __getNextNearPreReg(preReg, endSuffix, regIndex) {
-                if (endSuffix) {
-                    for (var i = endSuffix.line; i <= self.linesText.length; i++) {
-                        var ldpr = self.donePreReg[i - 1];
-                        for (var c in ldpr) {
-                            var pr = ldpr[c][regIndex]
-                            if (pr && (pr.line > endSuffix.line || pr.line == endSuffix.line && pr.start > endSuffix.start)) {
-                                pr.undo = true;
-                                if (checkPreRegArr.indexOf(pr.startPre) == -1) {
-                                    checkPreRegArr.push(pr.line);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
         }
         //检测preReg
         function _checkPairPreReg() {
-            checkPreRegArr.sort();
-            for (var l = 0; l < checkPreRegArr.length; l++) {
-                var currentLine = checkPreRegArr[l];
+            checkLines.sort();
+            for (var l = 0; l < checkLines.length; l++) {
+                var currentLine = checkLines[l];
                 var lineDonePreReg = self.donePreReg[currentLine - 1] || {};
                 //先处理需要删除的修饰，避免删掉新增的修饰
                 for (var column in lineDonePreReg) {
@@ -293,39 +278,9 @@
                                     _delDecoration(self.linesDecoration[line - 1], { start: preObj.endSuffix.decoStart, end: preObj.endSuffix.end, className: className });
                                     self.linesDom[line - 1].find('.code').html(renderHTML(line));
                                 }
-                                //寻找其修饰的区域是否存储plain preReg
-                                var sf = preObj.endSuffix;
-                                for (var i = currentLine; i <= sf.line; i++) {
-                                    var ldpr = self.donePreReg[i - 1];
-                                    for (var c in ldpr) {
-                                        var pr = ldpr[c][regIndex];
-                                        if (pr && pr.plain && (i > currentLine && i < sf.line || i == currentLine && i < sf.line && pr.start > preObj.start || i > currentLine && i == sf.line && pr.start < sf.start || currentLine == sf.line && pr.start > preObj.starat && pr.start < sf.start)) {
-                                            pr.plain = false;
-                                            pr.undo = true;
-                                            if (checkPreRegArr.indexOf(i) == -1) {
-                                                checkPreRegArr.push(i);
-                                                checkPreRegArr.sort();
-                                            }
-                                        }
-                                    }
-                                }
+                                __getNextNearPreReg(preObj);
                             } else if (!preObj.plain) {
-                                //寻找其修饰的区域是否存储plain preReg
-                                var sf = preObj.endSuffix;
-                                for (var i = currentLine; i <= self.linesText.length; i++) {
-                                    var ldpr = self.donePreReg[i - 1];
-                                    for (var c in ldpr) {
-                                        var pr = ldpr[c][regIndex];
-                                        if (pr && pr.plain && (i > currentLine || i == currentLine && i < sf.line && pr.start > preObj.start)) {
-                                            pr.plain = false;
-                                            pr.undo = true;
-                                            if (checkPreRegArr.indexOf(i) == -1) {
-                                                checkPreRegArr.push(i);
-                                                checkPreRegArr.sort();
-                                            }
-                                        }
-                                    }
-                                }
+                                __getNextNearPreReg(preObj);
                             }
                             //删除本行修饰
                             _delDecoration(self.linesDecoration[currentLine - 1], { start: preObj.start, end: preObj.decoEnd, className: className });
@@ -346,6 +301,35 @@
                         }
                     }
                 }
+                //寻找其后最近的一个preReg
+				//ie.	/*...
+				//		/*...*/...
+                function __getNextNearPreReg(preObj){
+                	var sf = preObj.endSuffix;
+                	var done = false;
+                	for (var i = preObj.line; !done && i <= self.linesText.length; i++) {
+                        var ldpr = self.donePreReg[i - 1];
+                        for (var c in ldpr) {
+                            var pr = ldpr[c][regIndex];
+                            //不存在endSuffix的情况
+                            if (!sf && pr && (i > preObj.line || i == preObj.line && pr.start > preObj.start)) {
+                                done = true;
+                            //存在endSuffix的情况
+                            }else if (sf && pr && (i > preObj.line && i < sf.line || i == preObj.line && i < sf.line && pr.start > preObj.start || i > preObj.line && i == sf.line && pr.start < sf.start || preObj.line == sf.line && pr.start > preObj.starat && pr.start < sf.start)) {
+                                done = true;
+                            }
+                            if(done){
+                            	pr.plain = false;
+                                pr.undo = true;
+                                if (checkLines.indexOf(i) == -1) {
+                                    checkLines.push(i);
+                                    checkLines.sort();
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
                 //处理需要添加的修饰
                 for (var column in lineDonePreReg) {
                     var matchs = lineDonePreReg[column];
@@ -353,11 +337,14 @@
                         var preObj = matchs[regIndex];
                         var className = pairReg[regIndex].className;
                         if (preObj.undo) { //新匹配到preReg
-                            var endSuffix = null,
+                            var preEndLine = -1,
+                            	endSuffix = null,
                                 preEndSuffix = preObj.endSuffix,
-                                preEndLine = endLine = self.linesText.length + 1;
+                                endLine = self.linesText.length + 1;
                             if (preEndSuffix) { //之前对应的suffix所在的行
                                 preEndLine = preEndSuffix.line;
+                            }else if(self.lineEndPreReg == preObj){
+                            	preEndLine = self.linesText.length + 1;
                             }
                             //寻找最近的匹配了suffixReg的行
                             var ifDo = false,
@@ -383,8 +370,12 @@
                                             endSuffix = suffixObj;
                                             endLine = endSuffix.line;
                                             endSuffix.undo = false;
+                                            if(endSuffix.startPre){
+                                            	endSuffix.startPre.endSuffix = undefined;
+                                            }
                                             endSuffix.startPre = preObj;
                                         }
+                                        //其后有suffix且不能与当前preObj配对，说明perObj存在某个preObj的修饰区域中
                                         if (hasSuffix) {
                                             break;
                                         }
@@ -414,7 +405,7 @@
                                 }
                                 if (!endSuffix) {
                                     self.lineEndPreReg = preObj;
-                                } else {
+                                } else if(self.lineEndPreReg == preObj) {
                                     self.lineEndPreReg = undefined;
                                 }
                                 //添加整行修饰
