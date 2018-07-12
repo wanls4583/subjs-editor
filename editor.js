@@ -144,6 +144,7 @@
         this.currentContent = ''; //光标所在的内容区域 
         this.linesText = []; //所有的行
         this.linesDom = []; //行对应的dom
+        this.leftNumDom = []; //行号dom
         this.linesDecoration = []; //行对应的修饰
         this.cursorPos = { line: 1, column: 0 }; //光标位置
         this.donePreReg = []; //多行匹配开始记录
@@ -482,7 +483,7 @@
     }
     //创建当前行背景
     _proto.createLineBg = function() {
-        this.$lineBg = $('<div class="current_line_bg" style="display:none;position:absolute;left:0;right:0;z-index:1;background-color:rgba(0,0,0,0.1);height:' + this.charHight + 'px"></div>');
+        this.$lineBg = $('<div class="current_line_bg" style="display:none;position:absolute;left:40px;right:0;z-index:1;height:' + this.charHight + 'px"></div>');
         this.$wrapper.append(this.$lineBg);
     }
     //创建光标
@@ -514,9 +515,18 @@
             top: pos.top + 'px',
             left: pos.left + 'px'
         });
+        this.$lineBg.css({
+            top: pos.top + 'px',
+        });
         this.cursorPos.top = pos.top;
         this.cursorPos.left = pos.left;
-        this.$lineBg.show();
+        if(!this.selection.selectText || this.selection.startPos.line == this.selection.endPos.line){
+            this.$lineBg.show();
+        }else{
+            this.$lineBg.hide();
+        }
+        this.$leftNumBg.find('.active').removeClass('active');
+        this.leftNumDom[this.cursorPos.line - 1].addClass('active');
         this.updateScroll();
     }
     _proto.updateScroll = function() {
@@ -534,9 +544,6 @@
             context.scrollLeft = cRect.offsetLeft + this.charWidth * 2 + 30 - (this.$wrapper[0].clientWidth - context.offsetLeft);
         }
         this.$leftNumBg.css('top', -context.scrollTop + 'px');
-        this.$lineBg.css({
-            top: this.linesDom[this.cursorPos.line - 1][0].offsetTop - context.scrollTop + 'px',
-        });
     }
     _proto.posToPx = function(line, column) {
         var self = this;
@@ -642,6 +649,7 @@
             'font-size': this.fontSize
         })
         this.$leftNumBg.append($num);
+        this.leftNumDom.splice(line - 1, 0, $num)
         this.linesDom.splice(line - 1, 0, $dom);
         //多行匹配pre记录后移一位
         this.donePreReg.splice(line - 1, 0, undefined);
@@ -656,8 +664,9 @@
     _proto.deleteLine = function(line) {
         this.linesText.splice(line - 1, 1);
         this.linesDom[line - 1].remove();
-        this.$leftNumBg.find('.line_num:last').remove();
         this.linesDom.splice(line - 1, 1);
+        this.leftNumDom[this.leftNumDom.length-1].remove();
+        this.leftNumDom.splice(this.leftNumDom.length-1, 1);
         //多行匹配pre记录前移一位
         this.donePreReg.splice(line - 1, 1);
         //多行匹配suffix记录前移一位
@@ -719,7 +728,7 @@
     }
     //渲染选中背景
     _proto.renderRange = function(_top, _left, _width) {
-        this.$selectBg.append('<div class="select_line_bg" style="position:absolute;top:' + _top + 'px;left:' + _left + 'px;width:' + _width + 'px;height:' + this.charHight + 'px;background-color:rgba(0,0,0,0.3)"></div>');
+        this.$selectBg.append('<div class="selection_line_bg" style="position:absolute;top:' + _top + 'px;left:' + _left + 'px;width:' + _width + 'px;height:' + this.charHight + 'px;background-color:rgb(181, 213, 255)"></div>');
     }
     //单行代码高亮
     _proto.highlight = function(currentLine) {

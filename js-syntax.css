@@ -38,6 +38,14 @@
     color: #999;
 }
 
+.line_num.active{
+    background-color:rgba(0,0,0,0.1);
+}
+
+.selection_line_bg{
+    background-color:rgba(0,0,0,0.2) !important;
+}
+
 .key {
     color: #7f0055;
 }
