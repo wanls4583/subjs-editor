@@ -1,6 +1,6 @@
 ! function() {
-	var Util = {
-		insertStr: function(str, index, cont) {
+    var Util = {
+        insertStr: function(str, index, cont) {
             return str.substring(0, index) + cont + str.substr(index);
         },
         deleteStr: function(str, index, size) {
@@ -23,23 +23,88 @@
                 return Number(arg1) - Number(arg2);
             })
         }
-	}
-	//多行匹配 ie. /*....*/
+    }
+    //多行匹配 ie. /*....*/
     var pairReg = [{
-        pre: /^(?:[^'"]*?|(?:[^'"]*?(?:'\w*'|"\w*")[^'"]*?)*?)(\/\*)/,
+        pre: /(?:^(?:[^'"]*?|(?:[^'"]*?(?:'\w*'|"\w*")[^'"]*?)*?)[^\*]|^)(\/\*)/,
         suffix: /^(?:[^'"]*?|(?:[^'"]*?(?:'\w*'|"\w*")[^'"]*?)*?)(\*\/)/,
         className: 'pair_comment'
     }]
     //单行匹配
-    var reg = [/^(?:[^'"]*?|(?:[^'"]*?(?:'\w*'|"\w*")[^'"]*?)*?)(\/\/[^\n]*)/, //单行注释
-        /'[\s\S]*?'|"[\s\S]*?"/, //字符串
-        /\b(?:break|continue|do|else|for|if|return|while|var|function|new|class)\b/, //关键字
-        /\!==|\!=|==|=|\?|\&\&|\&=|\&|\|\||\|=|\||>=|>|<=|<|\+=|\+|\-=|\-|\*=|\*|\/=|\//, //操作符
-        /\d+|\b(?:undefined|null)(?:[\b;]|$)/, //数字
-        /[.]?([\w]+)(?=\()/, //方法名
-    ]
-    //单行匹配修饰
-    var classNames = ['comment', 'string', 'key', 'oprator', 'number', 'method'];
+    var regs = [{
+        reg: /\/\/[^\n]*/,
+        exclude: /(?:'[^']*?|"[^"]*?)\/\/[^\n]*/,
+        className: 'comment'
+    }, {
+        reg: /'[\s\S]*?'|"[\s\S]*?"/,
+        className: 'string'
+    }, {
+        reg: [/\bbreak\b/, /\bcontinue\b/, /\bdo\b/, /\belse\b/, /\bfor\b/, /\bif\b/, /\bvar\b/, /\bfunction\b/, /\bnew\b/, /\bclass\b/],
+        className: 'key'
+    }, {
+        reg: /\+/,
+        exclude: /(?:'[^']*?|"[^"]*?)\+/,
+        className: 'oprator'
+    }, {
+        reg: /\-/,
+        exclude: /(?:'[^']*?|"[^"]*?)\-/,
+        className: 'oprator'
+    }, {
+        reg: /\*/,
+        exclude: /(?:'[^']*?|"[^"]*?)\*/,
+        className: 'oprator'
+    }, {
+        reg: /\//,
+        exclude: [/(?:'[^']*?|"[^"]*?)\//,/\/\//],
+        className: 'oprator'
+    }, {
+        reg: /\=/,
+        exclude: /(?:'[^']*?|"[^"]*?)\=/,
+        className: 'oprator'
+    }, {
+        reg: /\!/,
+        exclude: /(?:'[^']*?|"[^"]*?)\!/,
+        className: 'oprator'
+    }, {
+        reg: />/,
+        exclude: /(?:'[^']*?|"[^"]*?)>/,
+        className: 'oprator'
+    }, {
+        reg: /</,
+        exclude: /(?:'[^']*?|"[^"]*?)</,
+        className: 'oprator'
+    }, {
+        reg: /\&/,
+        exclude: /(?:'[^']*?|"[^"]*?)\&/,
+        className: 'oprator'
+    }, {
+        reg: /\|/,
+        exclude: /(?:'[^']*?|"[^"]*?)\|/,
+        className: 'oprator'
+    }, {
+        reg: /\?/,
+        exclude: /(?:'[^']*?|"[^"]*?)\?/,
+        className: 'oprator'
+    }, {
+        reg: /\:/,
+        exclude: /(?:'[^']*?|"[^"]*?)\:/,
+        className: 'oprator'
+    }, {
+        reg: /\b\d+\b/,
+        exclude: /(?:'[^']*?|"[^"]*?)\d+/,
+        className: 'number'
+    }, {
+        reg: /\bundefined\b/,
+        exclude: /(?:'[^']*?|"[^"]*?)\d+/,
+        className: 'number'
+    }, {
+        reg: /\bnull\b/,
+        exclude: /(?:'[^']*?|"[^"]*?)\d+/,
+        className: 'number'
+    }, {
+        reg: /[.]?([\w]+)(?=\()/,
+        className: 'method'
+    }]
     /**
      * JS 语法高亮
      * @param {[array]} linesText [行对应的内容]
@@ -58,34 +123,37 @@
         var self = this;
         var lineDecoration = []; //一行中已处理过的区域
         //单行匹配
-        for (var i = 0; i < reg.length; i++) {
-            var match = null,
-                regObj = reg[i],
-                preIndex = 0,
+        for (var i = 0; i < regs.length; i++) {
+            var regObj = regs[i].reg,
+                className = regs[i].className,
+                exclude = regs[i].exclude,
                 str = this.linesText[currentLine - 1];
-            while (match = regObj.exec(str)) {
-                var start, end;
-                if (!match[1]) {
-                    start = match.index + preIndex;
-                    end = start + match[0].length - 1;
-                } else {
-                    start = match.index + match[0].indexOf(match[1]) + preIndex;
-                    end = start + match[1].length - 1;
+            if (regObj instanceof Array) {
+                for (var j = 0; j < regObj.length; j++) {
+                    lineDecoration = lineDecoration.concat(_exec(regObj[j], str, className));
                 }
-                var className = classNames[i];
-                var ifDo = true;
-                for (var tmp = 0; tmp < lineDecoration.length; tmp++) {
-                    if (start >= lineDecoration[tmp].start && start <= lineDecoration[tmp].end || end >= lineDecoration[tmp].start && end <= lineDecoration[tmp].end) {
-                        ifDo = false;
+            } else {
+                var result = _exec(regObj, str, className);
+                var excludeArr = [];
+                if (exclude instanceof Array) {
+                    for (var j = 0; j < exclude.length; j++) {
+                        excludeArr = excludeArr.concat(_exec(exclude[j], str, className));
+                    }
+                } else if(exclude) {
+                    excludeArr = _exec(exclude, str, className);
+                }
+                for (var n = 0; n < excludeArr.length; n++) {
+                    var start = excludeArr[n].start,
+                        end = excludeArr[n].end;
+                    for (var m = 0; m < result.length; m++) {
+                        var tmp = result[m];
+                        if (start <= tmp.start && end >= tmp.start) {
+                            result.splice(m, 1);
+                            m--;
+                        }
                     }
                 }
-                str = str.substr(end + 1 - preIndex);
-                preIndex = end + 1;
-                regObj.lastIndex = 0;
-                if (!ifDo) {
-                    continue;
-                }
-                lineDecoration.push({ start: start, end: end, className: className });
+                lineDecoration = lineDecoration.concat(result);
             }
         }
         lineDecoration.sort(function(arg1, arg2) {
@@ -98,6 +166,27 @@
             }
         })
         this.linesDecoration[currentLine - 1] = lineDecoration;
+
+        function _exec(regObj, str, className) {
+            var match = null;
+            var result = [];
+            var preIndex = 0;
+            while (str && (match = regObj.exec(str))) {
+                var start, end;
+                if (!match[1]) {
+                    start = match.index + preIndex;
+                    end = start + match[0].length - 1;
+                } else {
+                    start = match.index + match[0].indexOf(match[1]) + preIndex;
+                    end = start + match[1].length - 1;
+                }
+                str = str.substr(end + 1 - preIndex);
+                preIndex = end + 1;
+                regObj.lastIndex = 0;
+                result.push({ start: start, end: end, className: className });
+            }
+            return result;
+        }
     }
     //多行代码高亮
     _proto.pairHighlight = function(currentLine) {
@@ -220,9 +309,9 @@
                                         if (checkLines.indexOf(preObj.line) == -1) {
                                             checkLines.push(preObj.line);
                                         }
-                                        if(suffixObj.startPre){
-                                        	suffixObj.startPre.endSuffix = undefined;
-                                        	suffixObj.startPre.plain = true;
+                                        if (suffixObj.startPre) {
+                                            suffixObj.startPre.endSuffix = undefined;
+                                            suffixObj.startPre.plain = true;
                                         }
                                         break;
                                     }
@@ -302,24 +391,24 @@
                     }
                 }
                 //寻找其后最近的一个preReg
-				//ie.	/*...
-				//		/*...*/...
-                function __getNextNearPreReg(preObj){
-                	var sf = preObj.endSuffix;
-                	var done = false;
-                	for (var i = preObj.line; !done && i <= self.linesText.length; i++) {
+                //ie.   /*...
+                //      /*...*/...
+                function __getNextNearPreReg(preObj) {
+                    var sf = preObj.endSuffix;
+                    var done = false;
+                    for (var i = preObj.line; !done && i <= self.linesText.length; i++) {
                         var ldpr = self.donePreReg[i - 1];
                         for (var c in ldpr) {
                             var pr = ldpr[c][regIndex];
                             //不存在endSuffix的情况
                             if (!sf && pr && (i > preObj.line || i == preObj.line && pr.start > preObj.start)) {
                                 done = true;
-                            //存在endSuffix的情况
-                            }else if (sf && pr && (i > preObj.line && i < sf.line || i == preObj.line && i < sf.line && pr.start > preObj.start || i > preObj.line && i == sf.line && pr.start < sf.start || preObj.line == sf.line && pr.start > preObj.starat && pr.start < sf.start)) {
+                                //存在endSuffix的情况
+                            } else if (sf && pr && (i > preObj.line && i < sf.line || i == preObj.line && i < sf.line && pr.start > preObj.start || i > preObj.line && i == sf.line && pr.start < sf.start || preObj.line == sf.line && pr.start > preObj.starat && pr.start < sf.start)) {
                                 done = true;
                             }
-                            if(done){
-                            	pr.plain = false;
+                            if (done) {
+                                pr.plain = false;
                                 pr.undo = true;
                                 if (checkLines.indexOf(i) == -1) {
                                     checkLines.push(i);
@@ -338,13 +427,13 @@
                         var className = pairReg[regIndex].className;
                         if (preObj.undo) { //新匹配到preReg
                             var preEndLine = -1,
-                            	endSuffix = null,
+                                endSuffix = null,
                                 preEndSuffix = preObj.endSuffix,
                                 endLine = self.linesText.length + 1;
                             if (preEndSuffix) { //之前对应的suffix所在的行
                                 preEndLine = preEndSuffix.line;
-                            }else if(self.lineEndPreReg == preObj){
-                            	preEndLine = self.linesText.length + 1;
+                            } else if (self.lineEndPreReg == preObj) {
+                                preEndLine = self.linesText.length + 1;
                             }
                             //寻找最近的匹配了suffixReg的行
                             var ifDo = false,
@@ -370,8 +459,8 @@
                                             endSuffix = suffixObj;
                                             endLine = endSuffix.line;
                                             endSuffix.undo = false;
-                                            if(endSuffix.startPre){
-                                            	endSuffix.startPre.endSuffix = undefined;
+                                            if (endSuffix.startPre) {
+                                                endSuffix.startPre.endSuffix = undefined;
                                             }
                                             endSuffix.startPre = preObj;
                                         }
@@ -405,7 +494,7 @@
                                 }
                                 if (!endSuffix) {
                                     self.lineEndPreReg = preObj;
-                                } else if(self.lineEndPreReg == preObj) {
+                                } else if (self.lineEndPreReg == preObj) {
                                     self.lineEndPreReg = undefined;
                                 }
                                 //添加整行修饰
