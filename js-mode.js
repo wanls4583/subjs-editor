@@ -79,15 +79,15 @@
     //多行匹配 ie. /*....*/
     var pairReg = [{
         pre: /\/\*/,
-        pre_exclude: [/(?:'[^']*?|"[^"]*?)\/\*/, /\*\/\*/],
+        pre_exclude: [/(?:'[^']*|"[^"]*)\/\*/, /\*\/\*/],
         suffix: /\*\//,
-        suffix_exclude: /(?:'[^']*?|"[^"]*?)\*\//,
+        suffix_exclude: /(?:'[^']*|"[^"]*)\*\//,
         className: 'pair_comment'
     }]
     //单行匹配
     var regs = [{
         reg: /\/\/[^\n]*/,
-        exclude: /(?:'[^']*?|"[^"]*?)\/\/[^\n]*/,
+        exclude: /(?:'[^']*|"[^"]*)\/\/[^\n]*/,
         className: 'comment'
     }, {
         reg: /'[\s\S]*?'|"[\s\S]*?"/,
@@ -97,63 +97,63 @@
         className: 'key'
     }, {
         reg: /\+/,
-        exclude: /(?:'[^']*?|"[^"]*?)\+/,
+        exclude: /(?:'[^']*|"[^"]*)\+/,
         className: 'oprator'
     }, {
         reg: /\-/,
-        exclude: /(?:'[^']*?|"[^"]*?)\-/,
+        exclude: /(?:'[^']*|"[^"]*)\-/,
         className: 'oprator'
     }, {
         reg: /\*/,
-        exclude: /(?:'[^']*?|"[^"]*?)\*/,
+        exclude: /(?:'[^']*|"[^"]*)\*/,
         className: 'oprator'
     }, {
         reg: /\//,
-        exclude: [/(?:'[^']*?|"[^"]*?)\//, /\/\//],
+        exclude: [/(?:'[^']*|"[^"]*)\//, /\/\//],
         className: 'oprator'
     }, {
         reg: /\=/,
-        exclude: /(?:'[^']*?|"[^"]*?)\=/,
+        exclude: /(?:'[^']*|"[^"]*)\=/,
         className: 'oprator'
     }, {
         reg: /\!/,
-        exclude: /(?:'[^']*?|"[^"]*?)\!/,
+        exclude: /(?:'[^']*|"[^"]*)\!/,
         className: 'oprator'
     }, {
         reg: />/,
-        exclude: /(?:'[^']*?|"[^"]*?)>/,
+        exclude: /(?:'[^']*|"[^"]*)>/,
         className: 'oprator'
     }, {
         reg: /</,
-        exclude: /(?:'[^']*?|"[^"]*?)</,
+        exclude: /(?:'[^']*|"[^"]*)</,
         className: 'oprator'
     }, {
         reg: /\&/,
-        exclude: /(?:'[^']*?|"[^"]*?)\&/,
+        exclude: /(?:'[^']*|"[^"]*)\&/,
         className: 'oprator'
     }, {
         reg: /\|/,
-        exclude: /(?:'[^']*?|"[^"]*?)\|/,
+        exclude: /(?:'[^']*|"[^"]*)\|/,
         className: 'oprator'
     }, {
         reg: /\?/,
-        exclude: /(?:'[^']*?|"[^"]*?)\?/,
+        exclude: /(?:'[^']*|"[^"]*)\?/,
         className: 'oprator'
     }, {
         reg: /\:/,
-        exclude: /(?:'[^']*?|"[^"]*?)\:/,
+        exclude: /(?:'[^']*|"[^"]*)\:/,
         className: 'oprator'
     }, {
         reg: /\b\d+\b/,
-        exclude: /(?:'[^']*?|"[^"]*?)\d+/,
+        exclude: /(?:'[^']*|"[^"]*)\d+/,
         className: 'number'
     }, {
         reg: /\bundefined\b/,
-        exclude: /(?:'[^']*?|"[^"]*?)\d+/,
+        exclude: /(?:'[^']*|"[^"]*)\d+/,
         className: 'number'
     }, {
         reg: /\bnull\b/,
-        exclude: /(?:'[^']*?|"[^"]*?)\d+/,
+        exclude: /(?:'[^']*|"[^"]*)\d+/,
         className: 'number'
     }, {
         reg: /[.]?([\w]+)(?=\()/,
