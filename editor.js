@@ -413,7 +413,7 @@
         this.fullAngleCharWidth = $('.char_width_2')[0].clientWidth / str2.length;
         this.fontSize = window.getComputedStyle ? window.getComputedStyle(dom, null).fontSize : dom.currentStyle.fontSize;
         this.$context[0].innerHTML = '';
-        console.log('charSize', this.charWidth, this.fullAngleCharWidth, this.charHight);
+        // console.log('charSize', this.charWidth, this.fullAngleCharWidth, this.charHight);
     }
     //输入框区域
     _proto.creatContext = function() {

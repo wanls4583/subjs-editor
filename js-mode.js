@@ -22,12 +22,66 @@
             arr.sort(function(arg1, arg2) {
                 return Number(arg1) - Number(arg2);
             })
+        },
+        execReg: function(reg, exclude, str) {
+            var result = [];
+            if (reg instanceof Array) {
+                for (var j = 0; j < reg.length; j++) {
+                    result = result.concat(_exec(reg[j], str));
+                }
+            } else {
+                var res = _exec(reg, str);
+                var excludeRes = [];
+                if (exclude instanceof Array) {
+                    for (var j = 0; j < exclude.length; j++) {
+                        excludeRes = excludeRes.concat(_exec(exclude[j], str));
+                    }
+                } else if (exclude) {
+                    excludeRes = _exec(exclude, str);
+                }
+                for (var n = 0; n < excludeRes.length; n++) {
+                    var start = excludeRes[n].start,
+                        end = excludeRes[n].end;
+                    for (var m = 0; m < res.length; m++) {
+                        var tmp = res[m];
+                        if (start <= tmp.start && end >= tmp.start) {
+                            res.splice(m, 1);
+                            m--;
+                        }
+                    }
+                }
+                result = result.concat(res);
+            }
+            return result;
+
+            function _exec(reg, str) {
+                var match = null;
+                var result = [];
+                var preIndex = 0;
+                while (str && (match = reg.exec(str))) {
+                    var start, end;
+                    if (!match[1]) {
+                        start = match.index + preIndex;
+                        end = start + match[0].length - 1;
+                    } else {
+                        start = match.index + match[0].indexOf(match[1]) + preIndex;
+                        end = start + match[1].length - 1;
+                    }
+                    str = str.substr(end + 1 - preIndex);
+                    preIndex = end + 1;
+                    reg.lastIndex = 0;
+                    result.push({ start: start, end: end });
+                }
+                return result;
+            }
         }
     }
     //多行匹配 ie. /*....*/
     var pairReg = [{
-        pre: /(?:^(?:[^'"]*?|(?:[^'"]*?(?:'\w*'|"\w*")[^'"]*?)*?)[^\*]|^)(\/\*)/,
-        suffix: /^(?:[^'"]*?|(?:[^'"]*?(?:'\w*'|"\w*")[^'"]*?)*?)(\*\/)/,
+        pre: /\/\*/,
+        pre_exclude: [/(?:'[^']*?|"[^"]*?)\/\*/, /\*\/\*/],
+        suffix: /\*\//,
+        suffix_exclude: /(?:'[^']*?|"[^"]*?)\*\//,
         className: 'pair_comment'
     }]
     //单行匹配
@@ -55,7 +109,7 @@
         className: 'oprator'
     }, {
         reg: /\//,
-        exclude: [/(?:'[^']*?|"[^"]*?)\//,/\/\//],
+        exclude: [/(?:'[^']*?|"[^"]*?)\//, /\/\//],
         className: 'oprator'
     }, {
         reg: /\=/,
@@ -124,37 +178,15 @@
         var lineDecoration = []; //一行中已处理过的区域
         //单行匹配
         for (var i = 0; i < regs.length; i++) {
-            var regObj = regs[i].reg,
+            var reg = regs[i].reg,
                 className = regs[i].className,
                 exclude = regs[i].exclude,
                 str = this.linesText[currentLine - 1];
-            if (regObj instanceof Array) {
-                for (var j = 0; j < regObj.length; j++) {
-                    lineDecoration = lineDecoration.concat(_exec(regObj[j], str, className));
-                }
-            } else {
-                var result = _exec(regObj, str, className);
-                var excludeArr = [];
-                if (exclude instanceof Array) {
-                    for (var j = 0; j < exclude.length; j++) {
-                        excludeArr = excludeArr.concat(_exec(exclude[j], str, className));
-                    }
-                } else if(exclude) {
-                    excludeArr = _exec(exclude, str, className);
-                }
-                for (var n = 0; n < excludeArr.length; n++) {
-                    var start = excludeArr[n].start,
-                        end = excludeArr[n].end;
-                    for (var m = 0; m < result.length; m++) {
-                        var tmp = result[m];
-                        if (start <= tmp.start && end >= tmp.start) {
-                            result.splice(m, 1);
-                            m--;
-                        }
-                    }
-                }
-                lineDecoration = lineDecoration.concat(result);
+            var result = Util.execReg(reg, exclude, str);
+            for (var j = 0; j < result.length; j++) {
+                result[j].className = className;
             }
+            lineDecoration = lineDecoration.concat(result);
         }
         lineDecoration.sort(function(arg1, arg2) {
             if (arg1.start < arg2.start) {
@@ -166,27 +198,6 @@
             }
         })
         this.linesDecoration[currentLine - 1] = lineDecoration;
-
-        function _exec(regObj, str, className) {
-            var match = null;
-            var result = [];
-            var preIndex = 0;
-            while (str && (match = regObj.exec(str))) {
-                var start, end;
-                if (!match[1]) {
-                    start = match.index + preIndex;
-                    end = start + match[0].length - 1;
-                } else {
-                    start = match.index + match[0].indexOf(match[1]) + preIndex;
-                    end = start + match[1].length - 1;
-                }
-                str = str.substr(end + 1 - preIndex);
-                preIndex = end + 1;
-                regObj.lastIndex = 0;
-                result.push({ start: start, end: end, className: className });
-            }
-            return result;
-        }
     }
     //多行代码高亮
     _proto.pairHighlight = function(currentLine) {
@@ -211,30 +222,25 @@
             }
             //多行匹配
             function _execPairReg(regIndex, ifPre) {
-                var regObj = null;
+                var reg = null,
+                    exclude = null,
+                    className = pairReg[regIndex].className;
                 if (ifPre) {
-                    regObj = pairReg[regIndex].pre;
+                    reg = pairReg[regIndex].pre;
+                    exclude = pairReg[regIndex].pre_exclude;
                 } else {
-                    regObj = pairReg[regIndex].suffix;
+                    reg = pairReg[regIndex].suffix;
+                    exclude = pairReg[regIndex].suffix_exclude;
                 }
-                var match = null,
-                    matchs = {},
-                    str = self.linesText[currentLine - 1],
-                    preIndex = 0;
-                while (match = regObj.exec(str)) {
-                    var className = pairReg[regIndex].className,
-                        start, end;
-                    if (!match[1]) {
-                        start = match.index + preIndex;
-                        end = start + match[0].length - 1;
-                    } else {
-                        start = match.index + match[0].indexOf(match[1]) + preIndex;
-                        end = start + match[1].length - 1;
-                    }
-                    matchs[start] = { line: currentLine, start: start, end: end, className: className } //start->end代表匹配的两端
-                    str = str.substr(end + 1 - preIndex);
-                    preIndex = end + 1;
-                    regObj.lastIndex = 0;
+                var matchs = {},
+                    result = null,
+                    str = self.linesText[currentLine - 1];
+                result = Util.execReg(reg, exclude, str);
+                for (var i = 0; i < result.length; i++) {
+                    var obj = result[i];
+                    obj.className = className;
+                    obj.line = currentLine;
+                    matchs[obj.start] = obj;
                 }
                 var doneRegObj = null;
                 if (ifPre) {
