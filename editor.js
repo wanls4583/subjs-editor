@@ -487,7 +487,7 @@
     }
     //创建光标
     _proto.createCrusor = function() {
-        this.$cursor = $('<i class="cursor" style="display:none;position:absolute;width:2px;height:' + this.charHight + 'px;background-color:#333"></i>');
+        this.$cursor = $('<i class="cursor" style="display:none;position:absolute;top:0;width:2px;height:' + this.charHight + 'px;background-color:#333"></i>');
         this.$scroller.append(this.$cursor);
         var show = true;
         var self = this;
@@ -702,14 +702,20 @@
         this.selection.selectText = '';
         this.$selectBg.html('');
         var width = this.$context[0].scrollWidth;
-        for (var i = 1; i <= this.linesText.length; i++) {
-            var px = this.posToPx(i, 0);
-            this.renderRange(px.top, px.left, width);
-            this.selection.selectText += this.linesText[i - 1] + '\n';
+        if(this.linesText.length > 1){
+            for (var i = 1; i <= this.linesText.length - 1; i++) {
+                var px = this.posToPx(i, 0);
+                this.renderRange(px.top, px.left, width);
+                this.selection.selectText += this.linesText[i - 1] + '\n';
+            }
         }
-        this.selection.selectText = this.selection.selectText.substring(0, this.selection.selectText.length - 1);
+        var line = this.linesText.length;
+        var width = Util.getStrWidth(this.linesText[line - 1],this.charWidth, this.fullAngleCharWidth,0,this.linesText[line - 1].length);
+        var px = this.posToPx(line, 0);
+        this.renderRange(px.top, px.left, width);
+        this.selection.selectText += this.linesText[line - 1];
         this.selection.startPos = { line: 1, column: 0 };
-        this.selection.endPos = { line: this.linesText.length, column: this.linesText[this.linesText.length - 1].length }
+        this.selection.endPos = { line: line, column: this.linesText[line - 1].length }
     }
     //渲染选中背景
     _proto.renderRange = function(_top, _left, _width) {
