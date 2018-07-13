@@ -99,6 +99,11 @@
                 width += match.length * (fullCharW - charW);
             }
             return width;
+        },
+        space: function(tabsize) {
+            var val = '';
+            for (var tmp = 0; tmp < tabsize; tmp++) { val += ' ' };
+            return val;
         }
     }
     /**
@@ -123,7 +128,7 @@
             return new Error('$wrapper must be string or object');
         }
         this.options.tabsize = options.tabsize || 4;
-        this.mode = window.SubJsMode && new SubJsMode(this.linesText,this.linesDom);
+        this.mode = window.SubJsMode && new SubJsMode(this.linesText, this.linesDom);
         this._init();
     }
     var _proto = SubJs.prototype;
@@ -143,6 +148,7 @@
         this.bindInputEvent();
         this.bindScrollEvent();
         this.bindSelectEvent();
+        this.bindMenuContextEvent();
     }
     //选中事件
     _proto.bindSelectEvent = function() {
@@ -152,7 +158,11 @@
         var rect = Util.getRect(self.$scroller[0]);
         var scrollTop = self.$scroller[0].scrollTop;
         var select = false;
-        this.$wrapper.on('selectstart', function(e) {
+        this.$context.on('selectstart', function(e) {
+            //阻止浏览器默认选中文字
+            e.preventDefault();
+        })
+        this.$leftNumBg.on('selectstart', function(e) {
             //阻止浏览器默认选中文字
             e.preventDefault();
         })
@@ -166,6 +176,9 @@
                 self.selection.endPos = null;
                 self.$selectBg.html('');
                 select = true;
+                self.$textWrap.css({
+                    'z-index': -1
+                });
             }
         });
         this.$wrapper.on('mousemove', function(e) {
@@ -173,6 +186,8 @@
                 var top = e.clientY - rect.top + scrollTop;
                 var left = e.clientX - rect.left + scrollTop;
                 endPx = { top: top, left: left };
+                var startPos = self.pxToPos(startPx.top, startPx.left);
+                var endPos = self.pxToPos(endPx.top, endPx.left);
                 _renderSelectBg();
             }
         });
@@ -225,7 +240,39 @@
             }
         }
     }
-    //鼠标编辑事件
+    //menuContext事件
+    _proto.bindMenuContextEvent = function() {
+        var self = this;
+        this.$context.on('mouseup', function(e) {
+            var rect = Util.getRect(self.$scroller[0]);
+            var top = e.clientY - rect.top + self.$scroller[0].scrollTop;
+            var _px = self.pxToPos(top, e.clientX - rect.left + self.$scroller[0].scrollTop);
+            var line = _px.line;
+            var column = _px.column;
+            if (e.button != 2) { //单纯的点击
+                self.cursorPos.line = line;
+                self.cursorPos.column = column;
+                self.$textarea[0].focus();
+                self.updateCursorPos();
+            } else {
+                //右键时把输入框层置顶，利用点击穿透原理，弹出texarea复制粘贴菜单
+                self.$textWrap.css({
+                    'z-index': 4
+                });
+                self.$textarea[0].focus();
+                if (self.selection.selectText) {
+                    self.$textarea.val(self.selection.selectText);
+                    self.$textarea[0].select();
+                }
+                Util.nextFrame(function() {
+                    self.selectAllText = Math.random();
+                    self.$textarea.val(self.selectAllText); //触发全选
+                });
+            }
+            select = false;
+        });
+    }
+    //copy,cut,paste事件
     _proto.bindEditorEvent = function() {
         var self = this;
         this.$textarea.on('copy', function() {
@@ -234,19 +281,19 @@
             self.$textarea.select();
         })
         this.$textarea.on('paste', function(e) {
-            var copyText = ''; 
+            var copyText = '';
             if (self.selection.startPos) {
                 self.deleteMutilLine(self.selection.startPos, self.selection.endPos);
             }
             if (e.originalEvent.clipboardData) {
                 copyText = e.originalEvent.clipboardData.getData('text');
             }
-            if(!copyText){
+            if (!copyText) {
                 copyText = self.copyText;
-            }else{
+            } else {
                 self.copyText = copyText;
             }
-            if(copyText){
+            if (copyText) {
                 self.insertOnLine(self.copyText);
             }
         })
@@ -265,29 +312,7 @@
                 self.$textarea.val(''); //防止下次触发全选
             }
         })
-        this.$textarea.on('mouseup', function(e) {
-            var rect = Util.getRect(self.$scroller[0]);
-            var top = e.clientY - rect.top + self.$scroller[0].scrollTop;
-            var _px = self.pxToPos(top, e.clientX - rect.left + self.$scroller[0].scrollTop);
-            var line = _px.line;
-            var column = _px.column;
-            self.$textarea.val(self.selection.selectText);
-            if (e.button != 2) { //单纯的点击
-                self.cursorPos.line = line;
-                self.cursorPos.column = column;
-                self.$textarea[0].focus();
-                self.updateCursorPos();
-            } else {
-                self.$textarea[0].focus();
-                if (self.selection.selectText) {
-                    self.$textarea[0].select();
-                }
-                Util.nextFrame(function() {
-                    self.selectAllText = Math.random();
-                    self.$textarea.val(self.selectAllText); //触发全选
-                });
-            }
-        })
+        this.$textarea.on('mouseup', function(e) {})
     }
     //滚动条事件
     _proto.bindScrollEvent = function() {
@@ -315,12 +340,12 @@
             } else {
                 switch (e.keyCode) {
                     case 37: //left arrow
-                        if (self.selection.startPos){
+                        if (self.selection.startPos) {
                             self.cursorPos.line = self.selection.startPos.line;
                             self.cursorPos.column = self.selection.startPos.column;
                             self.$selectBg.html('');
                             self.selection = {};
-                        }else if (self.cursorPos.column > 0) {
+                        } else if (self.cursorPos.column > 0) {
                             self.cursorPos.column--;
                         } else if (self.cursorPos.line > 1) {
                             self.cursorPos.line--;
@@ -328,23 +353,23 @@
                         }
                         break;
                     case 38: //up arrow
-                        if (self.selection.startPos){
+                        if (self.selection.startPos) {
                             self.cursorPos.line = self.selection.startPos.line;
                             self.cursorPos.column = self.selection.startPos.column;
                             self.$selectBg.html('');
                             self.selection = {};
-                        }else if (self.cursorPos.line > 1) {
+                        } else if (self.cursorPos.line > 1) {
                             self.cursorPos.line--;
                             self.cursorPos.column = self.pxToPos(self.cursorPos.line, self.cursorPos.left, true).column;
                         }
                         break;
                     case 39: //right arrow
-                        if (self.selection.startPos){
+                        if (self.selection.startPos) {
                             self.cursorPos.line = self.selection.endPos.line;
                             self.cursorPos.column = self.selection.endPos.column;
                             self.$selectBg.html('');
                             self.selection = {};
-                        }else if (self.cursorPos.column < self.linesText[self.cursorPos.line - 1].length) {
+                        } else if (self.cursorPos.column < self.linesText[self.cursorPos.line - 1].length) {
                             self.cursorPos.column++;
                         } else if (self.cursorPos.line < self.linesText.length) {
                             self.cursorPos.line++;
@@ -352,12 +377,12 @@
                         }
                         break;
                     case 40: //down arrow
-                        if (self.selection.startPos){
+                        if (self.selection.startPos) {
                             self.cursorPos.line = self.selection.endPos.line;
                             self.cursorPos.column = self.selection.endPos.column;
                             self.$selectBg.html('');
                             self.selection = {};
-                        }else if (self.cursorPos.line < self.linesText.length) {
+                        } else if (self.cursorPos.line < self.linesText.length) {
                             self.cursorPos.line++;
                             self.cursorPos.column = self.pxToPos(self.cursorPos.line, self.cursorPos.left, true).column;
                         }
@@ -365,7 +390,7 @@
                     case 46: //delete
                         if (self.selection.startPos) {
                             self.deleteMutilLine(self.selection.startPos, self.selection.endPos);
-                        }else{
+                        } else {
                             var str = self.linesText[self.cursorPos.line - 1];
                             str = str.substring(0, self.cursorPos.column) + str.substr(self.cursorPos.column + 1);
                             self.updateLine(self.cursorPos.line, str);
@@ -402,9 +427,27 @@
                         break;
                     case 9: //tab
                         e.preventDefault();
-                        var val = '';
-                        for (var tmp = 0; tmp < self.options.tabsize; tmp++) { val += ' ' };
-                        self.insertOnLine(val);
+                        //选中区域全体移动
+                        if (self.selection.startPos) {
+                            var starLine = self.selection.startPos.line,
+                                endLine = self.selection.endPos.line,
+                                space = Util.space(self.options.tabsize);
+                            for (var i = starLine; i <= endLine; i++) {
+                                if (!e.shiftKey) { //想后移动
+                                    self.linesDom[i - 1].find('.code').prepend(space);
+                                    self.linesText[i - 1] = space + self.linesText[i - 1];
+                                } else { //像前移动
+                                    _shiftTab(i);
+                                }
+                            }
+                        } else {
+                            if (!e.shiftKey) {
+                                var val = Util.space(self.options.tabsize);
+                                self.insertOnLine(val);
+                            } else {
+                                _shiftTab(self.cursorPos.line)
+                            }
+                        }
                         break;
                     default:
                         if (preCode > 222 && e.keyCode == 16) { //中文输入后shift延迟较大
@@ -418,13 +461,43 @@
                         }
                 }
             }
-            function _insertOnLine(){
+
+            function _insertOnLine() {
                 var val = self.$textarea.val();
-                if(val){
+                if (val) {
                     if (self.selection.startPos) {
                         self.deleteMutilLine(self.selection.startPos, self.selection.endPos);
                     }
                     self.insertOnLine(val);
+                }
+            }
+
+            function _shiftTab(line) {
+                var hl = self.linesDom[line - 1].find('.code').html();
+                if (hl.indexOf('    ') == 0) {
+                    self.linesDom[line - 1].find('.code').html(hl.substr(4));
+                    self.linesText[line - 1] = self.linesText[line - 1].substr(4);
+                    if(line == self.cursorPos.line){
+                        self.cursorPos.column -= 4;
+                    }
+                } else if (hl.indexOf('   ') == 0) {
+                    self.linesDom[line - 1].find('.code').html(hl.substr(3));
+                    self.linesText[line - 1] = self.linesText[line - 1].substr(3);
+                    if(line == self.cursorPos.line){
+                        self.cursorPos.column -= 3;
+                    }
+                } else if (hl.indexOf('  ') == 0) {
+                    self.linesDom[line - 1].find('.code').html(hl.substr(2));
+                    self.linesText[line - 1] = self.linesText[line - 1].substr(2);
+                    if(line == self.cursorPos.line){
+                        self.cursorPos.column -= 2;
+                    }
+                } else if (hl.indexOf(' ') == 0) {
+                    self.linesDom[line - 1].find('.code').html(hl.substr(1));
+                    self.linesText[line - 1] = self.linesText[line - 1].substr(1);
+                    if(line == self.cursorPos.line){
+                        self.cursorPos.column -= 1;
+                    }
                 }
             }
             preCode = e.keyCode;
@@ -442,7 +515,7 @@
         this.fullAngleCharWidth = $('.char_width_2')[0].clientWidth / str2.length;
         this.fontSize = window.getComputedStyle ? window.getComputedStyle(dom, null).fontSize : dom.currentStyle.fontSize;
         this.$context[0].innerHTML = '';
-        // console.log('charSize', this.charWidth, this.fullAngleCharWidth, this.charHight);
+        console.log('charSize', this.charWidth, this.fullAngleCharWidth, this.charHight);
     }
     //输入框区域
     _proto.creatContext = function() {
@@ -465,7 +538,7 @@
     //创建输入框
     _proto.creatTextarea = function() {
         var self = this;
-        var wrapStyle = 'position:absolute;top:0;left:0;right:0;bottom:0;z-index:4;overflow:hidden;opacity:0;'
+        var wrapStyle = 'position:absolute;top:0;left:0;right:0;bottom:0;z-index:-1;overflow:hidden;opacity:0;'
         var areaStyle = 'height:100%;width:100%;padding:0;outline:none;border-style:none;resize:none;overflow:hidden;background-color:transparent;color:transparent'
         this.$textWrap = $('\
             <div id="subjs_editor_textarea_wrap" style="' + wrapStyle + '">\
@@ -519,9 +592,9 @@
         });
         this.cursorPos.top = pos.top;
         this.cursorPos.left = pos.left;
-        if(!this.selection.selectText || this.selection.startPos.line == this.selection.endPos.line){
+        if (!this.selection.selectText || this.selection.startPos.line == this.selection.endPos.line) {
             this.$lineBg.show();
-        }else{
+        } else {
             this.$lineBg.hide();
         }
         this.$leftNumBg.find('.active').removeClass('active');
@@ -607,9 +680,9 @@
     //更新一行
     _proto.updateLine = function(line, newConent) {
         this.linesText[line - 1] = newConent;
-        if(this.mode){
+        if (this.mode) {
             this.mode.onUpdateLine(line);
-        }else{
+        } else {
             this.linesDom[line - 1].html(newConent);
         }
     }
@@ -653,7 +726,7 @@
         this.$leftNumBg.append($num);
         this.leftNumDom.push($num);
         this.linesDom.splice(line - 1, 0, $dom);
-        if(this.mode){
+        if (this.mode) {
             this.mode.onAddLine(line);
         }
     }
@@ -662,9 +735,9 @@
         this.linesText.splice(line - 1, 1);
         this.linesDom[line - 1].remove();
         this.linesDom.splice(line - 1, 1);
-        this.leftNumDom[this.leftNumDom.length-1].remove();
-        this.leftNumDom.splice(this.leftNumDom.length-1, 1);
-        if(this.mode){
+        this.leftNumDom[this.leftNumDom.length - 1].remove();
+        this.leftNumDom.splice(this.leftNumDom.length - 1, 1);
+        if (this.mode) {
             this.mode.onDeleteLine(line);
         }
     }
@@ -692,7 +765,7 @@
         this.selection.selectText = '';
         this.$selectBg.html('');
         var width = this.$context[0].scrollWidth;
-        if(this.linesText.length > 1){
+        if (this.linesText.length > 1) {
             for (var i = 1; i <= this.linesText.length - 1; i++) {
                 var px = this.posToPx(i, 0);
                 this.renderRange(px.top, px.left, width);
@@ -700,7 +773,7 @@
             }
         }
         var line = this.linesText.length;
-        var width = Util.getStrWidth(this.linesText[line - 1],this.charWidth, this.fullAngleCharWidth,0,this.linesText[line - 1].length);
+        var width = Util.getStrWidth(this.linesText[line - 1], this.charWidth, this.fullAngleCharWidth, 0, this.linesText[line - 1].length);
         var px = this.posToPx(line, 0);
         this.renderRange(px.top, px.left, width);
         this.selection.selectText += this.linesText[line - 1];
@@ -711,6 +784,5 @@
     _proto.renderRange = function(_top, _left, _width) {
         this.$selectBg.append('<div class="selection_line_bg" style="position:absolute;top:' + _top + 'px;left:' + _left + 'px;width:' + _width + 'px;height:' + this.charHight + 'px;background-color:rgb(181, 213, 255)"></div>');
     }
-    
     window.SubJs = SubJs;
-}($,window)
+}($, window)

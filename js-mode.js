@@ -158,7 +158,7 @@
     }, {
         reg: /\bvar\b/g,
         exclude: Util.excludeStrReg(/\bvar\b/),
-        className: 'storage_type'
+        className: 'type'
     }, {
         reg: /\bfunction\b/g,
         exclude: Util.excludeStrReg(/\bfunction\b/),
