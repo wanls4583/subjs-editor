@@ -44,7 +44,8 @@
                         end = excludeRes[n].end;
                     for (var m = 0; m < res.length; m++) {
                         var tmp = res[m];
-                        if (start <= tmp.start && end >= tmp.start) {
+                        //两个区域没有交叉
+                        if (!(start > tmp.end || end < tmp.start)) {
                             res.splice(m, 1);
                             m--;
                         }
@@ -64,6 +65,9 @@
             return result;
 
             function _exec(reg, str) {
+                if(!reg.global){
+                    throw new Error('reg is not global');
+                }
                 var match = null;
                 var result = [];
                 var preIndex = 0;
@@ -211,15 +215,15 @@
         exclude: Util.excludeStrReg(/\bnull\b/),
         className: 'number'
     }, {
-        reg: /[.]?([\$_a-zA-Z][\$_a-zA-Z0-9]*?)(?=\()/g, //ie. test(),.test()
-        exclude: [/'[^']*?'|"[^"]*?"/g, /function\s*?\(/g],
+        reg: /[\$_a-zA-Z][\$_a-zA-Z0-9]*?(?=\()/g, //ie. test()
+        exclude: [/'[^']*?'|"[^"]*?"/g, /function\s*?\(/g, /[.][\$_a-zA-Z][\$_a-zA-Z0-9]*?(?=\()/g], //ie. function test(),.test()
         className: 'function'
     }, {
         reg: /[\$_a-zA-Z][\$_a-zA-Z0-9]*?\s*?(?==\s*?function)/g, //ie. var test = function
-        exclude: /'[^']*?'|"[^"]*?"/g,
+        exclude: [/'[^']*?'|"[^"]*?"/g,/\.[\$_a-zA-Z][\$_a-zA-Z0-9]*?\s*?(?==\s*?function)/g], //ie. .test=function()
         className: 'function'
     }, {
-        reg: /function\s*?\(([\s\S]+?)\)/g, //ie. function(arg1,arg2)
+        reg: /function\s*?\(([\s\S]+?)\)|this|self/g, //ie. function(arg1,arg2)
         exclude: /'[^']*?'|"[^"]*?"/g,
         className: 'function_arg',
         callback: function(str, start, end) {
