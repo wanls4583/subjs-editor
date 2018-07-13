@@ -93,7 +93,40 @@
         reg: /'[\s\S]*?'|"[\s\S]*?"/,
         className: 'string'
     }, {
-        reg: [/\bbreak\b/, /\bcontinue\b/, /\bdo\b/, /\belse\b/, /\bfor\b/, /\bif\b/, /\bvar\b/, /\bfunction\b/, /\bnew\b/, /\bclass\b/],
+        reg: /\bcontinue\b/,
+        exclude: /'[\s\S]*?\bcontinue\b[\s\S]*?'|"[\s\S]*?\bcontinue\b[\s\S]*?"/,
+        className: 'key'
+    }, {
+        reg: /\bdo\b/,
+        exclude: /'[\s\S]*?\bdo\b[\s\S]*?'|"[\s\S]*?\bdo\b[\s\S]*?"/,
+        className: 'key'
+    }, {
+        reg: /\belse\b/,
+        exclude: /'[\s\S]*?\belse\b[\s\S]*?'|"[\s\S]*?\belse\b[\s\S]*?"/,
+        className: 'key'
+    }, {
+        reg: /\bfor\b/,
+        exclude: /'[\s\S]*?\bfor\b[\s\S]*?'|"[\s\S]*?\bfor\b[\s\S]*?"/,
+        className: 'key'
+    }, {
+        reg: /\bif\b/,
+        exclude: /'[\s\S]*?\bif\b[\s\S]*?'|"[\s\S]*?\bif\b[\s\S]*?"/,
+        className: 'key'
+    }, {
+        reg: /\bvar\b/,
+        exclude: /'[\s\S]*?\bvar\b[\s\S]*?'|"[\s\S]*?\bvar\b[\s\S]*?"/,
+        className: 'key'
+    }, {
+        reg: /\bfunction\b/,
+        exclude: /'[\s\S]*?\bfunction\b[\s\S]*?'|"[\s\S]*?\bfunction\b[\s\S]*?"/,
+        className: 'key'
+    }, {
+        reg: /\bnew\b/,
+        exclude: /'[\s\S]*?\bnew\b[\s\S]*?'|"[\s\S]*?\bnew\b[\s\S]*?"/,
+        className: 'key'
+    }, {
+        reg: /\bclass\b/,
+        exclude: /'[\s\S]*?\bclass\b[\s\S]*?'|"[\s\S]*?\bclass\b[\s\S]*?"/,
         className: 'key'
     }, {
         reg: /\+/,
@@ -156,8 +189,8 @@
         exclude: /'[\s\S]*?\bnull\b[\s\S]*?'|"[\s\S]*?\bnull\b[\s\S]*?"/,
         className: 'number'
     }, {
-        reg: /[.]?\(([\w]+)(?=\()/,
-        exclude: /'[\s\S]*?\([\w]+\)[\s\S]*?'|"[\s\S]*?\([\w]+\)[\s\S]*?"/,
+        reg: /[.]?([\w]+)(?=\()/,
+        exclude: /'[\s\S]*?[\w]+\([\s\S]*?'|"[\s\S]*?[\w]+\([\s\S]*?"/,
         className: 'method'
     }]
     /**

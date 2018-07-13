@@ -446,7 +446,7 @@
     }
     //输入框区域
     _proto.creatContext = function() {
-        this.$scroller = $('<div class="editor_scroller" style="position:relative;overflow:auto;margin-left:40px;height:100%;padding:5px 0 0 5px;box-sizing:border-box">\
+        this.$scroller = $('<div class="editor_scroller" style="position:relative;z-index:3;overflow:auto;margin-left:40px;height:100%;padding:5px 0 0 5px;box-sizing:border-box">\
                 <div class="editor_context" style="min-height:100%;cursor:text;"></div>\
                 <div class="editor_bg" style="position:absolute;left:0;top:0;z-index:-1"></div>\
             </div>');
@@ -465,7 +465,7 @@
     //创建输入框
     _proto.creatTextarea = function() {
         var self = this;
-        var wrapStyle = 'position:absolute;top:0;left:0;right:0;bottom:0;z-index:3;overflow:hidden;opacity:0;'
+        var wrapStyle = 'position:absolute;top:0;left:0;right:0;bottom:0;z-index:4;overflow:hidden;opacity:0;'
         var areaStyle = 'height:100%;width:100%;padding:0;outline:none;border-style:none;resize:none;overflow:hidden;background-color:transparent;color:transparent'
         this.$textWrap = $('\
             <div id="subjs_editor_textarea_wrap" style="' + wrapStyle + '">\

@@ -1,0 +1,63 @@
+.editor_wrap {
+    font-family: Consolas, Monaco, monospace;
+    font-size: 13px;
+    line-height: 1.2;
+    letter-spacing: .5px;
+    color: #fff;
+    background-color: rgb(40,41,35);
+}
+
+.editor_wrap textarea {
+    user-select: none;
+}
+
+.cursor {
+    width: 1px !important;
+    user-select: none;
+    background-color: #fff !important;
+}
+
+.current_line_bg {
+    user-select: none;
+}
+
+.line_num_bg {
+    color: #8F908A;
+    /*border-right: 1px solid rgb(72,71,66);*/
+}
+
+.line_num {
+    color: #999;
+}
+
+.line_num.active{
+    background-color:rgb(62,61,50);
+}
+
+.selection_line_bg{
+    background-color:rgb(72, 71, 61) !important;
+}
+
+.key {
+    color: #f92672;
+}
+
+.oprator {
+}
+
+.method {
+    color: #a6e22e;
+}
+
+.comment,
+.pair_comment {
+    color: #75715e;
+}
+
+.string {
+    color: #e6db74;
+}
+
+.number {
+    color: #ae81ff;
+}
