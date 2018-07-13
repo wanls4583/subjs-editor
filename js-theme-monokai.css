@@ -1,0 +1,91 @@
+.editor_wrap {
+    font-family: Consolas, Monaco, monospace;
+    font-size: 13px;
+    line-height: 1.2;
+    letter-spacing: .5px;
+    color: #F8F8F2;
+    background-color: #272822;
+}
+
+.editor_wrap textarea {
+    user-select: none;
+}
+
+.cursor {
+    width: 1px !important;
+    user-select: none;
+    background-color: #F8F8F0 !important;
+}
+
+.current_line_bg {
+    user-select: none;
+}
+
+.line_num_bg {
+    color: #272822;
+}
+
+.line_num {
+    color: #999;
+}
+
+.line_num.active{
+    background-color:#3E3D32;
+}
+
+.selection_line_bg{
+    background-color:#49483E !important;
+}
+
+.key {
+    color: #F92672;
+}
+
+.storage{
+    color: #66D9EF;
+}
+
+.class{
+    color: #A6E22E;
+}
+
+.function{
+    color: #A6E22E;
+}
+
+.function_arg{
+    color: #FD971F;
+}
+
+.tag{
+    color: #F92672;
+}
+
+.tag_attr{
+    color: #A6E22E;
+}
+
+.lib_function{
+    color: #66D9EF;
+}
+
+.lib_var{
+    color: #66D9EF;
+}
+
+.oprator {
+    color: #F92672;
+}
+
+.comment,
+.pair_comment {
+    color: #75715E;
+}
+
+.string {
+    color: #E6DB74;
+}
+
+.number {
+    color: #AE81FF;
+}

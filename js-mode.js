@@ -23,7 +23,7 @@
                 return Number(arg1) - Number(arg2);
             })
         },
-        execReg: function(reg, exclude, str) {
+        execReg: function(reg, exclude, str, callback) {
             var result = [];
             if (reg instanceof Array) {
                 for (var j = 0; j < reg.length; j++) {
@@ -52,6 +52,15 @@
                 }
                 result = result.concat(res);
             }
+            //二次处理
+            if (typeof callback == 'function') {
+                var tmpArr = [];
+                for (var j = 0; j < result.length; j++) {
+                    var obj = result[j];
+                    tmpArr = tmpArr.concat(callback(str, obj.start, obj.end));
+                }
+                result = tmpArr;
+            }
             return result;
 
             function _exec(reg, str) {
@@ -61,137 +70,175 @@
                 while (str && (match = reg.exec(str))) {
                     var start, end;
                     if (!match[1]) {
-                        start = match.index + preIndex;
+                        start = match.index;
                         end = start + match[0].length - 1;
                     } else {
-                        start = match.index + match[0].indexOf(match[1]) + preIndex;
+                        start = match.index + match[0].indexOf(match[1]);
                         end = start + match[1].length - 1;
                     }
-                    str = str.substr(end + 1 - preIndex);
-                    preIndex = end + 1;
-                    reg.lastIndex = 0;
                     result.push({ start: start, end: end });
                 }
                 return result;
             }
+        },
+        excludeStrReg: function(reg) {
+            var res = reg.source;
+            return new RegExp('\'[^\']*?' + res + '[^\']*?\'|' + '\"[^\"]*?' + res + '[^\"]*?\"', 'g');
         }
     }
     //多行匹配 ie. /*....*/
     var pairReg = [{
-        pre: /\/\*/,
-        pre_exclude: [/'[\s\S]*?\/\*[\s\S]*?'|"[\s\S]*?\/\*[\s\S]*?"/, /\*\/\*/],
-        suffix: /\*\//,
-        suffix_exclude: /'[\s\S]*?\*\/[\s\S]*?'|"[\s\S]*?\*\/[\s\S]*?"/,
+        pre: /\/\*/g,
+        pre_exclude: [Util.excludeStrReg(/\/\*/), /\*\/\*/g],
+        suffix: /\*\//g,
+        suffix_exclude: Util.excludeStrReg(/\*\//),
         className: 'pair_comment'
     }]
     //单行匹配
     var regs = [{
-        reg: /\/\/[^\n]*/,
-        exclude: /'[\s\S]*?\/\/[\s\S]*?'|"[\s\S]*?\/\/[\s\S]*?"/,
+        reg: /\/\/[^\n]*/g,
+        exclude: Util.excludeStrReg(/\/\/[^\n]*/),
         className: 'comment'
     }, {
-        reg: /'[\s\S]*?'|"[\s\S]*?"/,
+        reg: /'[^']*?'|"[^"]*?"/g,
         className: 'string'
     }, {
-        reg: /\bcontinue\b/,
-        exclude: /'[\s\S]*?\bcontinue\b[\s\S]*?'|"[\s\S]*?\bcontinue\b[\s\S]*?"/,
+        reg: /\bcontinue\b/g,
+        exclude: Util.excludeStrReg(/\bcontinue\b/),
         className: 'key'
     }, {
-        reg: /\bdo\b/,
-        exclude: /'[\s\S]*?\bdo\b[\s\S]*?'|"[\s\S]*?\bdo\b[\s\S]*?"/,
+        reg: /\bdo\b/g,
+        exclude: Util.excludeStrReg(/\bdo\b/),
         className: 'key'
     }, {
-        reg: /\belse\b/,
-        exclude: /'[\s\S]*?\belse\b[\s\S]*?'|"[\s\S]*?\belse\b[\s\S]*?"/,
+        reg: /\belse\b/g,
+        exclude: Util.excludeStrReg(/\belse\b/),
         className: 'key'
     }, {
-        reg: /\bfor\b/,
-        exclude: /'[\s\S]*?\bfor\b[\s\S]*?'|"[\s\S]*?\bfor\b[\s\S]*?"/,
+        reg: /\bfor\b/g,
+        exclude: Util.excludeStrReg(/\bfor\b/),
         className: 'key'
     }, {
-        reg: /\bif\b/,
-        exclude: /'[\s\S]*?\bif\b[\s\S]*?'|"[\s\S]*?\bif\b[\s\S]*?"/,
+        reg: /\bif\b/g,
+        exclude: Util.excludeStrReg(/\bif\b/),
         className: 'key'
     }, {
-        reg: /\bvar\b/,
-        exclude: /'[\s\S]*?\bvar\b[\s\S]*?'|"[\s\S]*?\bvar\b[\s\S]*?"/,
+        reg: /\bnew\b/g,
+        exclude: Util.excludeStrReg(/\bnew\b/),
         className: 'key'
     }, {
-        reg: /\bfunction\b/,
-        exclude: /'[\s\S]*?\bfunction\b[\s\S]*?'|"[\s\S]*?\bfunction\b[\s\S]*?"/,
+        reg: /\breturn\b/g,
+        exclude: Util.excludeStrReg(/\breturn\b/),
         className: 'key'
     }, {
-        reg: /\bnew\b/,
-        exclude: /'[\s\S]*?\bnew\b[\s\S]*?'|"[\s\S]*?\bnew\b[\s\S]*?"/,
-        className: 'key'
+        reg: /\bclass\b/g,
+        exclude: Util.excludeStrReg(/\bclass\b/),
+        className: 'class'
     }, {
-        reg: /\bclass\b/,
-        exclude: /'[\s\S]*?\bclass\b[\s\S]*?'|"[\s\S]*?\bclass\b[\s\S]*?"/,
-        className: 'key'
+        reg: /\bvar\b/g,
+        exclude: Util.excludeStrReg(/\bvar\b/),
+        className: 'storage'
     }, {
-        reg: /\+/,
-        exclude: /'[\s\S]*?\+[\s\S]*?'|"[\s\S]*?\+[\s\S]*?"/,
+        reg: /\bfunction\b/g,
+        exclude: Util.excludeStrReg(/\bfunction\b/),
+        className: 'storage'
+    }, {
+        reg: /\.([\$_a-zA-Z][\$_a-zA-Z0-9]*)/g, //ie. arr.length
+        exclude: Util.excludeStrReg(/\.([\$_a-zA-Z][\$_a-zA-Z0-9]*)/),
+        className: 'storage'
+    }, {
+        reg: /\+/g,
+        exclude: Util.excludeStrReg(/\+/),
         className: 'oprator'
     }, {
-        reg: /\-/,
-        exclude: /'[\s\S]*?\-[\s\S]*?'|"[\s\S]*?\-[\s\S]*?"/,
+        reg: /\-/g,
+        exclude: Util.excludeStrReg(/\-/),
         className: 'oprator'
     }, {
-        reg: /\*/,
-        exclude: /'[\s\S]*?\*[\s\S]*?'|"[\s\S]*?\*[\s\S]*?"/,
+        reg: /\*/g,
+        exclude: Util.excludeStrReg(/\*/),
         className: 'oprator'
     }, {
-        reg: /\//,
-        exclude: [/'[\s\S]*?\/[\s\S]*?'|"[\s\S]*?\/[\s\S]*?"/, /\/\//],
+        reg: /\//g,
+        exclude: [Util.excludeStrReg(/\//), /\/\//g],
         className: 'oprator'
     }, {
-        reg: /\=/,
-        exclude: /'[\s\S]*?\=[\s\S]*?'|"[\s\S]*?\=[\s\S]*?"/,
+        reg: /\=/g,
+        exclude: Util.excludeStrReg(/\=/),
         className: 'oprator'
     }, {
-        reg: /\!/,
-        exclude: /'[\s\S]*?\![\s\S]*?'|"[\s\S]*?\![\s\S]*?"/,
+        reg: /\!/g,
+        exclude: Util.excludeStrReg(/\!/),
         className: 'oprator'
     }, {
-        reg: />/,
-        exclude: /'[\s\S]*?>[\s\S]*?'|"[\s\S]*?>[\s\S]*?"/,
+        reg: />/g,
+        exclude: Util.excludeStrReg(/>/),
         className: 'oprator'
     }, {
-        reg: /</,
-        exclude: /'[\s\S]*?<[\s\S]*?'|"[\s\S]*?<[\s\S]*?"/,
+        reg: /</g,
+        exclude: Util.excludeStrReg(/</),
         className: 'oprator'
     }, {
-        reg: /\&/,
-        exclude: /'[\s\S]*?\&[\s\S]*?'|"[\s\S]*?\&[\s\S]*?"/,
+        reg: /\&/g,
+        exclude: Util.excludeStrReg(/\&/),
         className: 'oprator'
     }, {
-        reg: /\|/,
-        exclude: /'[\s\S]*?\|[\s\S]*?'|"[\s\S]*?\|[\s\S]*?"/,
+        reg: /\|/g,
+        exclude: Util.excludeStrReg(/\|/),
         className: 'oprator'
     }, {
-        reg: /\?/,
-        exclude: /'[\s\S]*?\?[\s\S]*?'|"[\s\S]*?\?[\s\S]*?"/,
+        reg: /\?/g,
+        exclude: Util.excludeStrReg(/\?/),
         className: 'oprator'
     }, {
-        reg: /\:/,
-        exclude: /'[\s\S]*?\:[\s\S]*?'|"[\s\S]*?\:[\s\S]*?"/,
+        reg: /\:/g,
+        exclude: Util.excludeStrReg(/\:/),
         className: 'oprator'
     }, {
-        reg: /\b\d+\b/,
-        exclude: /'[\s\S]*?\b\d+\b[\s\S]*?'|"[\s\S]*?\b\d+\b[\s\S]*?"/,
+        reg: /\b\d+\b/g,
+        exclude: Util.excludeStrReg(/\b\d+\b/),
         className: 'number'
     }, {
-        reg: /\bundefined\b/,
-        exclude: /'[\s\S]*?\bundefined\b[\s\S]*?'|"[\s\S]*?\bundefined\b[\s\S]*?"/,
+        reg: /\b0[xX][a-zA-Z0-9]*?\b/g,
+        exclude: Util.excludeStrReg(/\b0[xX][a-zA-Z0-9]*?\b/),
         className: 'number'
     }, {
-        reg: /\bnull\b/,
-        exclude: /'[\s\S]*?\bnull\b[\s\S]*?'|"[\s\S]*?\bnull\b[\s\S]*?"/,
+        reg: /\bundefined\b/g,
+        exclude: Util.excludeStrReg(/\bundefined\b/),
         className: 'number'
     }, {
-        reg: /[.]?([\w]+)(?=\()/,
-        exclude: /'[\s\S]*?[\w]+\([\s\S]*?'|"[\s\S]*?[\w]+\([\s\S]*?"/,
-        className: 'method'
+        reg: /\bnull\b/g,
+        exclude: Util.excludeStrReg(/\bnull\b/),
+        className: 'number'
+    }, {
+        reg: /[.]?([\$_a-zA-Z][\$_a-zA-Z0-9]*?)(?=\()/g, //ie. test(),.test()
+        exclude: [/'[^']*?'|"[^"]*?"/g, /function\s*?\(/g],
+        className: 'function'
+    }, {
+        reg: /[\$_a-zA-Z][\$_a-zA-Z0-9]*?\s*?(?==\s*?function)/g, //ie. var test = function
+        exclude: /'[^']*?'|"[^"]*?"/g,
+        className: 'function'
+    }, {
+        reg: /function\s*?\(([\s\S]+?)\)/g, //ie. function(arg1,arg2)
+        exclude: /'[^']*?'|"[^"]*?"/g,
+        className: 'function_arg',
+        callback: function(str, start, end) {
+            str = str.substring(start, end + 1);
+            var args = str.split(','),
+                suc = true,
+                varReg = /\s*?([\$_a-zA-Z][\$_a-zA-Z0-9]*?)\s*(?:,|$)/g,
+                result = [];
+            if(str.match(varReg) && str.match(varReg).length == args.length){
+                while (match = varReg.exec(str)) {
+                    if (match[1]) {
+                        var t = match.index + match[0].indexOf(match[1]) + start;
+                        var e = t + match[1].length - 1;
+                        result.push({ start: t, end: e });
+                    }
+                }
+            }
+            return result;
+        }
     }]
     /**
      * JS 语法高亮
@@ -215,8 +262,9 @@
             var reg = regs[i].reg,
                 className = regs[i].className,
                 exclude = regs[i].exclude,
+                callback = regs[i].callback,
                 str = this.linesText[currentLine - 1];
-            var result = Util.execReg(reg, exclude, str);
+            var result = Util.execReg(reg, exclude, str, callback);
             for (var j = 0; j < result.length; j++) {
                 result[j].className = className;
             }
