@@ -88,6 +88,23 @@
         excludeStrReg: function(reg) {
             var res = reg.source;
             return new RegExp('\'[^\']*?' + res + '[^\']*?\'|' + '\"[^\"]*?' + res + '[^\"]*?\"', 'g');
+        },
+        execArgsReg: function(str, start, end) {
+            str = str.substring(start, end + 1);
+            var args = str.split(','),
+                suc = true,
+                varReg = /\s*?([\$_a-zA-Z][\$_a-zA-Z0-9]*?)\s*(?:,|$)/g,
+                result = [];
+            if(str.match(varReg) && str.match(varReg).length == args.length){
+                while (match = varReg.exec(str)) {
+                    if (match[1]) {
+                        var t = match.index + match[0].indexOf(match[1]) + start;
+                        var e = t + match[1].length - 1;
+                        result.push({ start: t, end: e });
+                    }
+                }
+            }
+            return result;
         }
     }
     //多行匹配 ie. /*....*/
@@ -141,15 +158,15 @@
     }, {
         reg: /\bvar\b/g,
         exclude: Util.excludeStrReg(/\bvar\b/),
-        className: 'storage'
+        className: 'storage_type'
     }, {
         reg: /\bfunction\b/g,
         exclude: Util.excludeStrReg(/\bfunction\b/),
-        className: 'storage'
+        className: 'type'
     }, {
-        reg: /\.([\$_a-zA-Z][\$_a-zA-Z0-9]*)/g, //ie. arr.length
-        exclude: Util.excludeStrReg(/\.([\$_a-zA-Z][\$_a-zA-Z0-9]*)/),
-        className: 'storage'
+        reg: /[.]?([\$_a-zA-Z][\$_a-zA-Z0-9]*?)(?=\()/g, //ie. test(),.test()
+        exclude: [/'[^']*?'|"[^"]*?"/g, /function\s*?[^\(]*?\(/g], //ie. function test()
+        className: 'function'
     }, {
         reg: /\+/g,
         exclude: Util.excludeStrReg(/\+/),
@@ -215,34 +232,27 @@
         exclude: Util.excludeStrReg(/\bnull\b/),
         className: 'number'
     }, {
-        reg: /[\$_a-zA-Z][\$_a-zA-Z0-9]*?(?=\()/g, //ie. test()
-        exclude: [/'[^']*?'|"[^"]*?"/g, /function\s*?\(/g, /[.][\$_a-zA-Z][\$_a-zA-Z0-9]*?(?=\()/g], //ie. function test(),.test()
-        className: 'function'
+        reg: /function\s*?([\$_a-zA-Z][\$_a-zA-Z0-9]*?)\s*?(?=\()/g, //ie. function test()
+        exclude: [/'[^']*?'|"[^"]*?"/g],
+        className: 'function_name'
     }, {
-        reg: /[\$_a-zA-Z][\$_a-zA-Z0-9]*?\s*?(?==\s*?function)/g, //ie. var test = function
+        reg: /([\$_a-zA-Z][\$_a-zA-Z0-9]*?)\s*?:\s*?function\s*?(?=\()/g, //ie. fun:function()
+        exclude: [/'[^']*?'|"[^"]*?"/g],
+        className: 'function_name'
+    }, {
+        reg: /[\$_a-zA-Z][\$_a-zA-Z0-9]*?\s*?(?==\s*?function\()/g, //ie. var test = function()
         exclude: [/'[^']*?'|"[^"]*?"/g,/\.[\$_a-zA-Z][\$_a-zA-Z0-9]*?\s*?(?==\s*?function)/g], //ie. .test=function()
-        className: 'function'
+        className: 'function_name'
     }, {
-        reg: /function\s*?\(([\s\S]+?)\)|this|self/g, //ie. function(arg1,arg2)
+        reg: /function\s*?\(([\s\S]+?)\)|\bthis\b|\bself\b/g, //ie. function(arg1,arg2)
         exclude: /'[^']*?'|"[^"]*?"/g,
         className: 'function_arg',
-        callback: function(str, start, end) {
-            str = str.substring(start, end + 1);
-            var args = str.split(','),
-                suc = true,
-                varReg = /\s*?([\$_a-zA-Z][\$_a-zA-Z0-9]*?)\s*(?:,|$)/g,
-                result = [];
-            if(str.match(varReg) && str.match(varReg).length == args.length){
-                while (match = varReg.exec(str)) {
-                    if (match[1]) {
-                        var t = match.index + match[0].indexOf(match[1]) + start;
-                        var e = t + match[1].length - 1;
-                        result.push({ start: t, end: e });
-                    }
-                }
-            }
-            return result;
-        }
+        callback: Util.execArgsReg
+    }, {
+        reg: /function\s*?[\$_a-zA-Z][\$_a-zA-Z0-9]*?\s*?\(([\s\S]+?)\)/g, //ie. function test(arg1,arg2)
+        exclude: /'[^']*?'|"[^"]*?"/g,
+        className: 'function_arg',
+        callback: Util.execArgsReg
     }]
     /**
      * JS 语法高亮
