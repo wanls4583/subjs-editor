@@ -202,6 +202,7 @@
                     var px = self.posToPx(startPos.line, startPos.column);
                     self.renderRange(px.top, px.left, width);
                     self.selection.selectText = str.substring(startPos.column, endPos.column);
+                    self.$lineBg.hide(); //隐藏当前行背景
                 }
             } else {
                 var str = self.linesText[startPos.line - 1];
@@ -220,6 +221,7 @@
                 px = self.posToPx(endPos.line, 0);
                 self.renderRange(px.top, px.left, width);
                 self.selection.selectText += '\n' + str.substring(0, endPos.column);
+                self.$lineBg.hide(); //隐藏当前行背景
             }
         }
     }
@@ -313,7 +315,12 @@
             } else {
                 switch (e.keyCode) {
                     case 37: //left arrow
-                        if (self.cursorPos.column > 0) {
+                        if (self.selection.startPos){
+                            self.cursorPos.line = self.selection.startPos.line;
+                            self.cursorPos.column = self.selection.startPos.column;
+                            self.$selectBg.html('');
+                            self.selection = {};
+                        }else if (self.cursorPos.column > 0) {
                             self.cursorPos.column--;
                         } else if (self.cursorPos.line > 1) {
                             self.cursorPos.line--;
@@ -321,13 +328,23 @@
                         }
                         break;
                     case 38: //up arrow
-                        if (self.cursorPos.line > 1) {
+                        if (self.selection.startPos){
+                            self.cursorPos.line = self.selection.startPos.line;
+                            self.cursorPos.column = self.selection.startPos.column;
+                            self.$selectBg.html('');
+                            self.selection = {};
+                        }else if (self.cursorPos.line > 1) {
                             self.cursorPos.line--;
                             self.cursorPos.column = self.pxToPos(self.cursorPos.line, self.cursorPos.left, true).column;
                         }
                         break;
                     case 39: //right arrow
-                        if (self.cursorPos.column < self.linesText[self.cursorPos.line - 1].length) {
+                        if (self.selection.startPos){
+                            self.cursorPos.line = self.selection.endPos.line;
+                            self.cursorPos.column = self.selection.endPos.column;
+                            self.$selectBg.html('');
+                            self.selection = {};
+                        }else if (self.cursorPos.column < self.linesText[self.cursorPos.line - 1].length) {
                             self.cursorPos.column++;
                         } else if (self.cursorPos.line < self.linesText.length) {
                             self.cursorPos.line++;
@@ -335,15 +352,24 @@
                         }
                         break;
                     case 40: //down arrow
-                        if (self.cursorPos.line < self.linesText.length) {
+                        if (self.selection.startPos){
+                            self.cursorPos.line = self.selection.endPos.line;
+                            self.cursorPos.column = self.selection.endPos.column;
+                            self.$selectBg.html('');
+                            self.selection = {};
+                        }else if (self.cursorPos.line < self.linesText.length) {
                             self.cursorPos.line++;
                             self.cursorPos.column = self.pxToPos(self.cursorPos.line, self.cursorPos.left, true).column;
                         }
                         break;
                     case 46: //delete
-                        var str = self.linesText[self.cursorPos.line - 1];
-                        str = str.substring(0, self.cursorPos.column) + str.substr(self.cursorPos.column + 1);
-                        self.updateLine(self.cursorPos.line, str);
+                        if (self.selection.startPos) {
+                            self.deleteMutilLine(self.selection.startPos, self.selection.endPos);
+                        }else{
+                            var str = self.linesText[self.cursorPos.line - 1];
+                            str = str.substring(0, self.cursorPos.column) + str.substr(self.cursorPos.column + 1);
+                            self.updateLine(self.cursorPos.line, str);
+                        }
                         break;
                     case 8: //backspace
                         if (self.selection.startPos) {
@@ -365,6 +391,9 @@
                         break;
                     case 13: //换行
                     case 108: //数字键换行
+                        if (self.selection.startPos) {
+                            self.deleteMutilLine(self.selection.startPos, self.selection.endPos);
+                        }
                         var str = self.linesText[self.cursorPos.line - 1];
                         self.updateLine(self.cursorPos.line, str.substring(0, self.cursorPos.column));
                         self.addLine(self.cursorPos.line + 1, str.substr(self.cursorPos.column));
@@ -622,7 +651,7 @@
             'font-size': this.fontSize
         })
         this.$leftNumBg.append($num);
-        this.leftNumDom.splice(line - 1, 0, $num)
+        this.leftNumDom.push($num);
         this.linesDom.splice(line - 1, 0, $dom);
         if(this.mode){
             this.mode.onAddLine(line);
