@@ -65,7 +65,7 @@
             return result;
 
             function _exec(reg, str) {
-                if(!reg.global){
+                if (!reg.global) {
                     throw new Error('reg is not global');
                 }
                 var match = null;
@@ -95,7 +95,7 @@
                 suc = true,
                 varReg = /\s*?([\$_a-zA-Z][\$_a-zA-Z0-9]*?)\s*(?:,|$)/g,
                 result = [];
-            if(str.match(varReg) && str.match(varReg).length == args.length){
+            if (str.match(varReg) && str.match(varReg).length == args.length) {
                 while (match = varReg.exec(str)) {
                     if (match[1]) {
                         var t = match.index + match[0].indexOf(match[1]) + start;
@@ -201,7 +201,7 @@
         className: 'oprator'
     }, {
         reg: /\&/g,
-        exclude: Util.excludeStrReg(/\&/),
+        exclude: [Util.excludeStrReg(/\&/)],
         className: 'oprator'
     }, {
         reg: /\|/g,
@@ -241,7 +241,7 @@
         className: 'function_name'
     }, {
         reg: /[\$_a-zA-Z][\$_a-zA-Z0-9]*?\s*?(?==\s*?function\()/g, //ie. var test = function()
-        exclude: [/'[^']*?'|"[^"]*?"/g,/\.[\$_a-zA-Z][\$_a-zA-Z0-9]*?\s*?(?==\s*?function)/g], //ie. .test=function()
+        exclude: [/'[^']*?'|"[^"]*?"/g],
         className: 'function_name'
     }, {
         reg: /function\s*?\(([\s\S]+?)\)|\bthis\b|\bself\b/g, //ie. function(arg1,arg2)
@@ -277,7 +277,7 @@
                 className = regs[i].className,
                 exclude = regs[i].exclude,
                 callback = regs[i].callback,
-                str = this.linesText[currentLine - 1];
+                str = this.linesText.getText(currentLine);
             var result = Util.execReg(reg, exclude, str, callback);
             for (var j = 0; j < result.length; j++) {
                 result[j].className = className;
@@ -330,7 +330,7 @@
                 }
                 var matchs = {},
                     result = null,
-                    str = self.linesText[currentLine - 1];
+                    str = self.linesText.getText(currentLine);
                 result = Util.execReg(reg, exclude, str);
                 for (var i = 0; i < result.length; i++) {
                     var obj = result[i];
@@ -383,7 +383,7 @@
                     var suffixObj = matchs[regIndex];
                     var className = pairReg[regIndex].className;
                     if (suffixObj.undo) { //匹配到新的suffixReg
-                        var endLine = self.linesText.length,
+                        var endLine = self.linesText.getLength(),
                             startPre = null;
                         //寻找前一个最近的未匹配到suffix的preReg所在的行
                         var ifDo = false;
@@ -455,7 +455,7 @@
                         var className = pairReg[regIndex].className;
                         if (preObj.del) { //不再匹配preReg
                             //preObj.endSuffix为空，且self.lineEndPreReg不再等于preObj，说明最后一行已经被重新添加了新的整行修饰
-                            var line = preObj.endSuffix ? preObj.endSuffix.line : self.lineEndPreReg == preObj && self.linesText.length + 1;
+                            var line = preObj.endSuffix ? preObj.endSuffix.line : self.lineEndPreReg == preObj && self.linesText.getLength() + 1;
                             for (var i = currentLine + 1; line && i <= line - 1; i++) {
                                 self.highlight(i);
                                 self.linesDom[i - 1].find('.code').html(renderHTML(i));
@@ -498,7 +498,7 @@
                 function __getNextNearPreReg(preObj) {
                     var sf = preObj.endSuffix;
                     var done = false;
-                    for (var i = preObj.line; !done && i <= self.linesText.length; i++) {
+                    for (var i = preObj.line; !done && i <= self.linesText.getLength(); i++) {
                         var ldpr = self.donePreReg[i - 1];
                         for (var c in ldpr) {
                             var pr = ldpr[c][regIndex];
@@ -531,11 +531,11 @@
                             var preEndLine = -1,
                                 endSuffix = null,
                                 preEndSuffix = preObj.endSuffix,
-                                endLine = self.linesText.length + 1;
+                                endLine = self.linesText.getLength() + 1;
                             if (preEndSuffix) { //之前对应的suffix所在的行
                                 preEndLine = preEndSuffix.line;
                             } else if (self.lineEndPreReg == preObj) {
-                                preEndLine = self.linesText.length + 1;
+                                preEndLine = self.linesText.getLength() + 1;
                             }
                             //寻找最近的匹配了suffixReg的行
                             var ifDo = false,
@@ -601,7 +601,7 @@
                                 }
                                 //添加整行修饰
                                 for (var i = currentLine + 1; i <= endLine - 1; i++) {
-                                    self.linesDom[i - 1].find('.code').html(self.linesText[i - 1]);
+                                    self.linesDom[i - 1].find('.code').html(self.linesText.getText(i));
                                     self.linesDom[i - 1].find('.code').addClass(className);
                                 }
                                 //删除之前的整行修饰
@@ -642,7 +642,7 @@
                             var regObj = lineDonePreReg[column][regIndex];
                             var className = regObj.className;
                             if (!regObj.plain && (!regObj.endSuffix || regObj.endSuffix.line > currentLine)) {
-                                self.linesDom[currentLine - 1].find('.code').html(self.linesText[currentLine - 1]);
+                                self.linesDom[currentLine - 1].find('.code').html(self.linesText.getText(currentLine));
                                 self.linesDom[currentLine - 1].find('.code').addClass(className);
                                 hasRender = true;
                             }
@@ -707,21 +707,29 @@
                 startPre.decoEnd = endSuffix.end;
                 endSuffix.decoStart = startPre.start;
             } else if (!endSuffix) {
-                _insertDecoration(self.linesDecoration[startPre.line - 1], { start: startPre.start, end: self.linesText[startPre.line - 1].length - 1, className: startPre.className })
+                _insertDecoration(self.linesDecoration[startPre.line - 1], {
+                    start: startPre.start,
+                    end: self.linesText.getText(startPre.line).length - 1,
+                    className: startPre.className
+                })
                 self.linesDom[startPre.line - 1].find('.code').html(renderHTML(startPre.line)).removeClass(startPre.className);
-                startPre.decoEnd = self.linesText[startPre.line - 1].length - 1;
+                startPre.decoEnd = self.linesText.getText(startPre.line).length - 1;
             } else if (endSuffix) {
-                _insertDecoration(self.linesDecoration[startPre.line - 1], { start: startPre.start, end: self.linesText[startPre.line - 1].length - 1, className: startPre.className })
+                _insertDecoration(self.linesDecoration[startPre.line - 1], {
+                    start: startPre.start,
+                    end: self.linesText.getText(startPre.line).length - 1,
+                    className: startPre.className
+                })
                 _insertDecoration(self.linesDecoration[endSuffix.line - 1], { start: 0, end: endSuffix.end, className: startPre.className })
                 self.linesDom[startPre.line - 1].find('.code').html(renderHTML(startPre.line)).removeClass(startPre.className);
                 self.linesDom[endSuffix.line - 1].find('.code').html(renderHTML(endSuffix.line)).removeClass(startPre.className);
-                startPre.decoEnd = self.linesText[startPre.line - 1].length - 1;
+                startPre.decoEnd = self.linesText.getText(startPre.line).length - 1;
                 endSuffix.decoStart = 0;
             }
         }
 
         function renderHTML(line) {
-            var str = self.linesText[line - 1];
+            var str = self.linesText.getText(line);
             var doneRangeOnline = self.linesDecoration[line - 1];
             //处理单行匹配结果
             for (var i = doneRangeOnline.length - 1; i >= 0; i--) {
@@ -734,7 +742,7 @@
     }
     //重置行号
     _proto.resetDoneRegLine = function(line) {
-        for (var i = line - 1; i < this.linesText.length; i++) {
+        for (var i = line - 1; i < this.linesText.getLength(); i++) {
             for (var column in this.donePreReg[i]) {
                 for (var regIndex in this.donePreReg[i][column]) {
                     this.donePreReg[i][column][regIndex].line = i + 1;
