@@ -635,7 +635,7 @@
             self.$lineBg.hide(); //隐藏当前行背景
         } else {
             var str = self.linesText.getText(startPos.line);
-            var maxWidth = self.$context[0].scrollWidth - 1;
+            var maxWidth = self.$context[0].scrollWidth - 1; //防止$context真实宽度有小数（scrollWidth将被四舍五入）
             var width = Util.getStrWidth(str, self.charWidth, self.fullAngleCharWidth, 0, startPos.column);
             var px = self.posToPx(startPos.line, startPos.column);
             self.renderRange(px.top, px.left, maxWidth - width);
