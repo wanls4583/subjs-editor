@@ -157,9 +157,9 @@
         this.mode = window.SubJsMode && new SubJsMode(this.linesText, this.linesDom);
         this.creatContext();
         this.getCharWidth();
+        this.createLeftNumBg();
         this.creatTextarea();
         this.createCrusor();
-        this.createLeftNumBg();
         this.createLineBg();
         this.bindEvent();
         this.bindEditorEvent();
@@ -227,7 +227,7 @@
                 })
             }
         });
-        this.$wrapper.on('mouseup', function(e) {
+        $(document).on('mouseup', function(e) {
             select = false;
         })
     }
@@ -237,7 +237,7 @@
         this.$context.on('mouseup', function(e) {
             var rect = Util.getRect(self.$scroller[0]);
             var top = e.clientY - rect.top + self.$scroller[0].scrollTop;
-            var _px = self.pxToPos(top, e.clientX - rect.left + self.$scroller[0].scrollTop);
+            var _px = self.pxToPos(top, e.clientX - rect.left + self.$scroller[0].scrollLeft);
             var line = _px.line;
             var column = _px.column;
             if (e.button != 2) { //单纯的点击
@@ -519,7 +519,7 @@
     }
     //输入框区域
     _proto.creatContext = function() {
-        this.$scroller = $('<div class="editor_scroller" style="position:relative;z-index:3;overflow:auto;margin-left:40px;height:100%;padding:5px 0 0 5px;box-sizing:border-box">\
+        this.$scroller = $('<div class="editor_scroller" style="position:relative;z-index:3;overflow:auto;height:100%;padding:5px 0 0 5px;box-sizing:border-box">\
                 <div class="editor_context" style="min-height:100%;cursor:text;"></div>\
                 <div class="editor_bg" style="position:absolute;left:0;top:0;z-index:-1"></div>\
             </div>');
@@ -532,8 +532,8 @@
     }
     //左侧行号
     _proto.createLeftNumBg = function() {
-        this.$leftNumBg = $('<div class="line_num_bg" style="position:absolute;left:0;top:0;z-index:2;width:40px;min-height:100%;padding:5px 0;padding-bottom:' + this.charHight + 'px;box-sizing:border-box"></div>');
-        this.$wrapper.append(this.$leftNumBg);
+        this.$leftNumBg = $('<div class="line_num_bg" style="float:left;position:relative;left:0;top:0;z-index:2;min-height:100%;padding:5px 0;padding-bottom:' + this.charHight + 'px;box-sizing:border-box"></div>');
+        this.$wrapper.prepend(this.$leftNumBg);
     }
     //创建输入框
     _proto.creatTextarea = function() {
@@ -753,8 +753,8 @@
             'display': 'block',
             'height': this.charHight + 'px',
             'line-height': this.charHight + 'px',
-            'width': '36px',
-            'padding-right': '4px',
+            'padding-right': '15px',
+            'padding-left': '15px',
             'user-select': 'none',
             'text-align': 'right',
             'font-size': this.fontSize
