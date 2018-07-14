@@ -607,13 +607,15 @@
         var lRect = Util.getRect(this.$leftNumBg[0]);
         if (cRect.offsetTop <= this.$scroller[0].scrollTop) {
             context.scrollTop = cRect.offsetTop;
-        } else if (cRect.offsetTop + this.charHight >= context.scrollTop + this.$wrapper[0].clientHeight) {
-            context.scrollTop = cRect.offsetTop + this.charHight - this.$wrapper[0].clientHeight;
+        } else if (cRect.offsetTop + this.charHight + 24 >= context.scrollTop + this.$wrapper[0].clientHeight) {
+            //为滚动条预留24px
+            context.scrollTop = cRect.offsetTop + this.charHight + 24 - this.$wrapper[0].clientHeight;
         }
         if (cRect.offsetLeft - this.charWidth <= context.scrollLeft) {
             context.scrollLeft = cRect.offsetLeft - this.charWidth;
-        } else if (cRect.offsetLeft + this.charWidth * 2 + 30 >= context.scrollLeft + (this.$wrapper[0].clientWidth - context.offsetLeft)) {
-            context.scrollLeft = cRect.offsetLeft + this.charWidth * 2 + 30 - (this.$wrapper[0].clientWidth - context.offsetLeft);
+        } else if (cRect.offsetLeft + this.charWidth * 2 + 24 >= context.scrollLeft + (this.$wrapper[0].clientWidth - context.offsetLeft)) {
+            //为滚动条预留24px
+            context.scrollLeft = cRect.offsetLeft + this.charWidth * 2 + 24 - (this.$wrapper[0].clientWidth - context.offsetLeft);
         }
         this.$leftNumBg.css('top', -context.scrollTop + 'px');
     }
