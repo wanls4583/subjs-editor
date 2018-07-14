@@ -652,6 +652,9 @@
             self.selection.selectText += '\n' + str.substring(0, endPos.column);
             self.$lineBg.hide(); //隐藏当前行背景
         }
+        self.cursorPos.line = endPos.line;
+        self.cursorPos.column = endPos.column;
+        self.updateCursorPos();
     }
     _proto.posToPx = function(line, column) {
         var self = this;
@@ -798,23 +801,9 @@
     }
     //全选
     _proto.selectAll = function() {
-        this.selection.selectText = '';
-        this.$selectBg.html('');
-        var width = this.$context[0].scrollWidth;
-        if (this.linesText.getLength() > 1) {
-            for (var i = 1; i <= this.linesText.getLength() - 1; i++) {
-                var px = this.posToPx(i, 0);
-                this.renderRange(px.top, px.left, width);
-                this.selection.selectText += this.linesText.getText(i) + '\n';
-            }
-        }
-        var line = this.linesText.getLength();
-        var width = Util.getStrWidth(this.linesText.getText(line), this.charWidth, this.fullAngleCharWidth, 0, this.linesText.getText(line).length);
-        var px = this.posToPx(line, 0);
-        this.renderRange(px.top, px.left, width);
-        this.selection.selectText += this.linesText.getText(line);
-        this.selection.startPos = { line: 1, column: 0 };
-        this.selection.endPos = { line: line, column: this.linesText.getText(line).length }
+        var startPos = {line: 1,column: 0};
+        var endPos = {line: this.linesText.getLength(),column: this.linesText.getText(this.linesText.getLength()).length}
+        this.updateSelectBg(startPos,endPos);
     }
     //渲染选中背景
     _proto.renderRange = function(_top, _left, _width) {
