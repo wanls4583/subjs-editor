@@ -44,8 +44,8 @@
                         end = excludeRes[n].end;
                     for (var m = 0; m < res.length; m++) {
                         var tmp = res[m];
-                        //两个区域没有交叉
-                        if (!(start > tmp.end || end < tmp.start)) {
+                        //两个区域有交叉，或者结果区域不包含exclue区域，则丢弃
+                        if (!(start > tmp.end || end < tmp.start) && !(start > tmp.start && end < tmp.end)) {
                             res.splice(m, 1);
                             m--;
                         }
@@ -105,6 +105,9 @@
                 }
             }
             return result;
+        },
+        htmlTrans: function(cont) {
+            return cont.replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }
     }
     //多行匹配 ie. /*....*/
@@ -117,142 +120,109 @@
     }]
     //单行匹配
     var regs = [{
-        reg: /\/\/[^\n]*/g,
-        exclude: Util.excludeStrReg(/\/\/[^\n]*/),
-        className: 'comment'
-    }, {
-        reg: /'[^']*?'|"[^"]*?"/g,
-        className: 'string'
-    }, {
         reg: /\bcontinue\b/g,
-        exclude: Util.excludeStrReg(/\bcontinue\b/),
         className: 'key'
     }, {
         reg: /\bdo\b/g,
-        exclude: Util.excludeStrReg(/\bdo\b/),
         className: 'key'
     }, {
         reg: /\belse\b/g,
-        exclude: Util.excludeStrReg(/\belse\b/),
         className: 'key'
     }, {
         reg: /\bfor\b/g,
-        exclude: Util.excludeStrReg(/\bfor\b/),
         className: 'key'
     }, {
         reg: /\bif\b/g,
-        exclude: Util.excludeStrReg(/\bif\b/),
         className: 'key'
     }, {
         reg: /\bnew\b/g,
-        exclude: Util.excludeStrReg(/\bnew\b/),
         className: 'key'
     }, {
         reg: /\breturn\b/g,
-        exclude: Util.excludeStrReg(/\breturn\b/),
         className: 'key'
     }, {
         reg: /\bclass\b/g,
-        exclude: Util.excludeStrReg(/\bclass\b/),
         className: 'class'
     }, {
-        reg: /\bvar\b/g,
-        exclude: Util.excludeStrReg(/\bvar\b/),
-        className: 'type'
-    }, {
-        reg: /\bfunction\b/g,
-        exclude: Util.excludeStrReg(/\bfunction\b/),
-        className: 'type'
-    }, {
-        reg: /[.]?([\$_a-zA-Z][\$_a-zA-Z0-9]*?)(?=\()/g, //ie. test(),.test()
-        exclude: [/'[^']*?'|"[^"]*?"/g, /function\s*?[^\(]*?\(/g], //ie. function test()
-        className: 'function'
-    }, {
         reg: /\+/g,
-        exclude: Util.excludeStrReg(/\+/),
         className: 'oprator'
     }, {
         reg: /\-/g,
-        exclude: Util.excludeStrReg(/\-/),
         className: 'oprator'
     }, {
         reg: /\*/g,
-        exclude: Util.excludeStrReg(/\*/),
         className: 'oprator'
     }, {
         reg: /\//g,
-        exclude: [Util.excludeStrReg(/\//), /\/\//g],
         className: 'oprator'
     }, {
         reg: /\=/g,
-        exclude: Util.excludeStrReg(/\=/),
         className: 'oprator'
     }, {
         reg: /\!/g,
-        exclude: Util.excludeStrReg(/\!/),
         className: 'oprator'
     }, {
         reg: />/g,
-        exclude: Util.excludeStrReg(/>/),
         className: 'oprator'
     }, {
         reg: /</g,
-        exclude: Util.excludeStrReg(/</),
         className: 'oprator'
     }, {
         reg: /\&/g,
-        exclude: [Util.excludeStrReg(/\&/)],
         className: 'oprator'
     }, {
         reg: /\|/g,
-        exclude: Util.excludeStrReg(/\|/),
         className: 'oprator'
     }, {
         reg: /\?/g,
-        exclude: Util.excludeStrReg(/\?/),
         className: 'oprator'
     }, {
         reg: /\:/g,
-        exclude: Util.excludeStrReg(/\:/),
         className: 'oprator'
     }, {
         reg: /\b\d+\b/g,
-        exclude: Util.excludeStrReg(/\b\d+\b/),
         className: 'number'
     }, {
         reg: /\b0[xX][a-zA-Z0-9]*?\b/g,
-        exclude: Util.excludeStrReg(/\b0[xX][a-zA-Z0-9]*?\b/),
         className: 'number'
     }, {
         reg: /\bundefined\b/g,
-        exclude: Util.excludeStrReg(/\bundefined\b/),
         className: 'number'
     }, {
         reg: /\bnull\b/g,
-        exclude: Util.excludeStrReg(/\bnull\b/),
         className: 'number'
     }, {
+        reg: /\bvar\b/g,
+        className: 'type'
+    }, {
+        reg: /\bfunction\b/g,
+        className: 'type'
+    }, {
+        reg: /[.]?([\$_a-zA-Z][\$_a-zA-Z0-9]*?)(?=\()/g, //ie. test(),.test()
+        className: 'function'
+    }, {
         reg: /function\s*?([\$_a-zA-Z][\$_a-zA-Z0-9]*?)\s*?(?=\()/g, //ie. function test()
-        exclude: [/'[^']*?'|"[^"]*?"/g],
         className: 'function_name'
     }, {
         reg: /([\$_a-zA-Z][\$_a-zA-Z0-9]*?)\s*?:\s*?function\s*?(?=\()/g, //ie. fun:function()
-        exclude: [/'[^']*?'|"[^"]*?"/g],
         className: 'function_name'
     }, {
-        reg: /[\$_a-zA-Z][\$_a-zA-Z0-9]*?\s*?(?==\s*?function\()/g, //ie. var test = function()
-        exclude: [/'[^']*?'|"[^"]*?"/g],
+        reg: /([\$_a-zA-Z][\$_a-zA-Z0-9]*?)\s*?(?==\s*?function\()/g, //ie. var test = function()
         className: 'function_name'
     }, {
         reg: /function\s*?\(([\s\S]+?)\)|\bthis\b|\bself\b/g, //ie. function(arg1,arg2)
-        exclude: /'[^']*?'|"[^"]*?"/g,
         className: 'function_arg',
         callback: Util.execArgsReg
     }, {
         reg: /function\s*?[\$_a-zA-Z][\$_a-zA-Z0-9]*?\s*?\(([\s\S]+?)\)/g, //ie. function test(arg1,arg2)
-        exclude: /'[^']*?'|"[^"]*?"/g,
         className: 'function_arg',
         callback: Util.execArgsReg
+    }, {
+        reg: /\/\/[^\n]*/g,
+        className: 'comment'
+    }, {
+        reg: /'[^']*?'|"[^"]*?"/g,
+        className: 'string'
     }]
     /**
      * JS 语法高亮
@@ -281,6 +251,16 @@
             var result = Util.execReg(reg, exclude, str, callback);
             for (var j = 0; j < result.length; j++) {
                 result[j].className = className;
+            }
+            //检查是否和之前的修饰有交叉，有则覆盖
+            for (var j = 0; j < result.length; j++) {
+                var obj = result[j];
+                for (var m = 0; m < lineDecoration.length; m++) {
+                    if (!(obj.start > lineDecoration[m].end || obj.end < lineDecoration[m].start)) {
+                        lineDecoration.splice(m, 1);
+                        m--;
+                    }
+                }
             }
             lineDecoration = lineDecoration.concat(result);
         }
@@ -731,7 +711,28 @@
         function renderHTML(line) {
             var str = self.linesText.getText(line);
             var doneRangeOnline = self.linesDecoration[line - 1];
-            //处理单行匹配结果
+            //处理HTML转义'>,<'--'&gt;,&lt;'
+            var reg = />|</g,
+                match = null,
+                indexs = [];
+            while (match = reg.exec(str)) {
+                indexs.push(match.index);
+            }
+            //倒序移动位置
+            for (var i = indexs.length - 1; i >= 0; i--) {
+                var index = indexs[i];
+                for (var j = doneRangeOnline.length - 1; j >= 0; j--) {
+                    var obj = doneRangeOnline[j];
+                    if (obj.start > index) {
+                        obj.start += 3;
+                    }
+                    if (obj.end >= index) {
+                        obj.end += 3;
+                    }
+                }
+            }
+            str = Util.htmlTrans(str);
+            //生成HTML
             for (var i = doneRangeOnline.length - 1; i >= 0; i--) {
                 var obj = doneRangeOnline[i];
                 str = Util.insertStr(str, obj.end + 1, '</span>');

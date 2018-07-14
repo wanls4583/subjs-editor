@@ -104,30 +104,26 @@
             var val = '';
             for (var tmp = 0; tmp < tabsize; tmp++) { val += ' ' };
             return val;
-        },
-        htmlTrans: function(cont) {
-            return cont.replace(/</,'&lt;').replace(/>/,'&gt;');
         }
     }
     /**
      * 文本容器类
      */
-    function LinesText(){
+    function LinesText() {
         var content = [];
         this.getText = function(line) {
-            // return Util.htmlTrans(this[line - 1]);
             return content[line - 1];
         }
         this.setText = function(line, txt) {
             content[line - 1] = txt;
         }
-        this.add = function(line,txt){
-            content.splice(line-1,0,txt);
+        this.add = function(line, txt) {
+            content.splice(line - 1, 0, txt);
         }
-        this.delete = function(line){
-            content.splice(line-1,1);
+        this.delete = function(line) {
+            content.splice(line - 1, 1);
         }
-        this.getLength = function(){
+        this.getLength = function() {
             return content.length;
         }
     }
@@ -179,21 +175,19 @@
     _proto.bindSelectEvent = function() {
         var self = this;
         var startPx = {};
-        var endPx = {};
-        var rect = Util.getRect(self.$scroller[0]);
-        var scrollTop = self.$scroller[0].scrollTop;
         var select = false;
-        this.$context.on('selectstart', function(e) {
+        $(document).on('selectstart', function(e) {
             //阻止浏览器默认选中文字
-            e.preventDefault();
-        })
-        this.$leftNumBg.on('selectstart', function(e) {
-            //阻止浏览器默认选中文字
-            e.preventDefault();
+            if(e.target != self.$textarea[0]){
+                e.preventDefault();
+            }
         })
         this.$wrapper.on('mousedown', function(e) {
+            var rect = Util.getRect(self.$scroller[0]);
+            var scrollTop = self.$scroller[0].scrollTop;
+            var scrollLeft = self.$scroller[0].scrollLeft;
             var top = e.clientY - rect.top + scrollTop;
-            var left = e.clientX - rect.left + scrollTop;
+            var left = e.clientX - rect.left + scrollLeft;
             startPx = { top: top, left: left };
             if (e.button != 2) {
                 self.selection.selectText = '';
@@ -208,62 +202,34 @@
         });
         this.$wrapper.on('mousemove', function(e) {
             if (select) {
-                var top = e.clientY - rect.top + scrollTop;
-                var left = e.clientX - rect.left + scrollTop;
-                endPx = { top: top, left: left };
-                var startPos = self.pxToPos(startPx.top, startPx.left);
-                var endPos = self.pxToPos(endPx.top, endPx.left);
-                _renderSelectBg();
+                Util.nextFrame(function(){
+                    var rect = Util.getRect(self.$scroller[0]);
+                    var scrollTop = self.$scroller[0].scrollTop;
+                    var scrollLeft = self.$scroller[0].scrollLeft;
+                    var top = e.clientY - rect.top + scrollTop;
+                    var left = e.clientX - rect.left + scrollLeft;
+                    var endPx = { top: top, left: left };
+                    var startPos = self.pxToPos(startPx.top, startPx.left);
+                    var endPos = self.pxToPos(endPx.top, endPx.left);
+                    //处理顺序
+                    if (startPos.line > endPos.line) {
+                        var tmp = startPos;
+                        startPos = endPos;
+                        endPos = tmp;
+                    } else if (startPos.line == endPos.line && startPos.column > endPos.column) {
+                        var tmp = startPos.column;
+                        startPos.column = endPos.column;
+                        endPos.column = tmp;
+                    }
+                    if(startPos.line < endPos.line || startPos.line == endPos.line && Math.abs(endPx.left - startPx.left) > self.charWidth){
+                        self.updateSelectBg(startPos,endPos);
+                    }
+                })
             }
         });
         this.$wrapper.on('mouseup', function(e) {
             select = false;
         })
-        //渲染选中背景
-        function _renderSelectBg() {
-            var startPos = self.pxToPos(startPx.top, startPx.left);
-            var endPos = self.pxToPos(endPx.top, endPx.left);
-            self.$selectBg.html('');
-            if (startPos.line > endPos.line) {
-                var tmp = startPos;
-                startPos = endPos;
-                endPos = tmp;
-            } else if (startPos.line == endPos.line && startPos.column > endPos.column) {
-                var tmp = startPos.column;
-                startPos.column = endPos.column;
-                endPos.column = tmp;
-            }
-            self.selection.startPos = startPos;
-            self.selection.endPos = endPos;
-            if (startPos.line == endPos.line) {
-                if (Math.abs(endPx.left - startPx.left) > self.charWidth) {
-                    var str = self.linesText.getText(startPos.line);
-                    var width = Util.getStrWidth(str, self.charWidth, self.fullAngleCharWidth, startPos.column, endPos.column);
-                    var px = self.posToPx(startPos.line, startPos.column);
-                    self.renderRange(px.top, px.left, width);
-                    self.selection.selectText = str.substring(startPos.column, endPos.column);
-                    self.$lineBg.hide(); //隐藏当前行背景
-                }
-            } else {
-                var str = self.linesText.getText(startPos.line);
-                var maxWidth = self.$context[0].scrollWidth;
-                var width = Util.getStrWidth(str, self.charWidth, self.fullAngleCharWidth, 0, startPos.column);
-                var px = self.posToPx(startPos.line, startPos.column);
-                self.renderRange(px.top, px.left, maxWidth - width);
-                self.selection.selectText = str;
-                for (var l = startPos.line + 1; l < endPos.line; l++) {
-                    px = self.posToPx(l, 0);
-                    self.renderRange(px.top, rect.paddingLeft, maxWidth);
-                    self.selection.selectText += '\n' + self.linesText.getText(l);
-                }
-                str = self.linesText.getText(endPos.line);
-                width = Util.getStrWidth(str, self.charWidth, self.fullAngleCharWidth, 0, endPos.column);
-                px = self.posToPx(endPos.line, 0);
-                self.renderRange(px.top, px.left, width);
-                self.selection.selectText += '\n' + str.substring(0, endPos.column);
-                self.$lineBg.hide(); //隐藏当前行背景
-            }
-        }
     }
     //menuContext事件
     _proto.bindMenuContextEvent = function() {
@@ -431,8 +397,8 @@
                                 self.cursorPos.column--;
                                 self.updateLine(self.cursorPos.line, str);
                             } else if (self.cursorPos.line > 1) {
-                                var column = self.linesText.getText(self.cursorPos.line-1).length;
-                                self.updateLine(self.cursorPos.line - 1, self.linesText.getText(self.cursorPos.line-1) + self.linesText.getText(self.cursorPos.line));
+                                var column = self.linesText.getText(self.cursorPos.line - 1).length;
+                                self.updateLine(self.cursorPos.line - 1, self.linesText.getText(self.cursorPos.line - 1) + self.linesText.getText(self.cursorPos.line));
                                 self.deleteLine(self.cursorPos.line);
                                 self.cursorPos.column = column;
                                 self.cursorPos.line--;
@@ -454,16 +420,25 @@
                         e.preventDefault();
                         //选中区域全体移动
                         if (self.selection.startPos) {
-                            var starLine = self.selection.startPos.line,
-                                endLine = self.selection.endPos.line,
+                            var startPos = self.selection.startPos,
+                                endPos = self.selection.endPos,
                                 space = Util.space(self.options.tabsize);
-                            for (var i = starLine; i <= endLine; i++) {
+                            for (var i = startPos.line; i <= endPos.line; i++) {
                                 if (!e.shiftKey) { //想后移动
                                     self.linesDom[i - 1].find('.code').prepend(space);
-                                    self.linesText.setText(i,space + self.linesText.getText(i));
+                                    self.linesText.setText(i, space + self.linesText.getText(i));
                                 } else { //像前移动
                                     _shiftTab(i);
                                 }
+                            }
+                            if(!e.shiftKey){
+                                startPos.column += 4;
+                                endPos.column +=4;
+                                self.updateSelectBg(startPos,endPos);
+                            }else{
+                                startPos.column = startPos.column - 4 >= 0 ? startPos.column - 4 : 0;
+                                endPos.column = endPos.column - 4 >= 0 ? endPos.column - 4 : 0;
+                                self.updateSelectBg(startPos,endPos);
                             }
                         } else {
                             if (!e.shiftKey) {
@@ -501,25 +476,25 @@
                 var hl = self.linesDom[line - 1].find('.code').html();
                 if (hl.indexOf('    ') == 0) {
                     self.linesDom[line - 1].find('.code').html(hl.substr(4));
-                    self.linesText.setText(line,self.linesText.getText(line).substr(4));
+                    self.linesText.setText(line, self.linesText.getText(line).substr(4));
                     if (line == self.cursorPos.line) {
                         self.cursorPos.column -= 4;
                     }
                 } else if (hl.indexOf('   ') == 0) {
                     self.linesDom[line - 1].find('.code').html(hl.substr(3));
-                    self.linesText.setText(line,self.linesText.getText(line).substr(3));
+                    self.linesText.setText(line, self.linesText.getText(line).substr(3));
                     if (line == self.cursorPos.line) {
                         self.cursorPos.column -= 3;
                     }
                 } else if (hl.indexOf('  ') == 0) {
                     self.linesDom[line - 1].find('.code').html(hl.substr(2));
-                    self.linesText.setText(line,self.linesText.getText(line).substr(2));
+                    self.linesText.setText(line, self.linesText.getText(line).substr(2));
                     if (line == self.cursorPos.line) {
                         self.cursorPos.column -= 2;
                     }
                 } else if (hl.indexOf(' ') == 0) {
                     self.linesDom[line - 1].find('.code').html(hl.substr(1));
-                    self.linesText.setText(line,self.linesText.getText(line).substr(1));
+                    self.linesText.setText(line, self.linesText.getText(line).substr(1));
                     if (line == self.cursorPos.line) {
                         self.cursorPos.column -= 1;
                     }
@@ -642,6 +617,40 @@
         }
         this.$leftNumBg.css('top', -context.scrollTop + 'px');
     }
+    //渲染选中背景
+    _proto.updateSelectBg = function(startPos,endPos) {
+        var self = this;
+        var rect = Util.getRect(self.$scroller[0]);
+        self.$selectBg.html('');
+        self.selection.startPos = startPos;
+        self.selection.endPos = endPos;
+        if (startPos.line == endPos.line) {
+            var str = self.linesText.getText(startPos.line);
+            var width = Util.getStrWidth(str, self.charWidth, self.fullAngleCharWidth, startPos.column, endPos.column);
+            var px = self.posToPx(startPos.line, startPos.column);
+            self.renderRange(px.top, px.left, width);
+            self.selection.selectText = str.substring(startPos.column, endPos.column);
+            self.$lineBg.hide(); //隐藏当前行背景
+        } else {
+            var str = self.linesText.getText(startPos.line);
+            var maxWidth = self.$context[0].scrollWidth;
+            var width = Util.getStrWidth(str, self.charWidth, self.fullAngleCharWidth, 0, startPos.column);
+            var px = self.posToPx(startPos.line, startPos.column);
+            self.renderRange(px.top, px.left, maxWidth - width);
+            self.selection.selectText = str;
+            for (var l = startPos.line + 1; l < endPos.line; l++) {
+                px = self.posToPx(l, 0);
+                self.renderRange(px.top, rect.paddingLeft, maxWidth);
+                self.selection.selectText += '\n' + self.linesText.getText(l);
+            }
+            str = self.linesText.getText(endPos.line);
+            width = Util.getStrWidth(str, self.charWidth, self.fullAngleCharWidth, 0, endPos.column);
+            px = self.posToPx(endPos.line, 0);
+            self.renderRange(px.top, px.left, width);
+            self.selection.selectText += '\n' + str.substring(0, endPos.column);
+            self.$lineBg.hide(); //隐藏当前行背景
+        }
+    }
     _proto.posToPx = function(line, column) {
         var self = this;
         var top = (line - 1) * this.charHight;
@@ -726,7 +735,7 @@
         this.updateCursorPos();
     }
     _proto.addLine = function(line, newConent) {
-        this.linesText.add(line,newConent);
+        this.linesText.add(line, newConent);
         var $linePre = $('.pre_code_line')[line - 1];
         var $dom = $('\
             <div style="position:relative;margin:0;padding-right:15px;height:' + this.charHight + 'px;" class="pre_code_line">\
