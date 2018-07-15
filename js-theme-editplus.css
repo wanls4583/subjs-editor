@@ -1,0 +1,131 @@
+/*monokai 主题*/
+
+.editor_wrap {
+    font-family: Consolas, Monaco, monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    letter-spacing: .5px;
+    color: #000;
+    background-color: #fff;
+}
+
+.editor_wrap textarea {
+    user-select: none;
+}
+
+.cursor {
+    width: 1px !important;
+    user-select: none;
+    background-color: #000 !important;
+}
+
+.current_line_bg {
+    user-select: none;
+}
+
+.line_num_bg {
+    background: #fff;
+}
+
+.line_num {
+    color: rgba(0,0,0,0.3);
+}
+
+.line_num.active {
+    background-color: rgb(158,207,207);
+}
+
+.selection_line_bg {
+    background-color: #BAD6FD !important;
+}
+
+
+/*关键字*/
+
+.key {
+    color: #0000FF;
+}
+
+
+/*类型*/
+
+.type {
+    color: #3333FF;
+}
+
+
+/*函数执行*/
+
+.function {
+    color: #3333FF;
+
+}
+
+.class {
+    color: #3333FF;
+}
+
+
+/*函数名称*/
+
+.function_name {
+    color: #800000;
+}
+
+
+/*函数参数*/
+
+.function_arg {
+    color: #000;
+}
+
+.tag {
+    color: #0033CC;
+}
+
+.tag_attr {
+    color: #000;
+}
+
+
+/*内置函数*/
+
+.lib_function {
+    color: #3333FF;
+}
+
+
+/*内置变量*/
+
+.lib_var {
+    color: #3333FF;
+}
+
+
+/*操作符号*/
+
+.oprator {
+    color: #800000;
+}
+
+
+/*注释*/
+
+.comment,
+.pair_comment {
+    color: #008000;
+}
+
+
+/*字符串*/
+
+.string {
+    color: #FF00FF;
+}
+
+
+/*数字*/
+
+.number {
+    color: #800080;
+}
