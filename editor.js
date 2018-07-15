@@ -397,9 +397,6 @@
             self.selection.selectText += '\n' + str.substring(0, endPos.column);
             self.$lineBg.hide(); //隐藏当前行背景
         }
-        self.cursorPos.line = endPos.line;
-        self.cursorPos.column = endPos.column;
-        self.updateCursorPos();
     }
     //更新一行
     _proto.updateLine = function(line, newConent) {
