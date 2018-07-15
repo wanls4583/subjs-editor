@@ -40,6 +40,9 @@
                 return dom.currentStyle[prop]
             }
         },
+        pxToNum: function(px){
+            return parseInt(px.substring(0, px.length - 2))
+        },
         nextFrame: function(callback) {
             if (window.requestAnimationFrame) {
                 window.requestAnimationFrame(callback);
@@ -52,21 +55,21 @@
         getRect: function(dom) {
             var _r = dom.getBoundingClientRect();
             var _pt = this.getStyleVal(dom, 'paddingTop');
-            _pt = parseInt(_pt.substring(0, _pt.length - 2));
+            _pt = this.pxToNum(_pt);
             var _pb = Util.getStyleVal(dom, 'paddingBottom');
-            _pb = parseInt(_pb.substring(0, _pb.length - 2));
+            _pb = this.pxToNum(_pb);
             var _pl = this.getStyleVal(dom, 'paddingLeft');
-            _pl = parseInt(_pl.substring(0, _pl.length - 2));
+            _pl = this.pxToNum(_pl);
             var _pr = this.getStyleVal(dom, 'paddingRight');
-            _pr = parseInt(_pr.substring(0, _pr.length - 2));
+            _pr = this.pxToNum(_pr);
             var _mt = this.getStyleVal(dom, 'marginTop');
-            _mt = parseInt(_mt.substring(0, _mt.length - 2));
+            _mt = this.pxToNum(_mt);
             var _mb = Util.getStyleVal(dom, 'marginBottom');
-            _mb = parseInt(_mb.substring(0, _mb.length - 2));
+            _mb = this.pxToNum(_mb);
             var _ml = this.getStyleVal(dom, 'marginLeft');
-            _ml = parseInt(_ml.substring(0, _ml.length - 2));
+            _ml = this.pxToNum(_ml);
             var _mr = this.getStyleVal(dom, 'marginRight');
-            _mr = parseInt(_mr.substring(0, _mr.length - 2));
+            _mr = this.pxToNum(_mr);
             return {
                 top: _r.top,
                 bottom: _r.bottom,
@@ -277,7 +280,7 @@
      */
     _proto.posToPx = function(line, column) {
         var self = this;
-        var top = (line - 1) * this.charHight;
+        var top = (line - this.firstLine) * this.charHight + Util.pxToNum(Util.getStyleVal(this.$context[0],'top'));
         var str = this.linesText.getText(line).substring(0, column);
         var match = str.match(Util.fullAngleReg);
         var left = str.length * this.charWidth;
@@ -302,10 +305,11 @@
         var line = top;
         left -= rect.paddingLeft;
         if (!ifLine) {
-            top -= rect.paddingTop;
+            top = top - rect.paddingTop - Util.pxToNum(Util.getStyleVal(this.$context[0],'top'));
             line = Math.ceil(top / this.charHight);
         }
         line = line < 1 ? 1 : line;
+        line = line + this.firstLine - 1;
         if (line > this.linesText.getLength()) {
             line = this.linesText.getLength();
             column = this.linesText.getText(this.linesText.getLength()).length;
@@ -345,8 +349,6 @@
     _proto.updateCursorPos = function() {
         var pos = this.posToPx(this.cursorPos.line, this.cursorPos.column);
         var scrollTop = this.$vScrollWrap[0].scrollTop;
-        var conTop = Util.getStyleVal(this.$context[0], 'top');
-        pos.top = pos.top - scrollTop + conTop;
         this.$cursor.css({
             top: pos.top + 'px',
             left: pos.left + 'px'
@@ -366,22 +368,22 @@
         this.updateScroll();
     }
     _proto.updateScroll = function() {
-        var context = this.$scroller[0];
+        var scroller = this.$scroller[0];
         var cRect = Util.getRect(this.$cursor[0]);
         var lRect = Util.getRect(this.$leftNumBg[0]);
-        var conTop = Util.getStyleVal(this.$context[0], 'top');
-        conTop = parseInt(conTop.substring(0, conTop.length - 2));
-        var minScrollTop = this.posToPx(this.cursorPos.line, 0).top - this.$scroller[0].scrollTop + conTop;
-        if (this.$vScrollWrap[0].scrollTop < minScrollTop) {
-            this.$vScrollWrap[0].scrollTop = minScrollTop;
+        var top = this.posToPx(this.cursorPos.line, 0).top;
+        if(top + 30 > scroller.clientHeight){
+            this.$vScrollWrap[0].scrollTop = this.$vScrollWrap[0].clientHeight - this.$vScrollWrap[0].scrollHeight;
         }
-        if (cRect.offsetLeft - this.charWidth <= context.scrollLeft) {
-            context.scrollLeft = cRect.offsetLeft - this.charWidth;
-        } else if (cRect.offsetLeft + this.charWidth * 2 + 24 >= context.scrollLeft + (this.$wrapper[0].clientWidth - context.offsetLeft)) {
+        if (cRect.offsetLeft - this.charWidth <= scroller.scrollLeft) {
+            scroller.scrollLeft = cRect.offsetLeft - this.charWidth;
+        } else if (cRect.offsetLeft + this.charWidth * 2 + 24 >= scroller.scrollLeft + (this.$wrapper[0].clientWidth - scroller.offsetLeft)) {
             //为滚动条预留24px
-            context.scrollLeft = cRect.offsetLeft + this.charWidth * 2 + 24 - (this.$wrapper[0].clientWidth - context.offsetLeft);
+            scroller.scrollLeft = cRect.offsetLeft + this.charWidth * 2 + 24 - (this.$wrapper[0].clientWidth - scroller.offsetLeft);
         }
-        this.$leftNumBg.css('top', -context.scrollTop + 'px');
+        this.$vScrollBar.css({
+            height: this.$context[0].clientHeight + (this.firstLine - 1) * this.charHight + 'px'
+        })        
     }
     //渲染选中背景
     _proto.updateSelectBg = function(startPos, endPos) {
@@ -493,7 +495,7 @@
                 this.$leftNumBg.append(this.leftNumDom[i]);
             }
         }
-        for (var i = allDom.length; i <= this.leftNumDom.length; i++) {
+        for (var i = allDom.length; i < this.leftNumDom.length; i++) {
             this.leftNumDom[i].remove();
         }
     }
@@ -687,12 +689,13 @@
     _proto.bindScrollEvent = function() {
         var self = this;
         this.$vScrollWrap.on('scroll', function(e) {
-            self.$leftNumBg.css('top', -this.scrollTop + 'px');
             var firstLine = Math.ceil(this.scrollTop / self.charHight);
             self.$context.css({
                 top: this.scrollTop % self.charHight + 'p'
             })
-            console.log(firstLine, self.firstLine);
+            self.$leftNumBg.css({
+                top: this.scrollTop % self.charHight + 'p'
+            })
             self.mount(firstLine);
         })
     }
