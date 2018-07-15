@@ -204,6 +204,19 @@
     _proto.createLeftNumBg = function() {
         this.$leftNumBg = $('<div class="line_num_bg" style="float:left;position:relative;left:0;top:0;z-index:2;min-height:100%;padding:5px 0;padding-bottom:' + this.charHight + 'px;box-sizing:border-box"></div>');
         this.$wrapper.prepend(this.$leftNumBg);
+        for (var i = 1; i <= this.maxVisualLine; i++) {
+            var $num = $('<span class="line_num">' + this.linesText.getLength() + '</span>')
+            $num.css({
+                'display': 'block',
+                'height': this.charHight + 'px',
+                'line-height': this.charHight + 'px',
+                'padding-right': '15px',
+                'padding-left': '15px',
+                'user-select': 'none',
+                'text-align': 'right'
+            })
+            this.leftNumDom.push($num);
+        }
     }
     //创建输入框
     _proto.creatTextarea = function() {
@@ -349,7 +362,7 @@
             this.$lineBg.hide();
         }
         this.$leftNumBg.find('.active').removeClass('active');
-        this.leftNumDom[this.cursorPos.line - 1].addClass('active');
+        this.leftNumDom[this.cursorPos.line - this.firstLine].addClass('active');
         this.updateScroll();
     }
     _proto.updateScroll = function() {
@@ -438,19 +451,6 @@
             <div style="position:relative;margin:0;padding-right:15px;height:' + this.charHight + 'px;" class="pre_code_line">\
                 <div class="code" style="display:inline-block;position:relative;height:100%;min-width:100%;box-sizing:border-box;padding-right:10px;white-space:pre"></div>\
             </div>');
-        var $num = $('<span class="line_num">' + this.linesText.getLength() + '</span>')
-        $num.css({
-            'display': 'block',
-            'height': this.charHight + 'px',
-            'line-height': this.charHight + 'px',
-            'padding-right': '15px',
-            'padding-left': '15px',
-            'user-select': 'none',
-            'text-align': 'right',
-            'font-size': this.fontSize
-        })
-        this.$leftNumBg.append($num);
-        this.leftNumDom.push($num);
         this.linesDom.splice(line - 1, 0, $dom);
     }
     //删除一行
@@ -458,8 +458,6 @@
         this.linesText.delete(line);
         this.linesDom[line - 1].remove();
         this.linesDom.splice(line - 1, 1);
-        this.leftNumDom[this.leftNumDom.length - 1].remove();
-        this.leftNumDom.splice(this.leftNumDom.length - 1, 1);
         if (this.mode) {
             this.mode.onDeleteLine(line);
         }
@@ -484,6 +482,22 @@
         this.updateCursorPos();
     }
     /**
+     * 更新行号
+     * @param  {number} firstLine 首行
+     */
+    _proto.updateNum = function(firstLine) {
+        var allDom = this.$context.find('.pre_code_line');
+        for (var i = 0; i < allDom.length; i++) {
+            this.leftNumDom[i].html(firstLine + i);
+            if (!this.leftNumDom[i][0].isConnected) {
+                this.$leftNumBg.append(this.leftNumDom[i]);
+            }
+        }
+        for (var i = allDom.length; i <= this.leftNumDom.length; i++) {
+            this.leftNumDom[i].remove();
+        }
+    }
+    /**
      * 挂载dom
      * @param  {number} firstLine 首行序号
      */
@@ -495,28 +509,29 @@
         for (var i = this.firstLine; i < firstLine; i++) {
             this.linesDom[i - 1].remove();
         }
-        var allDom = this.$context.find('.pre_code_line');
+        //当过小于当前首行，则在其前插入
         if (firstLine < this.firstLine) {
             for (var i = firstLine; i < this.firstLine; i++) {
                 _hightlight(i);
-                this.linesDom[i - 1].insertBefore(this.linesDom[this.firstLine-1]);
+                this.linesDom[i - 1].insertBefore(this.linesDom[this.firstLine - 1]);
             }
         }
-        allDom = this.$context.find('.pre_code_line');
+        var allDom = this.$context.find('.pre_code_line');
+        //如果当前可视区域的元素少于最大可见个数，则在尾部追加
         if (allDom.length < this.maxVisualLine) {
-            for (var i = firstLine + allDom.length; this.linesDom[i-1] && i < firstLine + this.maxVisualLine; i++) {
+            for (var i = firstLine + allDom.length; this.linesDom[i - 1] && i < firstLine + this.maxVisualLine; i++) {
                 _hightlight(i);
                 this.$context.append(this.linesDom[i - 1]);
             }
         }
         allDom = this.$context.find('.pre_code_line');
-        for(var i = allDom.length; i > this.maxVisualLine; i--){
-            allDom[i-1].remove();
+        //可视区域元素个数大于最大可见个数，需要删除
+        for (var i = allDom.length; i > this.maxVisualLine; i--) {
+            allDom[i - 1].remove();
         }
-        this.$vScrollBar.css({
-            height: this.$leftNumBg[0].scrollHeight
-        })
+        this.updateNum(firstLine);
         this.firstLine = firstLine;
+
         function _hightlight(line) {
             if (self.mode && !self.linesDom[line - 1].hasHightLight) {
                 self.mode.onAddLine(line);
@@ -677,7 +692,7 @@
             self.$context.css({
                 top: this.scrollTop % self.charHight + 'p'
             })
-            console.log(firstLine,self.firstLine);
+            console.log(firstLine, self.firstLine);
             self.mount(firstLine);
         })
     }
