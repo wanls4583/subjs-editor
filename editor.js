@@ -247,6 +247,12 @@
             flicker();
         }
     }
+    //创建纵向滚动条
+    _proto.createVScrollBar = function() {
+        this.$vScrollWrap = $('<div class="v_scrollbar_wrap" style="position:absolute;top:0;bottom:0;z-index:4;right:0;overflow:auto;width:22px;"><div class="v_scrollbar"></div></div>');
+        this.$vScrollBar = this.$vScrollWrap.find('.v_scrollbar');
+        this.$wrapper.append(this.$vScrollWrap);
+    }
     /**
      * 将行列坐标转换成像素坐标（相对于scroller容器）
      * @param  {number} line   行号
