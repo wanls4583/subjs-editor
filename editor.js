@@ -154,6 +154,7 @@
         this.leftNumDom = []; //行号dom
         this.cursorPos = { line: 1, column: 0 }; //光标位置
         this.selection = {};
+        this.firstLine = 1;
         this.mode = window.SubJsMode && new SubJsMode(this.linesText, this.linesDom);
         this.creatContext();
         this.getCharWidth();
@@ -161,6 +162,7 @@
         this.creatTextarea();
         this.createCrusor();
         this.createLineBg();
+        this.createVScrollBar();
         this.bindEvent();
         this.bindEditorEvent();
         this.addLine(1, '');
@@ -182,12 +184,13 @@
         this.fullAngleCharWidth = $('.char_width_2')[0].clientWidth / str2.length;
         this.fontSize = window.getComputedStyle ? window.getComputedStyle(dom, null).fontSize : dom.currentStyle.fontSize;
         this.$context[0].innerHTML = '';
+        this.maxVisualLine = Math.ceil(this.$scroller[0].clientHeight / this.charHight) + 1;
         console.log('charSize', this.charWidth, this.fullAngleCharWidth, this.charHight);
     }
     //输入框区域
     _proto.creatContext = function() {
-        this.$scroller = $('<div class="editor_scroller" style="position:relative;z-index:3;overflow:auto;height:100%;padding:5px 0 0 5px;box-sizing:border-box">\
-                <div class="editor_context" style="min-height:100%;cursor:text;"></div>\
+        this.$scroller = $('<div class="editor_scroller" style="position:relative;z-index:3;overflow-x:auto;overflow-y:hidden;height:100%;padding:5px 0 0 5px;box-sizing:border-box">\
+                <div class="editor_context" style="position:relative;top:0;min-height:100%;cursor:text;"></div>\
                 <div class="editor_bg" style="position:absolute;left:0;top:0;z-index:-1"></div>\
             </div>');
         this.$wrapper = $('<div class="editor_wrap"></div>');
@@ -328,6 +331,9 @@
     //更新光标坐标
     _proto.updateCursorPos = function() {
         var pos = this.posToPx(this.cursorPos.line, this.cursorPos.column);
+        var scrollTop = this.$vScrollWrap[0].scrollTop;
+        var conTop = Util.getStyleVal(this.$context[0], 'top');
+        pos.top = pos.top - scrollTop + conTop;
         this.$cursor.css({
             top: pos.top + 'px',
             left: pos.left + 'px'
@@ -350,11 +356,11 @@
         var context = this.$scroller[0];
         var cRect = Util.getRect(this.$cursor[0]);
         var lRect = Util.getRect(this.$leftNumBg[0]);
-        if (cRect.offsetTop <= this.$scroller[0].scrollTop) {
-            context.scrollTop = cRect.offsetTop;
-        } else if (cRect.offsetTop + this.charHight + 24 >= context.scrollTop + this.$wrapper[0].clientHeight) {
-            //为滚动条预留24px
-            context.scrollTop = cRect.offsetTop + this.charHight + 24 - this.$wrapper[0].clientHeight;
+        var conTop = Util.getStyleVal(this.$context[0], 'top');
+        conTop = parseInt(conTop.substring(0, conTop.length - 2));
+        var minScrollTop = this.posToPx(this.cursorPos.line, 0).top - this.$scroller[0].scrollTop + conTop;
+        if (this.$vScrollWrap[0].scrollTop < minScrollTop) {
+            this.$vScrollWrap[0].scrollTop = minScrollTop;
         }
         if (cRect.offsetLeft - this.charWidth <= context.scrollLeft) {
             context.scrollLeft = cRect.offsetLeft - this.charWidth;
@@ -412,13 +418,17 @@
         var str = this.linesText.getText(this.cursorPos.line);
         str = str.substring(0, this.cursorPos.column) + val + str.substr(this.cursorPos.column);
         var strs = str.split(/\r\n|\r|\n/);
-        this.cursorPos.column += val.length;
         this.updateLine(this.cursorPos.line, strs[0]);
         for (var tmp = 1; tmp < strs.length; tmp++) { //粘贴操作可能存在换号符
-            this.cursorPos.line++;
-            this.addLine(this.cursorPos.line, strs[tmp]);
-            this.cursorPos.column = strs[tmp].length;
+            this.addLine(this.cursorPos.line + tmp, strs[tmp]);
         }
+        var firstLine = this.firstLine;
+        if (this.cursorPos.line - this.firstLine + strs.length > this.maxVisualLine) {
+            firstLine = this.cursorPos.line + strs.length - this.maxVisualLine;
+        }
+        this.mount(firstLine);
+        this.cursorPos.line = this.cursorPos.line + strs.length - 1;
+        this.cursorPos.column = strs[strs.length - 1].length;
         this.updateCursorPos();
     }
     _proto.addLine = function(line, newConent) {
@@ -428,11 +438,6 @@
             <div style="position:relative;margin:0;padding-right:15px;height:' + this.charHight + 'px;" class="pre_code_line">\
                 <div class="code" style="display:inline-block;position:relative;height:100%;min-width:100%;box-sizing:border-box;padding-right:10px;white-space:pre"></div>\
             </div>');
-        if (!$linePre) {
-            this.$scroller.find('.editor_context').append($dom);
-        } else {
-            $dom.insertBefore($linePre);
-        }
         var $num = $('<span class="line_num">' + this.linesText.getLength() + '</span>')
         $num.css({
             'display': 'block',
@@ -447,9 +452,6 @@
         this.$leftNumBg.append($num);
         this.leftNumDom.push($num);
         this.linesDom.splice(line - 1, 0, $dom);
-        if (this.mode) {
-            this.mode.onAddLine(line);
-        }
     }
     //删除一行
     _proto.deleteLine = function(line) {
@@ -480,6 +482,47 @@
         this.$selectBg.html('');
         this.selection = {};
         this.updateCursorPos();
+    }
+    /**
+     * 挂载dom
+     * @param  {number} firstLine 首行序号
+     */
+    _proto.mount = function(firstLine) {
+        var self = this,
+            firstDom = this.linesDom[firstLine - 1],
+            allDom = null;
+        //删除可视区域之前的元素
+        for (var i = this.firstLine; i < firstLine; i++) {
+            this.linesDom[i - 1].remove();
+        }
+        var allDom = this.$context.find('.pre_code_line');
+        if (firstLine < this.firstLine) {
+            for (var i = firstLine; i < this.firstLine; i++) {
+                _hightlight(i);
+                this.linesDom[i - 1].insertBefore(this.linesDom[this.firstLine-1]);
+            }
+        }
+        allDom = this.$context.find('.pre_code_line');
+        if (allDom.length < this.maxVisualLine) {
+            for (var i = firstLine + allDom.length; this.linesDom[i-1] && i < firstLine + this.maxVisualLine; i++) {
+                _hightlight(i);
+                this.$context.append(this.linesDom[i - 1]);
+            }
+        }
+        allDom = this.$context.find('.pre_code_line');
+        for(var i = allDom.length; i > this.maxVisualLine; i--){
+            allDom[i-1].remove();
+        }
+        this.$vScrollBar.css({
+            height: this.$leftNumBg[0].scrollHeight
+        })
+        this.firstLine = firstLine;
+        function _hightlight(line) {
+            if (self.mode && !self.linesDom[line - 1].hasHightLight) {
+                self.mode.onAddLine(line);
+                self.linesDom[line - 1].hasHightLight = true;
+            }
+        }
     }
     //全选
     _proto.selectAll = function() {
@@ -628,11 +671,14 @@
     //滚动条事件
     _proto.bindScrollEvent = function() {
         var self = this;
-        this.$scroller.on('scroll', function(e) {
+        this.$vScrollWrap.on('scroll', function(e) {
             self.$leftNumBg.css('top', -this.scrollTop + 'px');
-            self.$lineBg.css({
-                top: self.linesDom[self.cursorPos.line - 1][0].offsetTop - self.$scroller[0].scrollTop + 'px',
-            });
+            var firstLine = Math.ceil(this.scrollTop / self.charHight);
+            self.$context.css({
+                top: this.scrollTop % self.charHight + 'p'
+            })
+            console.log(firstLine,self.firstLine);
+            self.mount(firstLine);
         })
     }
     //输入事件
@@ -671,7 +717,7 @@
                             self.selection = {};
                         } else if (self.cursorPos.line > 1) {
                             self.cursorPos.line--;
-                            self.cursorPos.column = self.pxToPos(self.cursorPos.line, self.cursorPos.left, true).column;
+                            self.cursorPos.column = self.pxToPos(self.cursorPos.top, self.cursorPos.left, true).column;
                         }
                         break;
                     case 39: //right arrow
@@ -695,7 +741,7 @@
                             self.selection = {};
                         } else if (self.cursorPos.line < self.linesText.getLength()) {
                             self.cursorPos.line++;
-                            self.cursorPos.column = self.pxToPos(self.cursorPos.line, self.cursorPos.left, true).column;
+                            self.cursorPos.column = self.pxToPos(self.cursorPos.top, self.cursorPos.left, true).column;
                         }
                         break;
                     case 46: //delete
