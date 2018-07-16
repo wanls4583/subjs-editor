@@ -107,27 +107,45 @@
             var val = '';
             for (var tmp = 0; tmp < tabsize; tmp++) { val += ' ' };
             return val;
+        },
+        sortNum: function(arr) {
+            arr.sort(function(arg1, arg2) {
+                return Number(arg1) - Number(arg2);
+            })
         }
     }
     /**
      * 文本容器类
      */
     function LinesText() {
-        var content = [];
+        var _content = [];
+        var _width = [];
         this.getText = function(line) {
-            return content[line - 1];
+            return _content[line - 1];
         }
         this.setText = function(line, txt) {
-            content[line - 1] = txt;
+            _content[line - 1] = txt;
+            _width[line - 1] = Util.getStrWidth(txt, SubJs.charWidth, SubJs.fullAngleCharWidth);
+            Util.sortNum(_width);
         }
         this.add = function(line, txt) {
-            content.splice(line - 1, 0, txt);
+            _content.splice(line - 1, 0, txt);
+            _width.splice(line - 1, 0, 0);
+            _width[line - 1] = Util.getStrWidth(txt, SubJs.charWidth, SubJs.fullAngleCharWidth);
+            Util.sortNum(_width);
         }
         this.delete = function(line) {
-            content.splice(line - 1, 1);
+            _content.splice(line - 1, 1);
+            _width.splice(line - 1, 1);
         }
         this.getLength = function() {
-            return content.length;
+            return _content.length;
+        }
+        this.getMaxWidth = function() {
+            if (!_width.length) {
+                return 0;
+            }
+            return _width[_width.length - 1];
         }
     }
     /**
@@ -157,7 +175,7 @@
         this.leftNumDom = []; //行号dom
         this.cursorPos = { line: 1, column: 0 }; //光标位置
         this.selection = {};
-        this.firstLine = 1;
+        this.firstLine = 0;
         this.mode = window.SubJsMode && new SubJsMode(this.linesText, this.linesDom);
         this.creatContext();
         this.getCharWidth();
@@ -165,10 +183,12 @@
         this.creatTextarea();
         this.createCrusor();
         this.createLineBg();
-        this.createVScrollBar();
+        this.createScrollBar();
         this.bindEvent();
         this.bindEditorEvent();
         this.addLine(1, '');
+        this.mount(1);
+        this.updateCursorPos();
     }
     _proto.bindEvent = function() {
         this.bindInputEvent();
@@ -182,17 +202,17 @@
         var str2 = '啊啊啊啊啊啊啊啊';
         this.$context[0].innerHTML = '<span style="display:inline-block" class="char_width_1">' + str1 + '</span><span style="display:inline-block" class="char_width_2">' + str2 + '</span>';
         var dom = $('.char_width_1')[0];
-        this.charWidth = dom.clientWidth / str1.length;
-        this.charHight = dom.clientHeight;
-        this.fullAngleCharWidth = $('.char_width_2')[0].clientWidth / str2.length;
+        SubJs.charWidth = dom.clientWidth / str1.length;
+        SubJs.charHight = dom.clientHeight;
+        SubJs.fullAngleCharWidth = $('.char_width_2')[0].clientWidth / str2.length;
         this.fontSize = window.getComputedStyle ? window.getComputedStyle(dom, null).fontSize : dom.currentStyle.fontSize;
         this.$context[0].innerHTML = '';
-        this.maxVisualLine = Math.ceil(this.$scroller[0].clientHeight / this.charHight) + 1;
-        console.log('charSize', this.charWidth, this.fullAngleCharWidth, this.charHight);
+        this.maxVisualLine = Math.ceil(this.$context[0].clientHeight / SubJs.charHight) + 1;
+        console.log('charSize', SubJs.charWidth, SubJs.fullAngleCharWidth, SubJs.charHight);
     }
     //输入框区域
     _proto.creatContext = function() {
-        this.$scroller = $('<div class="editor_scroller" style="position:relative;z-index:3;overflow-x:auto;overflow-y:hidden;height:100%;padding:5px 0 0 5px;box-sizing:border-box">\
+        this.$scroller = $('<div class="editor_scroller" style="position:relative;z-index:3;overflow:hidden;height:100%;padding:5px 0 0 5px;box-sizing:border-box">\
                 <div class="editor_context" style="position:relative;top:0;min-height:100%;cursor:text;"></div>\
                 <div class="editor_bg" style="position:absolute;left:0;top:0;z-index:-1"></div>\
             </div>');
@@ -205,14 +225,14 @@
     }
     //左侧行号
     _proto.createLeftNumBg = function() {
-        this.$leftNumBg = $('<div class="line_num_bg" style="float:left;position:relative;left:0;top:0;z-index:2;min-height:100%;padding:5px 0;padding-bottom:' + this.charHight + 'px;box-sizing:border-box"></div>');
+        this.$leftNumBg = $('<div class="line_num_bg" style="float:left;position:relative;left:0;top:0;z-index:2;min-height:100%;padding:5px 0;padding-bottom:' + SubJs.charHight + 'px;box-sizing:border-box"></div>');
         this.$wrapper.prepend(this.$leftNumBg);
         for (var i = 1; i <= this.maxVisualLine; i++) {
             var $num = $('<span class="line_num">' + this.linesText.getLength() + '</span>')
             $num.css({
                 'display': 'block',
-                'height': this.charHight + 'px',
-                'line-height': this.charHight + 'px',
+                'height': SubJs.charHight + 'px',
+                'line-height': SubJs.charHight + 'px',
                 'padding-right': '15px',
                 'padding-left': '15px',
                 'user-select': 'none',
@@ -241,12 +261,12 @@
     }
     //创建当前行背景
     _proto.createLineBg = function() {
-        this.$lineBg = $('<div class="current_line_bg" style="display:none;position:absolute;top:5px;left:40px;right:0;z-index:1;height:' + this.charHight + 'px"></div>');
+        this.$lineBg = $('<div class="current_line_bg" style="display:none;position:absolute;top:5px;left:40px;right:0;z-index:1;height:' + SubJs.charHight + 'px"></div>');
         this.$wrapper.append(this.$lineBg);
     }
     //创建光标
     _proto.createCrusor = function() {
-        this.$cursor = $('<i class="cursor" style="display:none;position:absolute;top:0;width:2px;height:' + this.charHight + 'px;background-color:#333"></i>');
+        this.$cursor = $('<i class="cursor" style="display:none;position:absolute;top:0;width:2px;height:' + SubJs.charHight + 'px;background-color:#333"></i>');
         this.$scroller.append(this.$cursor);
         var show = true;
         var self = this;
@@ -267,10 +287,13 @@
         }
     }
     //创建纵向滚动条
-    _proto.createVScrollBar = function() {
-        this.$vScrollWrap = $('<div class="v_scrollbar_wrap" style="position:absolute;top:0;bottom:0;z-index:4;right:0;overflow:auto;width:22px;"><div class="v_scrollbar"></div></div>');
+    _proto.createScrollBar = function() {
+        this.$vScrollWrap = $('<div class="v_scrollbar_wrap" style="position:absolute;top:0;bottom:0;right:0;z-index:4;overflow:auto;width:22px;"><div class="v_scrollbar"></div></div>');
+        this.$hScrollWrap = $('<div class="h_scrollbar_wrap" style="position:absolute;left:0;right:0;bottom:0;z-index:4;overflow:auto;height:22px;"><div class="h_scrollbar" style="height:100%"></div></div>');
         this.$vScrollBar = this.$vScrollWrap.find('.v_scrollbar');
+        this.$hScrollBar = this.$hScrollWrap.find('.h_scrollbar');
         this.$wrapper.append(this.$vScrollWrap);
+        this.$wrapper.append(this.$hScrollWrap);
     }
     /**
      * 将行列坐标转换成像素坐标（相对于scroller容器）
@@ -280,13 +303,13 @@
      */
     _proto.posToPx = function(line, column) {
         var self = this;
-        var top = (line - this.firstLine) * this.charHight + Util.pxToNum(Util.getStyleVal(this.$context[0], 'top'));
+        var top = (line - this.firstLine) * SubJs.charHight + Util.pxToNum(Util.getStyleVal(this.$context[0], 'top'));
         var str = this.linesText.getText(line).substring(0, column);
         var match = str.match(Util.fullAngleReg);
-        var left = str.length * this.charWidth;
+        var left = str.length * SubJs.charWidth;
         var rect = Util.getRect(this.$scroller[0]);
         if (match) {
-            left += match.length * (this.fullAngleCharWidth - this.charWidth);
+            left += match.length * (SubJs.fullAngleCharWidth - SubJs.charWidth);
         }
         return {
             top: top + rect.paddingTop,
@@ -306,7 +329,7 @@
         left -= rect.paddingLeft;
         if (!ifLine) {
             top = top - rect.paddingTop - Util.pxToNum(Util.getStyleVal(this.$context[0], 'top'));
-            line = Math.ceil(top / this.charHight);
+            line = Math.ceil(top / SubJs.charHight);
         }
         line = line < 1 ? 1 : line;
         line = line + this.firstLine - 1;
@@ -315,13 +338,13 @@
             column = this.linesText.getText(this.linesText.getLength()).length;
         } else {
             var str = this.linesText.getText(line);
-            column = Math.ceil(left / this.charWidth);
+            column = Math.ceil(left / SubJs.charWidth);
             column = column < 0 ? 0 : column;
             column = column > str.length ? str.length : column;
             var match = str.match(Util.fullAngleReg);
-            var maxWidth = str.length * this.charWidth;
+            var maxWidth = str.length * SubJs.charWidth;
             if (match) {
-                maxWidth += match.length * (this.fullAngleCharWidth - this.charWidth);
+                maxWidth += match.length * (SubJs.fullAngleCharWidth - SubJs.charWidth);
             }
             if (left > maxWidth) {
                 left = maxWidth;
@@ -329,11 +352,11 @@
                 while (column > 0) {
                     var str = this.linesText.getText(line).substring(0, column);
                     var match = str.match(Util.fullAngleReg);
-                    var _left = str.length * this.charWidth;
+                    var _left = str.length * SubJs.charWidth;
                     if (match) {
-                        _left += match.length * (this.fullAngleCharWidth - this.charWidth);
+                        _left += match.length * (SubJs.fullAngleCharWidth - SubJs.charWidth);
                     }
-                    if (Math.abs(_left - left) < this.charWidth) {
+                    if (Math.abs(_left - left) < SubJs.charWidth) {
                         break;
                     }
                     column--;
@@ -368,23 +391,70 @@
         this.updateScroll();
     }
     _proto.updateScroll = function() {
-        this.$vScrollBar.css({
-            height: this.linesText.getLength() * this.charHight + 24 + 'px'
+        var scroller = this.$scroller[0],
+            context = this.$context[0],
+            cRect = Util.getRect(this.$cursor[0]),
+            lRect = Util.getRect(this.$leftNumBg[0]),
+            top = this.posToPx(this.cursorPos.line, 0).top,
+            hBarHeight = 0,
+            vBarWidth = 0,
+            realBarWidth = 0;
+        //设置横向滚动条左边距离
+        this.$hScrollWrap.css({
+            left: scroller.offsetLeft + 'px'
         })
-        var scroller = this.$scroller[0];
-        var cRect = Util.getRect(this.$cursor[0]);
-        var lRect = Util.getRect(this.$leftNumBg[0]);
-        var top = this.posToPx(this.cursorPos.line, 0).top;
-        if (top + 24 > scroller.clientHeight) {
-            var line = this.cursorPos.line - (this.maxVisualLine - 1) + 1;
-            var scrollTop = line * this.charHight + (this.charHight - scroller.clientHeight%this.charHight) + 24;
+        //设置纵向滚动条高度
+        this.$vScrollBar.css({
+            height: this.linesText.getLength() * SubJs.charHight + Util.pxToNum(Util.getStyleVal(scroller, 'paddingTop')) + hBarHeight + 'px'
+        })
+        if(this.$vScrollWrap[0].scrollHeight > this.$vScrollWrap[0].clientHeight){
+            vBarWidth = 22;
+        }
+        //设置编辑区宽度
+        this.$context.css({
+            'min-width': this.linesText.getMaxWidth() + vBarWidth + 15 + 'px'
+        })
+        //设置横向滚动条宽度度
+        this.$hScrollBar.css({
+            width:  scroller.scrollWidth + 'px'
+        })
+        //横线滚动条会占用一定高度
+        if (scroller.scrollWidth > scroller.clientWidth) {
+            hBarHeight = 22;
+        }
+        //出现横向滚动条后，纵向滚动条高度缩短22px
+        if (Util.pxToNum(Util.getStyleVal(this.$vScrollWrap[0], 'bottom')) == 0 && hBarHeight) {
+            //获取真实滚动条宽度
+            realBarWidth = this.$vScrollWrap[0].offsetWidth - this.$vScrollWrap[0].clientWidth;
+            this.$vScrollWrap.css({
+                bottom: realBarWidth + 'px'
+            })
+        }
+        //出现纵向滚动条后，横向滚动条高度缩短22px
+        if (Util.pxToNum(Util.getStyleVal(this.$hScrollWrap[0], 'right')) == 0 && vBarWidth) {
+            if(!realBarWidth){
+                realBarWidth = this.$hScrollWrap[0].offsetHeight - this.$hScrollWrap[0].clientHeight;
+            }
+            this.$hScrollWrap.css({
+                right: realBarWidth + 'px'
+            })
+        }
+        //光标超出可视区域最大高度之外
+        if (top + SubJs.charHight > context.clientHeight) {
+            var line = this.cursorPos.line - Math.ceil(context.clientHeight % SubJs.charHight);
+            var scrollTop = line * SubJs.charHight;
+            if (context.clientHeight % SubJs.charHight) {
+                scrollTop += (SubJs.charHight - context.clientHeight % SubJs.charHight);
+            }
             this.$vScrollWrap[0].scrollTop = scrollTop;
         }
-        if (cRect.offsetLeft - this.charWidth <= scroller.scrollLeft) {
-            scroller.scrollLeft = cRect.offsetLeft - this.charWidth;
-        } else if (cRect.offsetLeft + this.charWidth * 2 + 24 >= scroller.scrollLeft + (this.$wrapper[0].clientWidth - scroller.offsetLeft)) {
-            //为滚动条预留24px
-            scroller.scrollLeft = cRect.offsetLeft + this.charWidth * 2 + 24 - (this.$wrapper[0].clientWidth - scroller.offsetLeft);
+        //光标超出可视区域最大宽度之外
+        if (cRect.offsetLeft - SubJs.charWidth <= this.$hScrollWrap.scrollLeft) {
+            this.$hScrollWrap[0].scrollLeft = cRect.offsetLeft - SubJs.charWidth;
+        } else if (cRect.offsetLeft + SubJs.charWidth * 2 + vBarWidth > scroller.clientWidth) {
+            var str = this.linesText.getText(this.cursorPos.line);
+            str = str.substring(0,this.cursorPos.column+1);
+            this.$hScrollWrap[0].scrollLeft = Util.getStrWidth(str,SubJs.charWidth,SubJs.fullAngleCharWidth) - scroller.clientWidth; 
         }
     }
     //渲染选中背景
@@ -396,7 +466,7 @@
         self.selection.endPos = endPos;
         if (startPos.line == endPos.line) {
             var str = self.linesText.getText(startPos.line);
-            var width = Util.getStrWidth(str, self.charWidth, self.fullAngleCharWidth, startPos.column, endPos.column);
+            var width = Util.getStrWidth(str, SubJs.charWidth, SubJs.fullAngleCharWidth, startPos.column, endPos.column);
             var px = self.posToPx(startPos.line, startPos.column);
             self.renderRange(px.top, px.left, width);
             self.selection.selectText = str.substring(startPos.column, endPos.column);
@@ -404,7 +474,7 @@
         } else {
             var str = self.linesText.getText(startPos.line);
             var maxWidth = self.$context[0].scrollWidth - 1; //防止$context真实宽度有小数（scrollWidth将被四舍五入）
-            var width = Util.getStrWidth(str, self.charWidth, self.fullAngleCharWidth, 0, startPos.column);
+            var width = Util.getStrWidth(str, SubJs.charWidth, SubJs.fullAngleCharWidth, 0, startPos.column);
             var px = self.posToPx(startPos.line, startPos.column);
             self.renderRange(px.top, px.left, maxWidth - width);
             self.selection.selectText = str;
@@ -414,7 +484,7 @@
                 self.selection.selectText += '\n' + self.linesText.getText(l);
             }
             str = self.linesText.getText(endPos.line);
-            width = Util.getStrWidth(str, self.charWidth, self.fullAngleCharWidth, 0, endPos.column);
+            width = Util.getStrWidth(str, SubJs.charWidth, SubJs.fullAngleCharWidth, 0, endPos.column);
             px = self.posToPx(endPos.line, 0);
             self.renderRange(px.top, px.left, width);
             self.selection.selectText += '\n' + str.substring(0, endPos.column);
@@ -450,10 +520,9 @@
     }
     _proto.addLine = function(line, newConent) {
         this.linesText.add(line, newConent);
-        var $linePre = $('.pre_code_line')[line - 1];
         var $dom = $('\
-            <div style="position:relative;margin:0;padding-right:15px;height:' + this.charHight + 'px;" class="pre_code_line">\
-                <div class="code" style="display:inline-block;position:relative;height:100%;min-width:100%;box-sizing:border-box;padding-right:10px;white-space:pre"></div>\
+            <div style="position:relative;margin:0;height:' + SubJs.charHight + 'px;" class="pre_code_line">\
+                <div class="code" style="display:inline-block;position:relative;height:100%;min-width:100%;white-space:pre"></div>\
             </div>');
         this.linesDom.splice(line - 1, 0, $dom);
     }
@@ -510,7 +579,7 @@
             firstDom = this.linesDom[firstLine - 1],
             allDom = null;
         //删除可视区域之前的元素
-        for (var i = this.firstLine; i < firstLine; i++) {
+        for (var i = this.firstLine; i > 0 && i < firstLine; i++) {
             this.linesDom[i - 1].remove();
         }
         //当过小于当前首行，则在其前插入
@@ -551,7 +620,7 @@
     }
     //渲染选中背景
     _proto.renderRange = function(_top, _left, _width) {
-        this.$selectBg.append('<div class="selection_line_bg" style="position:absolute;top:' + _top + 'px;left:' + _left + 'px;width:' + _width + 'px;height:' + this.charHight + 'px;background-color:rgb(181, 213, 255)"></div>');
+        this.$selectBg.append('<div class="selection_line_bg" style="position:absolute;top:' + _top + 'px;left:' + _left + 'px;width:' + _width + 'px;height:' + SubJs.charHight + 'px;background-color:rgb(181, 213, 255)"></div>');
     }
     //选中事件
     _proto.bindSelectEvent = function() {
@@ -603,7 +672,7 @@
                         startPos.column = endPos.column;
                         endPos.column = tmp;
                     }
-                    if (startPos.line < endPos.line || startPos.line == endPos.line && Math.abs(endPx.left - startPx.left) > self.charWidth) {
+                    if (startPos.line < endPos.line || startPos.line == endPos.line && Math.abs(endPx.left - startPx.left) > SubJs.charWidth) {
                         self.updateSelectBg(startPos, endPos);
                     }
                 })
@@ -642,7 +711,6 @@
                     self.$textarea.val(self.selectAllText); //触发全选
                 });
             }
-            select = false;
         });
     }
     //copy,cut,paste事件
@@ -691,15 +759,21 @@
     _proto.bindScrollEvent = function() {
         var self = this;
         this.$vScrollWrap.on('scroll', function(e) {
-            var firstLine = Math.floor(this.scrollTop / self.charHight);
+            var firstLine = Math.ceil(this.scrollTop / SubJs.charHight);
             firstLine = firstLine < 1 ? 1 : firstLine;
             self.$context.css({
-                top: -this.scrollTop % self.charHight + 'px'
+                top: -this.scrollTop % SubJs.charHight + 'px'
             })
             self.$leftNumBg.css({
-                top: -this.scrollTop % self.charHight + 'px'
+                top: -this.scrollTop % SubJs.charHight + 'px'
             })
             self.mount(firstLine);
+        })
+        this.$wrapper.on('mousewheel', function(e) {
+            self.$vScrollWrap[0].scrollTop += e.originalEvent.deltaY;
+        })
+        this.$hScrollWrap.on('scroll',function(){
+            self.$scroller[0].scrollLeft = this.scrollLeft;
         })
     }
     //输入事件
