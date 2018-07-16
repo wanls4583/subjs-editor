@@ -40,7 +40,7 @@
                 return dom.currentStyle[prop]
             }
         },
-        pxToNum: function(px){
+        pxToNum: function(px) {
             return parseInt(px.substring(0, px.length - 2))
         },
         nextFrame: function(callback) {
@@ -280,7 +280,7 @@
      */
     _proto.posToPx = function(line, column) {
         var self = this;
-        var top = (line - this.firstLine) * this.charHight + Util.pxToNum(Util.getStyleVal(this.$context[0],'top'));
+        var top = (line - this.firstLine) * this.charHight + Util.pxToNum(Util.getStyleVal(this.$context[0], 'top'));
         var str = this.linesText.getText(line).substring(0, column);
         var match = str.match(Util.fullAngleReg);
         var left = str.length * this.charWidth;
@@ -305,7 +305,7 @@
         var line = top;
         left -= rect.paddingLeft;
         if (!ifLine) {
-            top = top - rect.paddingTop - Util.pxToNum(Util.getStyleVal(this.$context[0],'top'));
+            top = top - rect.paddingTop - Util.pxToNum(Util.getStyleVal(this.$context[0], 'top'));
             line = Math.ceil(top / this.charHight);
         }
         line = line < 1 ? 1 : line;
@@ -368,12 +368,17 @@
         this.updateScroll();
     }
     _proto.updateScroll = function() {
+        this.$vScrollBar.css({
+            height: this.linesText.getLength() * this.charHight + 24 + 'px'
+        })
         var scroller = this.$scroller[0];
         var cRect = Util.getRect(this.$cursor[0]);
         var lRect = Util.getRect(this.$leftNumBg[0]);
         var top = this.posToPx(this.cursorPos.line, 0).top;
-        if(top + 30 > scroller.clientHeight){
-            this.$vScrollWrap[0].scrollTop = this.$vScrollWrap[0].clientHeight - this.$vScrollWrap[0].scrollHeight;
+        if (top + 24 > scroller.clientHeight) {
+            var line = this.cursorPos.line - (this.maxVisualLine - 1) + 1;
+            var scrollTop = line * this.charHight + (this.charHight - scroller.clientHeight%this.charHight) + 24;
+            this.$vScrollWrap[0].scrollTop = scrollTop;
         }
         if (cRect.offsetLeft - this.charWidth <= scroller.scrollLeft) {
             scroller.scrollLeft = cRect.offsetLeft - this.charWidth;
@@ -381,9 +386,6 @@
             //为滚动条预留24px
             scroller.scrollLeft = cRect.offsetLeft + this.charWidth * 2 + 24 - (this.$wrapper[0].clientWidth - scroller.offsetLeft);
         }
-        this.$vScrollBar.css({
-            height: this.$context[0].clientHeight + (this.firstLine - 1) * this.charHight + 'px'
-        })        
     }
     //渲染选中背景
     _proto.updateSelectBg = function(startPos, endPos) {
@@ -689,12 +691,13 @@
     _proto.bindScrollEvent = function() {
         var self = this;
         this.$vScrollWrap.on('scroll', function(e) {
-            var firstLine = Math.ceil(this.scrollTop / self.charHight);
+            var firstLine = Math.floor(this.scrollTop / self.charHight);
+            firstLine = firstLine < 1 ? 1 : firstLine;
             self.$context.css({
-                top: this.scrollTop % self.charHight + 'p'
+                top: -this.scrollTop % self.charHight + 'px'
             })
             self.$leftNumBg.css({
-                top: this.scrollTop % self.charHight + 'p'
+                top: -this.scrollTop % self.charHight + 'px'
             })
             self.mount(firstLine);
         })
