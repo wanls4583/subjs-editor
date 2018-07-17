@@ -2,6 +2,7 @@
     var Util = {
         //全角符号和中文字符
         fullAngleReg: /[\x00-\x1f\x80-\xa0\xad\u1680\u180E\u2000-\u200f\u2028\u2029\u202F\u205F\u3000\uFEFF\uFFF9-\uFFFC]|[\u1100-\u115F\u11A3-\u11A7\u11FA-\u11FF\u2329-\u232A\u2E80-\u2E99\u2E9B-\u2EF3\u2F00-\u2FD5\u2FF0-\u2FFB\u3000-\u303E\u3041-\u3096\u3099-\u30FF\u3105-\u312D\u3131-\u318E\u3190-\u31BA\u31C0-\u31E3\u31F0-\u321E\u3220-\u3247\u3250-\u32FE\u3300-\u4DBF\u4E00-\uA48C\uA490-\uA4C6\uA960-\uA97C\uAC00-\uD7A3\uD7B0-\uD7C6\uD7CB-\uD7FB\uF900-\uFAFF\uFE10-\uFE19\uFE30-\uFE52\uFE54-\uFE66\uFE68-\uFE6B\uFF01-\uFF60\uFFE0-\uFFE6]|[\uD800-\uDBFF][\uDC00-\uDFFF]/g,
+        //获取选中的文本
         getSelectedText: function() {
             if (document.selection) {
                 return document.selection.createRange().text;
@@ -9,30 +10,12 @@
                 return window.getSelection().toString();
             }
         },
-        select: function(element) {
-            if (document.selection) {
-                var range = document.body.createTextRange();
-                range.moveToElementText(element);
-                range.select();
-            } else if (window.getSelection) {
-                var range = document.createRange();
-                range.selectNode(element);
-                window.getSelection().removeAllRanges();
-                window.getSelection().addRange(range);
-            }
-        },
-        copy: function(value) {
-            var element = document.createElement('SPAN');
-            element.textContent = value;
-            document.body.appendChild(element);
-            this.select(element);
-            if (document.execCommand) {
-                document.execCommand('copy');
-            } else {
-                window.clipboardData.setData('text', value);
-            }
-            element.remove ? element.remove() : element.removeNode(true);
-        },
+        /**
+         * 获取样式属性计算值
+         * @param  {DOM} dom
+         * @param  {string} prop 样式属性
+         * @return {string}      属性值
+         */
         getStyleVal: function(dom, prop) {
             if (window.getComputedStyle) {
                 return window.getComputedStyle(dom, null)[prop];
@@ -40,9 +23,11 @@
                 return dom.currentStyle[prop]
             }
         },
+        //px属性值转为整数
         pxToNum: function(px) {
             return parseInt(px.substring(0, px.length - 2))
         },
+        //下一帧兼容
         nextFrame: function(callback) {
             if (window.requestAnimationFrame) {
                 window.requestAnimationFrame(callback);
@@ -52,6 +37,7 @@
                 }, 0);
             }
         },
+        //获取margin,padding,offset(相对页面边缘)
         getRect: function(dom) {
             var _r = dom.getBoundingClientRect();
             var _pt = this.getStyleVal(dom, 'paddingTop');
@@ -89,6 +75,15 @@
                 offsetRight: dom.offsetRight,
             }
         },
+        /**
+         * 获取文本在浏览器中的真实宽度
+         * @param  {string} str       文本
+         * @param  {number} charW     半角符号/文字宽度
+         * @param  {number} fullCharW 全角符号/文字宽度
+         * @param  {number} start     文本开始索引
+         * @param  {number} end       文本结束索引
+         * @return {number}           文本真实宽度
+         */
         getStrWidth: function(str, charW, fullCharW, start, end) {
             if (typeof start != 'undefined') {
                 str = str.substr(start);
@@ -103,17 +98,28 @@
             }
             return width;
         },
+        //生成指定个数的空白符
         space: function(tabsize) {
             var val = '';
             for (var tmp = 0; tmp < tabsize; tmp++) { val += ' ' };
             return val;
         },
+        //数组数字排序
         sortNum: function(arr) {
             arr.sort(function(arg1, arg2) {
                 return Number(arg1) - Number(arg2);
             })
+        },
+        //获取滚动条宽度
+        getScrBarWidth: function() {
+            var wrap = $('<div style="height:30px;width:30px;overflow:auto"><div style="height:100px"></div></div>')
+            document.body.append(wrap[0]);
+            var w = wrap[0].offsetWidth - wrap[0].clientWidth;;
+            wrap.remove();
+            return w;
         }
     }
+    window.Util = Util;
     /**
      * 文本容器类
      */
@@ -288,8 +294,8 @@
     }
     //创建纵向滚动条
     _proto.createScrollBar = function() {
-        this.$vScrollWrap = $('<div class="v_scrollbar_wrap" style="position:absolute;top:0;bottom:0;right:0;z-index:4;overflow:auto;width:22px;padding-top:5px"><div class="v_scrollbar"></div></div>');
-        this.$hScrollWrap = $('<div class="h_scrollbar_wrap" style="position:absolute;left:0;right:0;bottom:0;z-index:4;overflow:auto;height:22px;padding-left:5px"><div class="h_scrollbar" style="height:100%"></div></div>');
+        this.$vScrollWrap = $('<div class="v_scrollbar_wrap" style="position:absolute;top:0;bottom:0;right:0;z-index:4;overflow:auto;width:22px;"><div class="v_scrollbar"></div></div>');
+        this.$hScrollWrap = $('<div class="h_scrollbar_wrap" style="position:absolute;left:0;right:0;bottom:0;z-index:4;overflow:auto;height:22px;"><div class="h_scrollbar" style="height:100%"></div></div>');
         this.$vScrollBar = this.$vScrollWrap.find('.v_scrollbar');
         this.$hScrollBar = this.$hScrollWrap.find('.h_scrollbar');
         this.$wrapper.append(this.$vScrollWrap);
@@ -393,33 +399,35 @@
     _proto.updateScroll = function() {
         var scroller = this.$scroller[0],
             context = this.$context[0],
-            cRect = Util.getRect(this.$cursor[0]),
-            lRect = Util.getRect(this.$leftNumBg[0]),
             top = this.posToPx(this.cursorPos.line, 0).top,
-            hBarHeight = 0,
-            vBarWidth = 0,
-            realBarWidth = 0;
+            hasHBar = false,
+            hasVBar = 0,
+            realBarWidth = Util.getScrBarWidth();
+        //设置编辑区宽度
+        this.$context.css({
+            'min-width': this.linesText.getMaxWidth() + realBarWidth + 15 + 'px'
+        })
+        //横线滚动条会占用一定高度
+        if (scroller.scrollWidth > scroller.clientWidth) {
+            hasHBar = true;
+        }
+        if (this.linesText.getLength() >= this.maxVisualLine - 1) {
+            hasVBar = 22;
+        }
         //设置横向滚动条左边距离
         this.$hScrollWrap.css({
             left: scroller.offsetLeft + 'px'
         })
         //设置纵向滚动条高度
         this.$vScrollBar.css({
-            height: this.linesText.getLength() * SubJs.charHight + 'px'
+            height: this.linesText.getLength() * SubJs.charHight + Util.pxToNum(Util.getStyleVal(scroller, 'paddingTop')) + 'px'
         })
-        if(this.$vScrollWrap[0].scrollHeight > this.$vScrollWrap[0].clientHeight){
-            vBarWidth = 22;
-        }
-        //设置编辑区宽度
-        this.$context.css({
-            'min-width': this.linesText.getMaxWidth() + vBarWidth + 15 + 'px'
+        //设置横向滚动条宽度度
+        this.$hScrollBar.css({
+            width: context.scrollWidth - (hasVBar ? realBarWidth : 0) + 'px'
         })
-        //横线滚动条会占用一定高度
-        if (scroller.scrollWidth > scroller.clientWidth) {
-            hBarHeight = 22;
-        }
         //出现横向滚动条后，纵向滚动条高度缩短22px
-        if (Util.pxToNum(Util.getStyleVal(this.$vScrollWrap[0], 'bottom')) == 0 && hBarHeight) {
+        if (Util.pxToNum(Util.getStyleVal(this.$vScrollWrap[0], 'bottom')) == 0 && hasHBar) {
             //获取真实滚动条宽度
             realBarWidth = this.$vScrollWrap[0].offsetWidth - this.$vScrollWrap[0].clientWidth;
             this.$vScrollWrap.css({
@@ -427,34 +435,13 @@
             })
         }
         //出现纵向滚动条后，横向滚动条高度缩短22px
-        if (Util.pxToNum(Util.getStyleVal(this.$hScrollWrap[0], 'right')) == 0 && vBarWidth) {
-            if(!realBarWidth){
+        if (Util.pxToNum(Util.getStyleVal(this.$hScrollWrap[0], 'right')) == 0 && hasVBar) {
+            if (!realBarWidth) {
                 realBarWidth = this.$hScrollWrap[0].offsetHeight - this.$hScrollWrap[0].clientHeight;
             }
             this.$hScrollWrap.css({
                 right: realBarWidth + 'px'
             })
-        }
-        //设置横向滚动条宽度度
-        this.$hScrollBar.css({
-            width:  scroller.scrollWidth - 1 - realBarWidth + 'px'
-        })
-        //光标超出可视区域最大高度之外
-        if (top + SubJs.charHight > context.clientHeight) {
-            var line = this.cursorPos.line - Math.ceil(context.clientHeight % SubJs.charHight);
-            var scrollTop = line * SubJs.charHight;
-            if (context.clientHeight % SubJs.charHight) {
-                scrollTop += (SubJs.charHight - context.clientHeight % SubJs.charHight);
-            }
-            this.$vScrollWrap[0].scrollTop = scrollTop;
-        }
-        //光标超出可视区域最大宽度之外
-        if (cRect.offsetLeft - SubJs.charWidth <= this.$hScrollWrap.scrollLeft) {
-            this.$hScrollWrap[0].scrollLeft = cRect.offsetLeft - SubJs.charWidth;
-        } else if (cRect.offsetLeft + SubJs.charWidth * 2 + vBarWidth > scroller.clientWidth) {
-            var str = this.linesText.getText(this.cursorPos.line);
-            str = str.substring(0,this.cursorPos.column+1);
-            this.$hScrollWrap[0].scrollLeft = Util.getStrWidth(str,SubJs.charWidth,SubJs.fullAngleCharWidth) - scroller.clientWidth; 
         }
     }
     //渲染选中背景
@@ -526,7 +513,10 @@
             </div>');
         this.linesDom.splice(line - 1, 0, $dom);
     }
-    //删除一行
+    /**
+     * 从编辑器中删除一行
+     * @param  {number} line 行号
+     */
     _proto.deleteLine = function(line) {
         this.linesText.delete(line);
         this.linesDom[line - 1].remove();
@@ -535,7 +525,11 @@
             this.mode.onDeleteLine(line);
         }
     }
-    //删除多行
+    /**
+     * 从编辑器中删除多行
+     * @param  {object} startPos 开始行列坐标{line,column}
+     * @param  {object} endPos   结束行列坐标{line,column}
+     */
     _proto.deleteMutilLine = function(startPos, endPos) {
         if (startPos.line == endPos.line) {
             var str = this.linesText.getText(startPos.line);
@@ -618,7 +612,12 @@
         var endPos = { line: this.linesText.getLength(), column: this.linesText.getText(this.linesText.getLength()).length }
         this.updateSelectBg(startPos, endPos);
     }
-    //渲染选中背景
+    /**
+     * 渲染一行背景
+     * @param  {number} _top   距离scroller容器顶部的距离
+     * @param  {number} _left  距离scroller容器左边的距离
+     * @param  {number} _width 背景的宽度
+     */
     _proto.renderRange = function(_top, _left, _width) {
         this.$selectBg.append('<div class="selection_line_bg" style="position:absolute;top:' + _top + 'px;left:' + _left + 'px;width:' + _width + 'px;height:' + SubJs.charHight + 'px;background-color:rgb(181, 213, 255)"></div>');
     }
@@ -772,7 +771,7 @@
         this.$wrapper.on('mousewheel', function(e) {
             self.$vScrollWrap[0].scrollTop += e.originalEvent.deltaY;
         })
-        this.$hScrollWrap.on('scroll',function(){
+        this.$hScrollWrap.on('scroll', function() {
             self.$scroller[0].scrollLeft = this.scrollLeft;
         })
     }
