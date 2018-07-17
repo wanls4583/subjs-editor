@@ -716,6 +716,10 @@
             autoMove = false;
             Util.cancelNextFrame(timer);
         });
+        /**
+         * 鼠标选择超出编辑区域时，自动滚动并选中
+         * @param  {string} direct 滚动方向 up：向上滚动，down：两下滚动
+         */
         function _move(direct){
             var wrap = self.$vScrollWrap[0];
             var startPos = originStartPos;
