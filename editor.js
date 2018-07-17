@@ -437,7 +437,7 @@
         }
         //设置横向滚动条宽度度
         this.$hScrollBar.css({
-            width:  context.scrollWidth - 1 - 2*realBarWidth + 'px'
+            width:  scroller.scrollWidth - 1 - realBarWidth + 'px'
         })
         //光标超出可视区域最大高度之外
         if (top + SubJs.charHight > context.clientHeight) {
