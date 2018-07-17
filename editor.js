@@ -288,8 +288,8 @@
     }
     //创建纵向滚动条
     _proto.createScrollBar = function() {
-        this.$vScrollWrap = $('<div class="v_scrollbar_wrap" style="position:absolute;top:0;bottom:0;right:0;z-index:4;overflow:auto;width:22px;"><div class="v_scrollbar"></div></div>');
-        this.$hScrollWrap = $('<div class="h_scrollbar_wrap" style="position:absolute;left:0;right:0;bottom:0;z-index:4;overflow:auto;height:22px;"><div class="h_scrollbar" style="height:100%"></div></div>');
+        this.$vScrollWrap = $('<div class="v_scrollbar_wrap" style="position:absolute;top:0;bottom:0;right:0;z-index:4;overflow:auto;width:22px;padding-top:5px"><div class="v_scrollbar"></div></div>');
+        this.$hScrollWrap = $('<div class="h_scrollbar_wrap" style="position:absolute;left:0;right:0;bottom:0;z-index:4;overflow:auto;height:22px;padding-left:5px"><div class="h_scrollbar" style="height:100%"></div></div>');
         this.$vScrollBar = this.$vScrollWrap.find('.v_scrollbar');
         this.$hScrollBar = this.$hScrollWrap.find('.h_scrollbar');
         this.$wrapper.append(this.$vScrollWrap);
@@ -405,7 +405,7 @@
         })
         //设置纵向滚动条高度
         this.$vScrollBar.css({
-            height: this.linesText.getLength() * SubJs.charHight + Util.pxToNum(Util.getStyleVal(scroller, 'paddingTop')) + hBarHeight + 'px'
+            height: this.linesText.getLength() * SubJs.charHight + 'px'
         })
         if(this.$vScrollWrap[0].scrollHeight > this.$vScrollWrap[0].clientHeight){
             vBarWidth = 22;
@@ -413,10 +413,6 @@
         //设置编辑区宽度
         this.$context.css({
             'min-width': this.linesText.getMaxWidth() + vBarWidth + 15 + 'px'
-        })
-        //设置横向滚动条宽度度
-        this.$hScrollBar.css({
-            width:  scroller.scrollWidth + 'px'
         })
         //横线滚动条会占用一定高度
         if (scroller.scrollWidth > scroller.clientWidth) {
@@ -439,6 +435,10 @@
                 right: realBarWidth + 'px'
             })
         }
+        //设置横向滚动条宽度度
+        this.$hScrollBar.css({
+            width:  context.scrollWidth - 1 - 2*realBarWidth + 'px'
+        })
         //光标超出可视区域最大高度之外
         if (top + SubJs.charHight > context.clientHeight) {
             var line = this.cursorPos.line - Math.ceil(context.clientHeight % SubJs.charHight);
