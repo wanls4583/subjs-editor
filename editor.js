@@ -120,11 +120,15 @@
         },
         //获取滚动条宽度
         getScrBarWidth: function() {
-            var wrap = $('<div style="height:30px;width:30px;overflow:auto"><div style="height:100px"></div></div>')
-            document.body.append(wrap[0]);
-            var w = wrap[0].offsetWidth - wrap[0].clientWidth;;
-            wrap.remove();
-            return w;
+            if (!this.scrBarWidth) {
+                var wrap = $('<div style="height:30px;width:30px;overflow:auto"><div style="height:100px"></div></div>')
+                document.body.append(wrap[0]);
+                var w = wrap[0].offsetWidth - wrap[0].clientWidth;;
+                wrap.remove();
+                this.scrBarWidth = w;
+                return w;
+            }
+            return this.scrBarWidth;
         }
     }
     window.Util = Util;
@@ -134,27 +138,33 @@
     function LinesText() {
         var _content = [];
         var _width = [];
+        //获取一行文本
         this.getText = function(line) {
             return _content[line - 1];
         }
+        //更新一行文本
         this.setText = function(line, txt) {
             _content[line - 1] = txt;
             _width[line - 1] = Util.getStrWidth(txt, SubJs.charWidth, SubJs.fullAngleCharWidth);
             Util.sortNum(_width);
         }
+        //在指定行添加一行文本
         this.add = function(line, txt) {
             _content.splice(line - 1, 0, txt);
             _width.splice(line - 1, 0, 0);
             _width[line - 1] = Util.getStrWidth(txt, SubJs.charWidth, SubJs.fullAngleCharWidth);
             Util.sortNum(_width);
         }
+        //删除一行文本
         this.delete = function(line) {
             _content.splice(line - 1, 1);
             _width.splice(line - 1, 1);
         }
+        //获取总行数
         this.getLength = function() {
             return _content.length;
         }
+        //获取文本最大宽度
         this.getMaxWidth = function() {
             if (!_width.length) {
                 return 0;
@@ -221,6 +231,7 @@
         SubJs.fullAngleCharWidth = $('.char_width_2')[0].clientWidth / str2.length;
         this.fontSize = window.getComputedStyle ? window.getComputedStyle(dom, null).fontSize : dom.currentStyle.fontSize;
         this.$context[0].innerHTML = '';
+        //可实区域可能显示的行的数量
         this.maxVisualLine = Math.ceil(this.$context[0].clientHeight / SubJs.charHight) + 1;
         console.log('charSize', SubJs.charWidth, SubJs.fullAngleCharWidth, SubJs.charHight);
     }
@@ -446,6 +457,10 @@
             this.$vScrollWrap.css({
                 bottom: realBarWidth + 'px'
             })
+        }else if(!hasHBar){
+            this.$vScrollWrap.css({
+                bottom: '0px'
+            })
         }
         //出现纵向滚动条后，横向滚动条高度缩短22px
         if (Util.pxToNum(Util.getStyleVal(this.$hScrollWrap[0], 'right')) == 0 && hasVBar) {
@@ -454,6 +469,10 @@
             }
             this.$hScrollWrap.css({
                 right: realBarWidth + 'px'
+            })
+        }else if(!hasVBar){
+            this.$hScrollWrap.css({
+                right: '0px'
             })
         }
         if (ifScrollToCursor) {
@@ -474,7 +493,11 @@
             }
         }
     }
-    //更新一行
+    /**
+     * 更更一行
+     * @param  {number} line      行号
+     * @param  {string} newConent 新的内容
+     */
     _proto.updateLine = function(line, newConent) {
         this.linesText.setText(line, newConent);
         if (this.mode) {
@@ -483,16 +506,20 @@
             this.linesDom[line - 1].html(newConent);
         }
     }
-    //插入内容
-    _proto.insertOnLine = function(val) {
+    /**
+     * 在当前光标位置处插入内容
+     * @param  {string} val 插入的内容
+     */
+    _proto.insertOnLine = function(newContent) {
         var str = this.linesText.getText(this.cursorPos.line);
-        str = str.substring(0, this.cursorPos.column) + val + str.substr(this.cursorPos.column);
+        str = str.substring(0, this.cursorPos.column) + newContent + str.substr(this.cursorPos.column);
         var strs = str.split(/\r\n|\r|\n/);
         this.updateLine(this.cursorPos.line, strs[0]);
         for (var tmp = 1; tmp < strs.length; tmp++) { //粘贴操作可能存在换号符
             this.addLine(this.cursorPos.line + tmp, strs[tmp]);
         }
         var firstLine = this.firstLine;
+        //计算可视区域的首行
         if (this.cursorPos.line - this.firstLine + strs.length > this.maxVisualLine) {
             firstLine = this.cursorPos.line + strs.length - this.maxVisualLine;
         }
@@ -502,6 +529,11 @@
         this.updateCursorPos();
         this.updateScroll(true);
     }
+    /**
+     * 在指定行前面添加一行内容
+     * @param {number} line      行号
+     * @param {string} newConent 内容
+     */
     _proto.addLine = function(line, newConent) {
         this.linesText.add(line, newConent);
         var $dom = $('\
@@ -541,10 +573,10 @@
             this.cursorPos.line = startPos.line;
             this.cursorPos.column = startPos.column;
         }
+        this.renderLine(this.firstLine);
+        this.updateScroll();
         this.$selectBg.html('');
         this.selection = {};
-        this.updateCursorPos();
-        this.updateScroll(true);
     }
     /**
      * 更新行号
@@ -617,7 +649,6 @@
      */
     _proto.renderLine = function(firstLine) {
         var self = this,
-            firstDom = this.linesDom[firstLine - 1],
             allDom = null;
         //删除可视区域之前的元素
         for (var i = this.firstLine; i > 0 && i < firstLine; i++) {
@@ -625,7 +656,7 @@
         }
         //当过小于当前首行，则在其前插入
         if (firstLine < this.firstLine) {
-            for (var i = firstLine; i < this.firstLine; i++) {
+            for (var i = firstLine; this.linesDom[i - 1] && i < this.firstLine; i++) {
                 _hightlight(i);
                 this.linesDom[i - 1].insertBefore(this.linesDom[this.firstLine - 1]);
             }
@@ -645,7 +676,7 @@
         }
         this.updateNum(firstLine);
         this.firstLine = firstLine;
-
+        //高亮代码
         function _hightlight(line) {
             if (self.mode && !self.linesDom[line - 1].hasHightLight) {
                 self.mode.onAddLine(line);
@@ -664,7 +695,8 @@
         var self = this,
             startPx = null,
             originStartPos = null,
-            autoMove = false,
+            originEndPos = null,
+            autoDirect = '',
             timer = null,
             select = false;
         $(document).on('selectstart', function(e) {
@@ -685,6 +717,8 @@
             preTop = top;
             startPx = { top: top, left: left };
             originStartPos = self.pxToPos(top, left);
+            select = false;
+            autoDirect = '';
             if (e.button != 2) {
                 self.selection.selectText = '';
                 self.selection.startPos = null;
@@ -697,7 +731,10 @@
             }
         });
         this.$wrapper.on('mousemove', function(e) {
+            e.stopPropagation();
             if (select) {
+                var vBarWidth = self.linesText.getLength() >= self.maxVisualLine ? Util.getScrBarWidth() : 0,
+                    hBarHeight = self.$scroller[0].scrollWidth > self.$scroller[0].clientWidth ? Util.getScrBarWidth() : 0;
                 Util.nextFrame(function() {
                     var rect = Util.getRect(self.$scroller[0]);
                     var scrollTop = self.$scroller[0].scrollTop;
@@ -705,8 +742,9 @@
                     var top = e.clientY - rect.top + scrollTop;
                     var left = e.clientX - rect.left + scrollLeft;
                     var endPx = { top: top, left: left };
-                    var startPos = originStartPos;
+                    var startPos = {line: originStartPos.line, column: originStartPos.column};
                     var endPos = self.pxToPos(endPx.top, endPx.left);
+                    originEndPos = endPos;
                     //处理顺序
                     if (startPos.line > endPos.line) {
                         var tmp = startPos;
@@ -720,44 +758,106 @@
                     if (startPos.line < endPos.line || startPos.line == endPos.line && Math.abs(endPx.left - startPx.left) > SubJs.charWidth) {
                         self.renderSelectBg(startPos, endPos);
                     }
-                    if (top + 5 > self.$scroller[0].clientHeight) {
-                        autoMove = true;
-                        _move('down');
+                    if (top + hBarHeight + 5 > self.$scroller[0].clientHeight) {
+                        autoDirect = 'down';
+                        _move(2);
                     } else if (top - 5 < 0) {
-                        autoMove = true;
-                        _move('up');
+                        autoDirect = 'up';
+                        _move(2);
+                    } else if (left - 5 < 0) {
+                        autoDirect = 'left';
+                        _move(2);
+                    } else if (left - self.$scroller[0].scrollLeft + vBarWidth + 5 > self.$scroller[0].clientWidth) {
+                        autoDirect = 'right';
+                        _move(2);
                     } else {
-                        autoMove = false;
+                        autoDirect = '';
                         Util.cancelNextFrame(timer);
                     }
                 })
             }
         });
+        //快速滚动
+        $(document).on('mousemove', function(e) {
+            if (autoDirect){
+                var rect = Util.getRect(self.$scroller[0]),speed;
+                Util.cancelNextFrame(timer);
+                switch(autoDirect){
+                    case 'up':
+                        speed = Math.abs(e.clientY - rect.top);
+                        _move(speed);
+                        break;
+                    case 'down':
+                        speed = e.clientY - rect.top - self.$scroller[0].clientHeight;
+                        _move(speed);
+                        break;
+                    case 'left':
+                        speed = Math.abs(e.clientX - rect.left);
+                        _move(speed);
+                        break;
+                    case 'right':
+                        speed = e.clientX - rect.left - self.$scroller[0].clientWidth;
+                        _move(speed);
+                        break;
+                }
+            }
+        });
+        //停止选择和滚动
         $(document).on('mouseup', function(e) {
+            if(select){
+                self.$textarea.focus()
+            }
             select = false;
-            autoMove = false;
+            autoDirect = '';
             Util.cancelNextFrame(timer);
         });
         /**
          * 鼠标选择超出编辑区域时，自动滚动并选中
-         * @param  {string} direct 滚动方向 up：向上滚动，down：两下滚动
+         * @param  {string} direct 滚动方向 up：向上滚动，down：两下滚动，left：向左，right：向右
          */
-        function _move(direct) {
-            var wrap = self.$vScrollWrap[0];
+        function _move(speed) {
+            var vScrollWrap = self.$vScrollWrap[0];
+            var hScrollWrap = self.$hScrollWrap[0];
             var startPos = originStartPos;
             var endPos = null;
-            if (autoMove) {
-                if (direct == 'up') {
-                    wrap.scrollTop -= 4;
-                    endPos = self.pxToPos(0, 0);
-                } else {
-                    wrap.scrollTop += 4;
-                    endPos = self.pxToPos(self.$scroller[0].offsetHeight, 100000);
+            var vBarWidth = self.linesText.getLength() >= self.maxVisualLine ? Util.getScrBarWidth() : 0,
+                hBarHeight = self.$scroller[0].scrollWidth > self.$scroller[0].clientWidth ? Util.getScrBarWidth() : 0;
+            if (autoDirect) {
+                switch (autoDirect) {
+                    case 'up':
+                        if (vScrollWrap.scrollTop > 0) {
+                            vScrollWrap.scrollTop -= speed;
+                            endPos = self.pxToPos(0, 0);
+                            endPos.column = originEndPos.column;
+                        }
+                        break;
+                    case 'down':
+                        if (vScrollWrap.scrollTop < vScrollWrap.scrollHeight - vScrollWrap.clientHeight) {
+                            vScrollWrap.scrollTop += speed;
+                            endPos = self.pxToPos(self.$scroller[0].clientHeight - hBarHeight, 0);
+                            endPos.column = originEndPos.column;
+                        }
+                        break;
+                    case 'left':
+                        if (hScrollWrap.scrollLeft > 0) {
+                            hScrollWrap.scrollLeft -= speed;
+                            endPos = self.pxToPos(0, 0);
+                            endPos.line = originEndPos.line;
+                        }
+                        break;
+                    case 'right':
+                        if (hScrollWrap.scrollLeft < hScrollWrap.scrollWidth - hScrollWrap.clientWidth) {
+                            hScrollWrap.scrollLeft += speed;
+                            endPos = self.pxToPos(0, self.$scroller[0].clientWidth - vBarWidth);
+                            endPos.line = originEndPos.line;
+                        }
                 }
-                _render(endPos);
-                timer = Util.nextFrame(function() {
-                    _move(direct);
-                })
+                if (endPos) {
+                    _render(endPos);
+                    timer = Util.nextFrame(function() {
+                        _move(speed);
+                    })
+                }
             }
 
             function _render(endPos) {
@@ -868,6 +968,8 @@
             self.selection.startPos && self.renderSelectBg(self.selection.startPos, self.selection.endPos);
             //更新光标
             self.updateCursorPos();
+            //更新滚动条
+            self.updateScroll();
         })
         this.$hScrollWrap.on('scroll', function() {
             self.$scroller[0].scrollLeft = this.scrollLeft;
@@ -958,6 +1060,8 @@
                                 var column = self.linesText.getText(self.cursorPos.line - 1).length;
                                 self.updateLine(self.cursorPos.line - 1, self.linesText.getText(self.cursorPos.line - 1) + self.linesText.getText(self.cursorPos.line));
                                 self.deleteLine(self.cursorPos.line);
+                                this.renderLine(this.firstLine);
+                                this.updateScroll();
                                 self.cursorPos.column = column;
                                 self.cursorPos.line--;
                             }
