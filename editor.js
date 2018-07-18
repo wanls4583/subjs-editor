@@ -38,10 +38,10 @@
             }
         },
         //取消下一帧
-        cancelNextFrame: function(id){
-            if(window.requestAnimationFrame){
+        cancelNextFrame: function(id) {
+            if (window.requestAnimationFrame) {
                 window.cancelAnimationFrame(id);
-            }else{
+            } else {
                 clearTimeout(id);
             }
         },
@@ -404,9 +404,12 @@
         if (this.leftNumDom[this.cursorPos.line - this.firstLine]) {
             this.leftNumDom[this.cursorPos.line - this.firstLine].addClass('active');
         }
-        this.updateScroll();
     }
-    _proto.updateScroll = function() {
+    /**
+     * 更新可视区域
+     * @param  {boolean} ifScrollToCursor 是否滚动到光标位置
+     */
+    _proto.updateScroll = function(ifScrollToCursor) {
         var scroller = this.$scroller[0],
             context = this.$context[0],
             top = this.posToPx(this.cursorPos.line, 0).top,
@@ -453,6 +456,23 @@
                 right: realBarWidth + 'px'
             })
         }
+        if (ifScrollToCursor) {
+            var point = this.posToPx(this.cursorPos.line, this.cursorPos.column);
+            var height = hasHBar ? this.$scroller[0].clientHeight - realBarWidth : this.$scroller[0].clientHeight;
+            //处理纵向
+            if (point.top < 0) {
+                this.$vScrollWrap[0].scrollTop = (this.cursorPos.line - 1) * SubJs.charHight;
+            } else if (point.top > height - SubJs.charHight) {
+                var line = this.cursorPos.line - Math.ceil(height / SubJs.charHight);
+                this.$vScrollWrap[0].scrollTop = line * SubJs.charHight + (SubJs.charHight - height % SubJs.charHight) + Util.pxToNum(Util.getStyleVal(scroller, 'paddingTop'));
+            }
+            //处理横向
+            if (point.left < this.$hScrollWrap[0].scrollLeft + SubJs.charWidth) {
+                this.$hScrollWrap[0].scrollLeft = point.left - SubJs.charWidth;
+            } else if (point.left > this.$hScrollWrap[0].scrollLeft + this.$scroller[0].clientWidth - SubJs.charWidth - realBarWidth) {
+                this.$hScrollWrap[0].scrollLeft = point.left - this.$scroller[0].clientWidth + SubJs.charWidth + realBarWidth;
+            }
+        }
     }
     //更新一行
     _proto.updateLine = function(line, newConent) {
@@ -480,6 +500,7 @@
         this.cursorPos.line = this.cursorPos.line + strs.length - 1;
         this.cursorPos.column = strs[strs.length - 1].length;
         this.updateCursorPos();
+        this.updateScroll(true);
     }
     _proto.addLine = function(line, newConent) {
         this.linesText.add(line, newConent);
@@ -523,6 +544,7 @@
         this.$selectBg.html('');
         this.selection = {};
         this.updateCursorPos();
+        this.updateScroll(true);
     }
     /**
      * 更新行号
@@ -720,24 +742,25 @@
          * 鼠标选择超出编辑区域时，自动滚动并选中
          * @param  {string} direct 滚动方向 up：向上滚动，down：两下滚动
          */
-        function _move(direct){
+        function _move(direct) {
             var wrap = self.$vScrollWrap[0];
             var startPos = originStartPos;
             var endPos = null;
-            if(autoMove){
-                if(direct == 'up'){
+            if (autoMove) {
+                if (direct == 'up') {
                     wrap.scrollTop -= 4;
                     endPos = self.pxToPos(0, 0);
-                }else{
+                } else {
                     wrap.scrollTop += 4;
                     endPos = self.pxToPos(self.$scroller[0].offsetHeight, 100000);
                 }
                 _render(endPos);
-                timer = Util.nextFrame(function(){
+                timer = Util.nextFrame(function() {
                     _move(direct);
                 })
             }
-            function _render(endPos){
+
+            function _render(endPos) {
                 //处理顺序
                 if (startPos.line > endPos.line) {
                     var tmp = startPos;
@@ -832,7 +855,7 @@
             self.$vScrollWrap[0].scrollTop += e.originalEvent.deltaY;
         })
         this.$vScrollWrap.on('scroll', function(e) {
-            var firstLine = Math.ceil(this.scrollTop / SubJs.charHight);
+            var firstLine = Math.floor(this.scrollTop / SubJs.charHight) + 1;
             firstLine = firstLine < 1 ? 1 : firstLine;
             self.$context.css({
                 top: -this.scrollTop % SubJs.charHight + 'px'
@@ -1037,6 +1060,7 @@
             }
             preCode = e.keyCode;
             self.updateCursorPos();
+            self.updateScroll(true);
         })
     }
     window.SubJs = SubJs;
