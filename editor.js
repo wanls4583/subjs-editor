@@ -275,7 +275,7 @@
         this.$leftNumBg = $('<div class="line_num_bg" style="float:left;position:relative;left:0;top:0;z-index:2;min-height:100%;padding:5px 0;padding-bottom:' + SubJs.charHight + 'px;box-sizing:border-box"></div>');
         this.$wrapper.prepend(this.$leftNumBg);
         for (var i = 1; i <= this.maxVisualLine; i++) {
-            var $num = $('<span class="line_num">' + this.linesText.getLength() + '</span>')
+            var $num = $('<span class="line_num"></span>');
             $num.css({
                 'display': 'block',
                 'height': SubJs.charHight + 'px',
@@ -675,15 +675,18 @@
             domLength = allDom.length;
         //删除可视区域之前的元素
         for (var i = this.firstLine; i > 0 && i < firstLine && domLength > 0; i++) {
-            this.linesDom[i - 1].remove();
+            allDom[i - this.firstLine].remove();
             domLength--;
         }
         //当过小于当前首行，则在其前插入
         if (firstLine < this.firstLine) {
-            for (var i = firstLine; i < this.firstLine && i <= this.linesDom.length; i++) {
+            for (var i = firstLine; i < this.firstLine && i <= this.linesDom.length && i < firstLine + this.maxVisualLine; i++) {
                 _hightlight(i);
-                this.linesDom[i - 1].insertBefore(allDom[0]);
-                domLength++;
+                //页面上可能已经有该元素了
+                if(!this.linesDom[i - 1][0].isConnected){
+                    this.linesDom[i - 1].insertBefore(allDom[0]);
+                    domLength++;
+                }
             }
         }
         //如果当前可视区域的元素少于最大可见个数，则在尾部追加
@@ -804,27 +807,26 @@
         });
         //快速滚动
         $(document).on('mousemove', function(e) {
-            if (autoDirect) {
+            if (select) {
                 var rect = Util.getRect(self.$scroller[0]),
                     speed;
                 Util.cancelNextFrame(timer);
-                switch (autoDirect) {
-                    case 'up':
-                        speed = Math.abs(e.clientY - rect.top);
-                        _move(speed);
-                        break;
-                    case 'down':
-                        speed = e.clientY - rect.top - self.$scroller[0].clientHeight;
-                        _move(speed);
-                        break;
-                    case 'left':
-                        speed = Math.abs(e.clientX - rect.left);
-                        _move(speed);
-                        break;
-                    case 'right':
-                        speed = e.clientX - rect.left - self.$scroller[0].clientWidth;
-                        _move(speed);
-                        break;
+                if(e.clientY - rect.top < 0){
+                    autoDirect = 'up';
+                    speed = Math.abs(e.clientY - rect.top);
+                    _move(speed);
+                }else if(e.clientY - rect.top - self.$scroller[0].clientHeight > 0){
+                    autoDirect = 'down';
+                    speed = e.clientY - rect.top - self.$scroller[0].clientHeight;
+                    _move(speed);
+                }else if(e.clientX - rect.left < 0){
+                    autoDirect = 'left';
+                    speed = Math.abs(e.clientX - rect.left);
+                    _move(speed);
+                }else if(e.clientX - rect.left - self.$scroller[0].clientWidth > 0){
+                    autoDirect = 'right';
+                    speed = e.clientX - rect.left - self.$scroller[0].clientWidth;
+                    _move(speed);
                 }
             }
         });
@@ -1086,10 +1088,10 @@
                                 var column = self.linesText.getText(self.cursorPos.line - 1).length;
                                 self.updateLine(self.cursorPos.line - 1, self.linesText.getText(self.cursorPos.line - 1) + self.linesText.getText(self.cursorPos.line));
                                 self.deleteLine(self.cursorPos.line);
-                                this.renderLine(this.firstLine);
-                                this.updateScroll();
                                 self.cursorPos.column = column;
                                 self.cursorPos.line--;
+                                self.renderLine(self.firstLine);
+                                self.updateScroll();
                             }
                         }
                         break;
