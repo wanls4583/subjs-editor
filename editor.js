@@ -136,8 +136,10 @@
      * 文本容器类
      */
     function LinesText() {
-        var _content = [];
-        var _width = [];
+        var _content = [], //存储每行文本
+            _width = [], //记录每行文本的宽度
+            maxObj = { line: 1, width: 0 }, //文本当前最大宽度
+            findMax = false; //是否要重新计算最大宽度
         //获取一行文本
         this.getText = function(line) {
             return _content[line - 1];
@@ -146,19 +148,31 @@
         this.setText = function(line, txt) {
             _content[line - 1] = txt;
             _width[line - 1] = Util.getStrWidth(txt, SubJs.charWidth, SubJs.fullAngleCharWidth);
-            Util.sortNum(_width);
+            if (_width[line - 1] > maxObj.width) {
+                maxObj.width = _width[line - 1];
+                maxObj.line = line;
+            } else if (line == maxObj.line) {
+                findMax = true;
+            }
         }
         //在指定行添加一行文本
         this.add = function(line, txt) {
             _content.splice(line - 1, 0, txt);
             _width.splice(line - 1, 0, 0);
             _width[line - 1] = Util.getStrWidth(txt, SubJs.charWidth, SubJs.fullAngleCharWidth);
-            Util.sortNum(_width);
+            if (_width[line - 1] > maxObj.width) {
+                maxObj.width = _width[line - 1];
+            } else if (line == maxObj.line) {
+                maxObj.line = line + 1;
+            }
         }
         //删除一行文本
         this.delete = function(line) {
             _content.splice(line - 1, 1);
             _width.splice(line - 1, 1);
+            if (line == maxObj.line) {
+                findMax = true;
+            }
         }
         //获取总行数
         this.getLength = function() {
@@ -166,10 +180,18 @@
         }
         //获取文本最大宽度
         this.getMaxWidth = function() {
-            if (!_width.length) {
-                return 0;
+            if (findMax) {
+                var max = 0;
+                for (var i = 0; i < _width.length; i++) {
+                    if (_width[i] > max) {
+                        maxObj.line = i + 1;
+                        maxObj.width = _width[i];
+                        max = _width[i];
+                    }
+                }
+                findMax = false;
             }
-            return _width[_width.length - 1];
+            return maxObj.width;
         }
     }
     /**
@@ -457,7 +479,7 @@
             this.$vScrollWrap.css({
                 bottom: realBarWidth + 'px'
             })
-        }else if(!hasHBar){
+        } else if (!hasHBar) {
             this.$vScrollWrap.css({
                 bottom: '0px'
             })
@@ -470,7 +492,7 @@
             this.$hScrollWrap.css({
                 right: realBarWidth + 'px'
             })
-        }else if(!hasVBar){
+        } else if (!hasVBar) {
             this.$hScrollWrap.css({
                 right: '0px'
             })
@@ -649,29 +671,32 @@
      */
     _proto.renderLine = function(firstLine) {
         var self = this,
-            allDom = null;
+            allDom = this.$context.find('.pre_code_line'),
+            domLength = allDom.length;
         //删除可视区域之前的元素
-        for (var i = this.firstLine; i > 0 && i < firstLine; i++) {
+        for (var i = this.firstLine; i > 0 && i < firstLine && domLength > 0; i++) {
             this.linesDom[i - 1].remove();
+            domLength--;
         }
         //当过小于当前首行，则在其前插入
         if (firstLine < this.firstLine) {
-            for (var i = firstLine; this.linesDom[i - 1] && i < this.firstLine; i++) {
+            for (var i = firstLine; i < this.firstLine && i <= this.linesDom.length; i++) {
                 _hightlight(i);
-                this.linesDom[i - 1].insertBefore(this.linesDom[this.firstLine - 1]);
+                this.linesDom[i - 1].insertBefore(allDom[0]);
+                domLength++;
             }
         }
-        var allDom = this.$context.find('.pre_code_line');
         //如果当前可视区域的元素少于最大可见个数，则在尾部追加
-        if (allDom.length < this.maxVisualLine) {
-            for (var i = firstLine + allDom.length; this.linesDom[i - 1] && i < firstLine + this.maxVisualLine; i++) {
+        if (domLength < this.maxVisualLine) {
+            for (var i = firstLine + domLength; i < firstLine + this.maxVisualLine && i <= this.linesDom.length; i++) {
                 _hightlight(i);
                 this.$context.append(this.linesDom[i - 1]);
+                domLength++;
             }
         }
         allDom = this.$context.find('.pre_code_line');
         //可视区域元素个数大于最大可见个数，需要删除
-        for (var i = allDom.length; i > this.maxVisualLine; i--) {
+        for (var i = domLength; i > this.maxVisualLine; i--) {
             allDom[i - 1].remove();
         }
         this.updateNum(firstLine);
@@ -742,7 +767,7 @@
                     var top = e.clientY - rect.top + scrollTop;
                     var left = e.clientX - rect.left + scrollLeft;
                     var endPx = { top: top, left: left };
-                    var startPos = {line: originStartPos.line, column: originStartPos.column};
+                    var startPos = { line: originStartPos.line, column: originStartPos.column };
                     var endPos = self.pxToPos(endPx.top, endPx.left);
                     originEndPos = endPos;
                     //处理顺序
@@ -779,10 +804,11 @@
         });
         //快速滚动
         $(document).on('mousemove', function(e) {
-            if (autoDirect){
-                var rect = Util.getRect(self.$scroller[0]),speed;
+            if (autoDirect) {
+                var rect = Util.getRect(self.$scroller[0]),
+                    speed;
                 Util.cancelNextFrame(timer);
-                switch(autoDirect){
+                switch (autoDirect) {
                     case 'up':
                         speed = Math.abs(e.clientY - rect.top);
                         _move(speed);
@@ -804,7 +830,7 @@
         });
         //停止选择和滚动
         $(document).on('mouseup', function(e) {
-            if(select){
+            if (select) {
                 self.$textarea.focus()
             }
             select = false;
