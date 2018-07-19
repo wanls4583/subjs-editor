@@ -681,9 +681,9 @@
         //当过小于当前首行，则在其前插入
         if (firstLine < this.firstLine) {
             for (var i = firstLine; i < this.firstLine && i <= this.linesDom.length && i < firstLine + this.maxVisualLine; i++) {
-                _hightlight(i);
                 //页面上可能已经有该元素了
                 if(!this.linesDom[i - 1][0].isConnected){
+                    _hightlight(i);
                     this.linesDom[i - 1].insertBefore(allDom[0]);
                     domLength++;
                 }
@@ -707,7 +707,7 @@
         //高亮代码
         function _hightlight(line) {
             if (self.mode && !self.linesDom[line - 1].hasHightLight) {
-                self.mode.onAddLine(line);
+                self.mode.onUpdateLine(line);
                 self.linesDom[line - 1].hasHightLight = true;
             }
         }
