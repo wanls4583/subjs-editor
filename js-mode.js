@@ -756,26 +756,44 @@
             }
         }
     }
-    _proto.onAddLine = function(line) {
-        //多行匹配pre记录后移一位
-        this.donePreReg.splice(line - 1, 0, undefined);
-        //多行匹配suffix记录后移一位
-        this.doneSuffixReg.splice(line - 1, 0, undefined);
-        this.resetDoneRegLine(line);
-        this.highlight(line);
-        this.pairHighlight(line);
-    }
+    /**
+     * 当更新一行时触发
+     * @param  {行号} line 行号
+     */
     _proto.onUpdateLine = function(line) {
         this.highlight(line);
         this.pairHighlight(line);
     }
-    _proto.onDeleteLine = function(line) {
-        //多行匹配pre记录前移一位
-        this.donePreReg.splice(line - 1, 1);
-        //多行匹配suffix记录前移一位
-        this.doneSuffixReg.splice(line - 1, 1);
-        this.resetDoneRegLine(line);
-        this.pairHighlight(line - 1);
+    /**
+     * 当插入内容时触发
+     * @param  {number} line   首行
+     * @param  {number} length 插入的行数
+     */
+    _proto.onInsertContent = function(line, length) {
+        for (var i = 1; i <= length; i++) {
+            //多行匹配pre记录后移一位
+            this.donePreReg.splice(line + i - 1, 0, undefined);
+            //多行匹配suffix记录后移一位
+            this.doneSuffixReg.splice(line + i - 1, 0, undefined);
+        }
+        this.resetDoneRegLine(line + 1);
+    }
+    /**
+     * 当删除内容时触发多行匹配
+     * @param  {number} line   首行
+     * @param  {number} length 删除的行数
+     */
+    _proto.onDeleteContent = function(line, length) {
+        for (var i = 1; i <= length; i++) {
+            //多行匹配pre记录前移一位
+            this.donePreReg.splice(line, 1);
+            //多行匹配suffix记录前移一位
+            this.doneSuffixReg.splice(line, 1);
+        }
+        if(length > 1){
+            this.resetDoneRegLine(line + 1);
+            this.pairHighlight(line + 1);
+        }
     }
     window.SubJsMode = JsMode;
 }()

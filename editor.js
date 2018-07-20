@@ -219,9 +219,9 @@
         this.linesText = new LinesText(); //所有的行
         this.linesDom = []; //行对应的dom
         this.leftNumDom = []; //行号dom
-        this.cursorPos = { line: 1, column: 0 }; //光标位置
+        this.cursorPos = { line: 0, column: 0 }; //光标位置
         this.selection = {};
-        this.firstLine = 0;
+        this.firstLine = 1;
         this.mode = window.SubJsMode && new SubJsMode(this.linesText, this.linesDom);
         this.creatContext();
         this.getCharWidth();
@@ -232,9 +232,7 @@
         this.createScrollBar();
         this.bindEvent();
         this.bindEditorEvent();
-        this.addLine(1, '');
-        this.renderLine(1);
-        this.updateCursorPos();
+        this.insertContent('\n');
     }
     _proto.bindEvent = function() {
         this.bindInputEvent();
@@ -516,31 +514,32 @@
         }
     }
     /**
-     * 更更一行
-     * @param  {number} line      行号
-     * @param  {string} newConent 新的内容
-     */
-    _proto.updateLine = function(line, newConent) {
-        this.linesText.setText(line, newConent);
-        if (this.mode) {
-            this.mode.onUpdateLine(line);
-        } else {
-            this.linesDom[line - 1].html(newConent);
-        }
-    }
-    /**
      * 在当前光标位置处插入内容
      * @param  {string} val 插入的内容
      */
-    _proto.insertOnLine = function(newContent) {
-        var str = this.linesText.getText(this.cursorPos.line);
+    _proto.insertContent = function(newContent) {
+        var str = this.linesText.getText(this.cursorPos.line) || '',
+            strs = null,
+            firstLine;
         str = str.substring(0, this.cursorPos.column) + newContent + str.substr(this.cursorPos.column);
-        var strs = str.split(/\r\n|\r|\n/);
-        this.updateLine(this.cursorPos.line, strs[0]);
-        for (var tmp = 1; tmp < strs.length; tmp++) { //粘贴操作可能存在换号符
-            this.addLine(this.cursorPos.line + tmp, strs[tmp]);
+        strs = str.split(/\r\n|\r|\n/);
+        if (strs[0]) { //'\n'.split(/\r\n|\r|\n/)->['','']
+            this.linesText.setText(this.cursorPos.line, strs[0]);
+            this.hightlight(this.cursorPos.line);
         }
-        var firstLine = this.firstLine;
+        //粘贴操作可能存在换号符,需要添加新行
+        for (var tmp = 1; tmp < strs.length; tmp++) {
+            this.linesText.add(this.cursorPos.line + tmp, strs[tmp]);
+            var $dom = $('\
+                <div style="position:relative;margin:0;height:' + SubJs.charHight + 'px;" class="pre_code_line">\
+                    <div class="code" style="display:inline-block;position:relative;height:100%;min-width:100%;white-space:pre"></div>\
+                </div>');
+            this.linesDom.splice(this.cursorPos.line + tmp - 1, 0, $dom);
+        }
+        if (this.mode) {
+            this.mode.onInsertContent(this.cursorPos.line, str.length);
+        }
+        firstLine = this.firstLine;
         //计算可视区域的首行
         if (this.cursorPos.line - this.firstLine + strs.length > this.maxVisualLine) {
             firstLine = this.cursorPos.line + strs.length - this.maxVisualLine;
@@ -552,53 +551,56 @@
         this.updateScroll(true);
     }
     /**
-     * 在指定行前面添加一行内容
-     * @param {number} line      行号
-     * @param {string} newConent 内容
-     */
-    _proto.addLine = function(line, newConent) {
-        this.linesText.add(line, newConent);
-        var $dom = $('\
-            <div style="position:relative;margin:0;height:' + SubJs.charHight + 'px;" class="pre_code_line">\
-                <div class="code" style="display:inline-block;position:relative;height:100%;min-width:100%;white-space:pre"></div>\
-            </div>');
-        this.linesDom.splice(line - 1, 0, $dom);
-    }
-    /**
-     * 从编辑器中删除一行
-     * @param  {number} line 行号
-     */
-    _proto.deleteLine = function(line) {
-        this.linesText.delete(line);
-        this.linesDom[line - 1].remove();
-        this.linesDom.splice(line - 1, 1);
-        if (this.mode) {
-            this.mode.onDeleteLine(line);
-        }
-    }
-    /**
      * 从编辑器中删除多行
-     * @param  {object} startPos 开始行列坐标{line,column}
+     * @param  {object/number} startPos 开始行列坐标{line,column}/行号
      * @param  {object} endPos   结束行列坐标{line,column}
      */
-    _proto.deleteMutilLine = function(startPos, endPos) {
+    _proto.deleteContent = function(startPos, endPos) {
+        if (typeof startPos == 'number') {
+            var line = startPos;
+            if (line > 1) {
+                startPos = { line: line - 1, column: this.linesText.getText(line - 1).length };
+            } else {
+                startPos = { line: line, column: 0 };
+            }
+            endPos = { line: line, column: this.linesText.getText(line).length };
+        }
         if (startPos.line == endPos.line) {
             var str = this.linesText.getText(startPos.line);
-            this.updateLine(startPos.line, str.substring(0, startPos.column) + str.substring(endPos.column));
+            this.linesText.setText(startPos.line, str.substring(0, startPos.column) + str.substring(endPos.column));
+            this.hightlight(startPos.line);
             this.cursorPos.column = startPos.column;
         } else {
             var str = this.linesText.getText(startPos.line).substring(0, startPos.column) + this.linesText.getText(endPos.line).substring(endPos.column);
-            this.updateLine(startPos.line, str);
+            this.linesText.setText(startPos.line, str);
+            this.hightlight(startPos.line);
+            //删除行
             for (var i = startPos.line + 1; i <= endPos.line; i++) {
-                this.deleteLine(startPos.line + 1);
+                this.linesText.delete(startPos.line + 1);
+                this.linesDom[startPos.line].remove();
+                this.linesDom.splice(startPos.line, 1);
             }
             this.cursorPos.line = startPos.line;
             this.cursorPos.column = startPos.column;
         }
-        this.renderLine(this.firstLine);
+        if (this.mode) {
+            this.mode.onDeleteContent(startPos.line, endPos.line - startPos.line + 1);
+        }
+        this.renderLine(startPos.line);
         this.updateScroll();
         this.$selectBg.html('');
         this.selection = {};
+    }
+    /**
+     * 高亮一行代码
+     * @param  {number} line 行号
+     */
+    _proto.hightlight = function(line) {
+        if (this.mode) {
+            this.mode.onUpdateLine(line);
+        } else {
+            this.linesDom[line - 1].html(this.linesText.getText(line));
+        }
     }
     /**
      * 更新行号
@@ -671,43 +673,34 @@
      */
     _proto.renderLine = function(firstLine) {
         var self = this,
-            allDom = this.$context.find('.pre_code_line'),
-            domLength = allDom.length;
+            allDom = this.$context.find('.pre_code_line');
         //删除可视区域之前的元素
-        for (var i = this.firstLine; i > 0 && i < firstLine && domLength > 0; i++) {
-            allDom[i - this.firstLine].remove();
-            domLength--;
+        for (var i = this.firstLine; i > 0 && i < firstLine; i++) {
+            allDom[i - this.firstLine] && allDom[i - this.firstLine].remove();
         }
-        //当过小于当前首行，则在其前插入
-        if (firstLine < this.firstLine) {
-            for (var i = firstLine; i < this.firstLine && i <= this.linesDom.length && i < firstLine + this.maxVisualLine; i++) {
-                //页面上可能已经有该元素了
-                if(!this.linesDom[i - 1][0].isConnected){
-                    _hightlight(i);
-                    this.linesDom[i - 1].insertBefore(allDom[0]);
-                    domLength++;
+        //遍历可视区域的元素是否已经挂载
+        for (var i = firstLine; i < firstLine + this.maxVisualLine && i <= this.linesDom.length; i++) {
+            var $dom = this.linesDom[i - 1];
+            var $preDom = this.linesDom[i - 2];
+            if (!$dom[0].isConnected) {
+                if (i == firstLine) {
+                    this.$context.prepend($dom);
+                } else {
+                    $dom.insertAfter($preDom);
                 }
-            }
-        }
-        //如果当前可视区域的元素少于最大可见个数，则在尾部追加
-        if (domLength < this.maxVisualLine) {
-            for (var i = firstLine + domLength; i < firstLine + this.maxVisualLine && i <= this.linesDom.length; i++) {
-                _hightlight(i);
-                this.$context.append(this.linesDom[i - 1]);
-                domLength++;
             }
         }
         allDom = this.$context.find('.pre_code_line');
         //可视区域元素个数大于最大可见个数，需要删除
-        for (var i = domLength; i > this.maxVisualLine; i--) {
+        for (var i = allDom.length; i > this.maxVisualLine; i--) {
             allDom[i - 1].remove();
         }
         this.updateNum(firstLine);
         this.firstLine = firstLine;
         //高亮代码
         function _hightlight(line) {
-            if (self.mode && !self.linesDom[line - 1].hasHightLight) {
-                self.mode.onUpdateLine(line);
+            if (!self.linesDom[line - 1].hasHightLight) {
+                self.hightlight(line);
                 self.linesDom[line - 1].hasHightLight = true;
             }
         }
@@ -811,19 +804,19 @@
                 var rect = Util.getRect(self.$scroller[0]),
                     speed;
                 Util.cancelNextFrame(timer);
-                if(e.clientY - rect.top < 0){
+                if (e.clientY - rect.top < 0) {
                     autoDirect = 'up';
                     speed = Math.abs(e.clientY - rect.top);
                     _move(speed);
-                }else if(e.clientY - rect.top - self.$scroller[0].clientHeight > 0){
+                } else if (e.clientY - rect.top - self.$scroller[0].clientHeight > 0) {
                     autoDirect = 'down';
                     speed = e.clientY - rect.top - self.$scroller[0].clientHeight;
                     _move(speed);
-                }else if(e.clientX - rect.left < 0){
+                } else if (e.clientX - rect.left < 0) {
                     autoDirect = 'left';
                     speed = Math.abs(e.clientX - rect.left);
                     _move(speed);
-                }else if(e.clientX - rect.left - self.$scroller[0].clientWidth > 0){
+                } else if (e.clientX - rect.left - self.$scroller[0].clientWidth > 0) {
                     autoDirect = 'right';
                     speed = e.clientX - rect.left - self.$scroller[0].clientWidth;
                     _move(speed);
@@ -945,7 +938,7 @@
         this.$textarea.on('paste', function(e) {
             var copyText = '';
             if (self.selection.startPos) {
-                self.deleteMutilLine(self.selection.startPos, self.selection.endPos);
+                self.deleteContent(self.selection.startPos, self.selection.endPos);
             }
             if (e.originalEvent.clipboardData) {
                 copyText = e.originalEvent.clipboardData.getData('text');
@@ -956,7 +949,7 @@
                 self.copyText = copyText;
             }
             if (copyText) {
-                self.insertOnLine(self.copyText);
+                self.insertContent(self.copyText);
             }
         })
         this.$textarea.on('cut', function() {
@@ -964,7 +957,7 @@
             self.$textarea.val(self.copyText);
             self.$textarea.select();
             if (self.selection.startPos) {
-                self.deleteMutilLine(self.selection.startPos, self.selection.endPos);
+                self.deleteContent(self.selection.startPos, self.selection.endPos);
             }
         })
         this.$textarea.on('select', function() {
@@ -1068,44 +1061,35 @@
                         break;
                     case 46: //delete
                         if (self.selection.startPos) {
-                            self.deleteMutilLine(self.selection.startPos, self.selection.endPos);
+                            self.deleteContent(self.selection.startPos, self.selection.endPos);
                         } else {
-                            var str = self.linesText.getText(self.cursorPos.line);
-                            str = str.substring(0, self.cursorPos.column) + str.substr(self.cursorPos.column + 1);
-                            self.updateLine(self.cursorPos.line, str);
+                            var startPos = { line: self.cursorPos.line, column: self.cursorPos.column };
+                            var endPos = { line: self.cursorPos.line, column: self.cursorPos.column + 1 };
+                            self.deleteContent(startPos, endPos);
                         }
                         break;
                     case 8: //backspace
                         if (self.selection.startPos) {
-                            self.deleteMutilLine(self.selection.startPos, self.selection.endPos);
+                            self.deleteContent(self.selection.startPos, self.selection.endPos);
                         } else {
-                            var str = self.linesText.getText(self.cursorPos.line);
-                            str = str.substring(0, self.cursorPos.column - 1) + str.substr(self.cursorPos.column);
                             if (self.cursorPos.column > 0) {
-                                self.cursorPos.column--;
-                                self.updateLine(self.cursorPos.line, str);
+                                var startPos = { line: self.cursorPos.line, column: self.cursorPos.column - 1 };
+                                var endPos = { line: self.cursorPos.line, column: self.cursorPos.column };
+                                self.deleteContent(startPos, endPos);
                             } else if (self.cursorPos.line > 1) {
-                                var column = self.linesText.getText(self.cursorPos.line - 1).length;
-                                self.updateLine(self.cursorPos.line - 1, self.linesText.getText(self.cursorPos.line - 1) + self.linesText.getText(self.cursorPos.line));
-                                self.deleteLine(self.cursorPos.line);
-                                self.cursorPos.column = column;
-                                self.cursorPos.line--;
-                                self.renderLine(self.firstLine);
-                                self.updateScroll();
+                                var startPos = { line: self.cursorPos.line - 1, column: self.linesText.getText(self.cursorPos.line - 1) };
+                                var endPos = { line: self.cursorPos.line, column: 0 };
+                                self.deleteContent(self.cursorPos.line);
                             }
                         }
                         break;
-                    case 13: //换行
-                    case 108: //数字键换行
-                        if (self.selection.startPos) {
-                            self.deleteMutilLine(self.selection.startPos, self.selection.endPos);
-                        }
-                        var str = self.linesText.getText(self.cursorPos.line);
-                        self.updateLine(self.cursorPos.line, str.substring(0, self.cursorPos.column));
-                        self.addLine(self.cursorPos.line + 1, str.substr(self.cursorPos.column));
-                        self.cursorPos.line++;
-                        self.cursorPos.column = 0;
-                        break;
+                        // case 13: //换行
+                        // case 108: //数字键换行
+                        //     if (self.selection.startPos) {
+                        //         self.deleteContent(self.selection.startPos, self.selection.endPos);
+                        //     }
+                        //     self.insertContent('\n');
+                        //     break;
                     case 9: //tab
                         e.preventDefault();
                         //选中区域全体移动
@@ -1133,7 +1117,7 @@
                         } else {
                             if (!e.shiftKey) {
                                 var val = Util.space(self.options.tabsize);
-                                self.insertOnLine(val);
+                                self.insertContent(val);
                             } else {
                                 _shiftTab(self.cursorPos.line)
                             }
@@ -1142,23 +1126,23 @@
                     default:
                         if (preCode > 222 && e.keyCode == 16) { //中文输入后shift延迟较大
                             setTimeout(function() {
-                                _insertOnLine();
+                                _insertContent();
                             }, 150);
                         } else {
                             setTimeout(function() {
-                                _insertOnLine();
+                                _insertContent();
                             }, 0)
                         }
                 }
             }
 
-            function _insertOnLine() {
+            function _insertContent() {
                 var val = self.$textarea.val();
                 if (val) {
                     if (self.selection.startPos) {
-                        self.deleteMutilLine(self.selection.startPos, self.selection.endPos);
+                        self.deleteContent(self.selection.startPos, self.selection.endPos);
                     }
-                    self.insertOnLine(val);
+                    self.insertContent(val);
                 }
             }
 
