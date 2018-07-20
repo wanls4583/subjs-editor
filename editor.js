@@ -683,6 +683,7 @@
             var $dom = this.linesDom[i - 1];
             var $preDom = this.linesDom[i - 2];
             if (!$dom[0].isConnected) {
+                _hightlight(i);
                 if (i == firstLine) {
                     this.$context.prepend($dom);
                 } else {
