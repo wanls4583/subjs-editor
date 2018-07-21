@@ -774,6 +774,8 @@
             this.donePreReg.splice(line + i - 1, 0, undefined);
             //多行匹配suffix记录后移一位
             this.doneSuffixReg.splice(line + i - 1, 0, undefined);
+            //修饰记录后移一位
+            this.linesDecoration.splice(line + i - 1, 0, undefined);
         }
         if (length > 1 && line + 1 <= this.linesText.getLength()) {
             this.resetDoneRegLine(line + 1);
@@ -807,7 +809,7 @@
             //寻找待删除行之后最近的所有suffixReg行
             for(var regIndex=0; regIndex<pairReg.length; regIndex++){
                 var done = false;
-                for(var l = line+length+1; !done && l <= this.linesText.getLength(); l++){
+                for(var l = line+length; !done && l <= this.linesText.getLength(); l++){
                     for(var column in this.doneSuffixReg[l-1]){
                         if(this.doneSuffixReg[l-1][column][regIndex]){
                             this.doneSuffixReg[l-1][column][regIndex].undo = true;
@@ -825,6 +827,8 @@
                 this.donePreReg.splice(line, 1);
                 //多行匹配suffix记录前移一位
                 this.doneSuffixReg.splice(line, 1);
+                //修饰记录前移一位
+                this.linesDecoration.splice(line, 1);
             }
             this.resetDoneRegLine(line+1);
             Util.sortNum(checkLines);

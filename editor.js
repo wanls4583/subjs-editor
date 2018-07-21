@@ -976,6 +976,9 @@
     //滚动条事件
     _proto.bindScrollEvent = function() {
         var self = this;
+        $(window).on('resize',function(e){
+            self.updateScroll();
+        })
         this.$wrapper.on('mousewheel', function(e) {
             self.$vScrollWrap[0].scrollTop += e.originalEvent.deltaY;
         })
