@@ -769,6 +769,7 @@
      * @param  {number} length 插入的行数
      */
     _proto.onInsertContent = function(line, length) {
+        this.onUpdateLine(line);
         for (var i = 1; i < length; i++) {
             //多行匹配pre记录后移一位
             this.donePreReg.splice(line + i - 1, 0, undefined);
@@ -788,15 +789,20 @@
      */
     _proto.onDeleteContent = function(line, length) {
         var checkLines=[];
-        if(length > 1){
+        if(length > 1){ //需要删除整行
             //寻找待删除行之前最近的所有preReg行
             for(var regIndex=0; regIndex<pairReg.length; regIndex++){
                 var done = false;
                 for(var l = line; !done && l >= 1; l--){
                     for(var column in this.donePreReg[l-1]){
-                        if(this.donePreReg[l-1][column][regIndex]){
-                            this.donePreReg[l-1][column][regIndex].undo = true;
-                            this.donePreReg[l-1][column][regIndex].endSuffix = undefined;
+                        var obj = this.donePreReg[l-1][column][regIndex];
+                        if(obj){
+                            obj.undo = true;
+                            if(obj.endSuffix){
+                                obj.endSuffix.undo = true;
+                                obj.endSuffix.startPre = undefined;
+                            }
+                            obj.endSuffix = undefined;
                             if(checkLines.indexOf(l) == -1){
                                 checkLines.push(l);
                             }
@@ -811,10 +817,18 @@
                 var done = false;
                 for(var l = line+length; !done && l <= this.linesText.getLength(); l++){
                     for(var column in this.doneSuffixReg[l-1]){
-                        if(this.doneSuffixReg[l-1][column][regIndex]){
-                            this.doneSuffixReg[l-1][column][regIndex].undo = true;
-                            if(!checkLines.indexOf(l) == -1){
-                                checkLines.push(l);
+                        var obj = this.doneSuffixReg[l-1][column][regIndex];
+                        if(obj){
+                            if(!obj.startPre || obj.startPre.line > line){
+                                obj.undo = true;
+                                if(obj.startPre){
+                                    obj.startPre.undo = true;
+                                    obj.startPre.endSuffix = undefined;
+                                    obj.startPre = undefined;
+                                }
+                                if(!checkLines.indexOf(l) == -1){
+                                    checkLines.push(l);
+                                }
                             }
                             done = true;
                             break;
@@ -835,6 +849,8 @@
             for(var i = 0; i<checkLines.length; i++){
                 this.pairHighlight(checkLines[i]);
             }
+        }else{ //删除一行中部分内容
+            this.onUpdateLine(line);
         }
     }
     window.SubJsMode = JsMode;

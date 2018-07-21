@@ -525,7 +525,6 @@
         strs = str.split(/\r\n|\r|\n/);
         if (strs[0]) { //'\n'.split(/\r\n|\r|\n/)->['','']
             this.linesText.setText(this.cursorPos.line, strs[0]);
-            this.hightlight(this.cursorPos.line);
         }
         //粘贴操作可能存在换号符,需要添加新行
         for (var tmp = 1; tmp < strs.length; tmp++) {
@@ -568,7 +567,6 @@
         if (startPos.line == endPos.line) {
             var str = this.linesText.getText(startPos.line);
             this.linesText.setText(startPos.line, str.substring(0, startPos.column) + str.substring(endPos.column));
-            this.hightlight(startPos.line);
             this.cursorPos.column = startPos.column;
         } else {
             var str = this.linesText.getText(startPos.line).substring(0, startPos.column) + this.linesText.getText(endPos.line).substring(endPos.column);
