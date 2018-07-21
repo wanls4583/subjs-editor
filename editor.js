@@ -375,9 +375,9 @@
         if (!ifLine) {
             top = top - rect.paddingTop - Util.pxToNum(Util.getStyleVal(this.$context[0], 'top'));
             line = Math.ceil(top / SubJs.charHight);
+            line = line + this.firstLine - 1;
         }
         line = line < 1 ? 1 : line;
-        line = line + this.firstLine - 1;
         if (line > this.linesText.getLength()) {
             line = this.linesText.getLength();
             column = this.linesText.getText(this.linesText.getLength()).length;
@@ -670,7 +670,7 @@
      * @param  {number} firstLine 首行序号
      */
     _proto.renderLine = function(firstLine) {
-        if(!firstLine){
+        if (!firstLine) {
             firstLine = this.firstLine;
         }
         var self = this,
@@ -787,7 +787,7 @@
                     } else if (top - 5 < 0) {
                         autoDirect = 'up';
                         _move(2);
-                    } else if (left - 5 < 0) {
+                    } else if (left - 5 < self.$scroller[0].scrollLeft) {
                         autoDirect = 'left';
                         _move(2);
                     } else if (left - self.$scroller[0].scrollLeft + vBarWidth + 5 > self.$scroller[0].clientWidth) {
@@ -841,7 +841,7 @@
         function _move(speed) {
             var vScrollWrap = self.$vScrollWrap[0];
             var hScrollWrap = self.$hScrollWrap[0];
-            var startPos = originStartPos;
+            var startPos = { line: originStartPos.line, column: originStartPos.column };
             var endPos = null;
             var vBarWidth = self.linesText.getLength() >= self.maxVisualLine ? Util.getScrBarWidth() : 0,
                 hBarHeight = self.$scroller[0].scrollWidth > self.$scroller[0].clientWidth ? Util.getScrBarWidth() : 0;
@@ -864,15 +864,13 @@
                     case 'left':
                         if (hScrollWrap.scrollLeft > 0) {
                             hScrollWrap.scrollLeft -= speed;
-                            endPos = self.pxToPos(0, 0);
-                            endPos.line = originEndPos.line;
+                            endPos = self.pxToPos(originEndPos.line, self.$scroller[0].scrollLeft, true);
                         }
                         break;
                     case 'right':
                         if (hScrollWrap.scrollLeft < hScrollWrap.scrollWidth - hScrollWrap.clientWidth) {
                             hScrollWrap.scrollLeft += speed;
-                            endPos = self.pxToPos(0, self.$scroller[0].clientWidth - vBarWidth);
-                            endPos.line = originEndPos.line;
+                            endPos = self.pxToPos(originEndPos.line, self.$scroller[0].clientWidth + self.$scroller[0].scrollLeft - vBarWidth, true);
                         }
                 }
                 if (endPos) {
@@ -974,7 +972,7 @@
     //滚动条事件
     _proto.bindScrollEvent = function() {
         var self = this;
-        $(window).on('resize',function(e){
+        $(window).on('resize', function(e) {
             self.updateScroll();
         })
         this.$wrapper.on('mousewheel', function(e) {
@@ -1037,7 +1035,7 @@
                             self.selection = {};
                         } else if (self.cursorPos.line > 1) {
                             self.cursorPos.line--;
-                            self.cursorPos.column = self.pxToPos(self.cursorPos.top, self.cursorPos.left, true).column;
+                            self.cursorPos.column = self.pxToPos(self.cursorPos.line, self.cursorPos.left, true).column;
                         }
                         break;
                     case 39: //right arrow
@@ -1061,7 +1059,7 @@
                             self.selection = {};
                         } else if (self.cursorPos.line < self.linesText.getLength()) {
                             self.cursorPos.line++;
-                            self.cursorPos.column = self.pxToPos(self.cursorPos.top, self.cursorPos.left, true).column;
+                            self.cursorPos.column = self.pxToPos(self.cursorPos.line, self.cursorPos.left, true).column;
                         }
                         break;
                     case 46: //delete
@@ -1090,10 +1088,6 @@
                         break;
                         // case 13: //换行
                         // case 108: //数字键换行
-                        //     if (self.selection.startPos) {
-                        //         self.deleteContent(self.selection.startPos, self.selection.endPos);
-                        //     }
-                        //     self.insertContent('\n');
                         //     break;
                     case 9: //tab
                         e.preventDefault();
