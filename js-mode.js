@@ -769,7 +769,7 @@
      * @param  {number} length 插入的行数
      */
     _proto.onInsertContent = function(line, length) {
-        for (var i = 1; i <= length; i++) {
+        for (var i = 1; i < length; i++) {
             //多行匹配pre记录后移一位
             this.donePreReg.splice(line + i - 1, 0, undefined);
             //多行匹配suffix记录后移一位
@@ -789,9 +789,9 @@
             //多行匹配suffix记录前移一位
             this.doneSuffixReg.splice(line, 1);
         }
-        if(length > 1){
-            this.resetDoneRegLine(line + 1);
-            this.pairHighlight(line + 1);
+        if(length > 1 && line <= this.linesText.getLength()){
+            this.resetDoneRegLine(line);
+            this.pairHighlight(line);
         }
     }
     window.SubJsMode = JsMode;

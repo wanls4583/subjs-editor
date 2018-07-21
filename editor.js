@@ -586,7 +586,7 @@
         if (this.mode) {
             this.mode.onDeleteContent(startPos.line, endPos.line - startPos.line + 1);
         }
-        this.renderLine(startPos.line);
+        this.renderLine();
         this.updateScroll();
         this.$selectBg.html('');
         this.selection = {};
@@ -672,6 +672,9 @@
      * @param  {number} firstLine 首行序号
      */
     _proto.renderLine = function(firstLine) {
+        if(!firstLine){
+            firstLine = this.firstLine;
+        }
         var self = this,
             allDom = this.$context.find('.pre_code_line');
         //删除可视区域之前的元素
