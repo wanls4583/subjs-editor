@@ -537,7 +537,7 @@
             this.linesDom.splice(this.cursorPos.line + tmp - 1, 0, $dom);
         }
         if (this.mode) {
-            this.mode.onInsertContent(this.cursorPos.line, str.length);
+            this.mode.onInsertContent(this.cursorPos.line, strs.length);
         }
         firstLine = this.firstLine;
         //计算可视区域的首行

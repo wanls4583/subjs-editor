@@ -423,7 +423,7 @@
         }
         //检测preReg
         function _checkPairPreReg() {
-            checkLines.sort();
+            Util.sortNum(checkLines);
             for (var l = 0; l < checkLines.length; l++) {
                 var currentLine = checkLines[l];
                 var lineDonePreReg = self.donePreReg[currentLine - 1] || {};
@@ -468,35 +468,6 @@
                             //渲染当前行
                             if (renderArr.indexOf(preObj) == -1) {
                                 renderArr.push(preObj);
-                            }
-                        }
-                    }
-                }
-                //寻找其后最近的一个preReg
-                //ie.   /*...
-                //      /*...*/...
-                function __getNextNearPreReg(preObj) {
-                    var sf = preObj.endSuffix;
-                    var done = false;
-                    for (var i = preObj.line; !done && i <= self.linesText.getLength(); i++) {
-                        var ldpr = self.donePreReg[i - 1];
-                        for (var c in ldpr) {
-                            var pr = ldpr[c][regIndex];
-                            //不存在endSuffix的情况
-                            if (!sf && pr && (i > preObj.line || i == preObj.line && pr.start > preObj.start)) {
-                                done = true;
-                                //存在endSuffix的情况
-                            } else if (sf && pr && (i > preObj.line && i < sf.line || i == preObj.line && i < sf.line && pr.start > preObj.start || i > preObj.line && i == sf.line && pr.start < sf.start || preObj.line == sf.line && pr.start > preObj.starat && pr.start < sf.start)) {
-                                done = true;
-                            }
-                            if (done) {
-                                pr.plain = false;
-                                pr.undo = true;
-                                if (checkLines.indexOf(i) == -1) {
-                                    checkLines.push(i);
-                                    checkLines.sort();
-                                }
-                                break;
                             }
                         }
                     }
@@ -591,6 +562,7 @@
                                     self.linesDom[i - 1].find('.code').removeClass(className);
                                 }
                                 preObj.plain = false;
+                                __getNextNearPreReg(preObj);
                             } else {
                                 preObj.plain = true;
                             }
@@ -599,6 +571,33 @@
                             //渲染当前行
                             if (renderArr.indexOf(preObj) == -1) {
                                 renderArr.push(preObj);
+                            }
+                        }
+                    }
+                }
+                //寻找当前处理过的preReg后的最近的一个preReg
+                //ie.   /*...
+                //      /*...*/...
+                function __getNextNearPreReg(preObj) {
+                    var sf = preObj.endSuffix;
+                    var done = false;
+                    for (var i = preObj.line; !done && i <= self.linesText.getLength(); i++) {
+                        var ldpr = self.donePreReg[i - 1];
+                        for (var c in ldpr) {
+                            var pr = ldpr[c][regIndex];
+                            if(i > preObj.line || pr.start > preObj.start){
+                                done = true;
+                            }
+                            if (done) {
+                                if(!pr.endSuffix){
+                                    pr.plain = false;
+                                    pr.undo = true;
+                                }
+                                if (checkLines.indexOf(i) == -1) {
+                                    checkLines.push(i);
+                                    Util.sortNum(checkLines);
+                                }
+                                break;
                             }
                         }
                     }
