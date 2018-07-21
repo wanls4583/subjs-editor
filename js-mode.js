@@ -585,11 +585,11 @@
                         var ldpr = self.donePreReg[i - 1];
                         for (var c in ldpr) {
                             var pr = ldpr[c][regIndex];
-                            if(i > preObj.line || pr.start > preObj.start){
+                            if (i > preObj.line || pr.start > preObj.start) {
                                 done = true;
                             }
                             if (done) {
-                                if(!pr.endSuffix){
+                                if (!pr.endSuffix) {
                                     pr.plain = false;
                                     pr.undo = true;
                                 }
@@ -775,7 +775,9 @@
             //多行匹配suffix记录后移一位
             this.doneSuffixReg.splice(line + i - 1, 0, undefined);
         }
-        this.resetDoneRegLine(line + 1);
+        if (length > 1 && line + 1 <= this.linesText.getLength()) {
+            this.resetDoneRegLine(line + 1);
+        }
     }
     /**
      * 当删除内容时触发多行匹配
@@ -783,15 +785,52 @@
      * @param  {number} length 删除的行数
      */
     _proto.onDeleteContent = function(line, length) {
-        for (var i = 1; i <= length; i++) {
-            //多行匹配pre记录前移一位
-            this.donePreReg.splice(line, 1);
-            //多行匹配suffix记录前移一位
-            this.doneSuffixReg.splice(line, 1);
-        }
-        if(length > 1 && line <= this.linesText.getLength()){
-            this.resetDoneRegLine(line);
-            this.pairHighlight(line);
+        var checkLines=[];
+        if(length > 1){
+            //寻找待删除行之前最近的所有preReg行
+            for(var regIndex=0; regIndex<pairReg.length; regIndex++){
+                var done = false;
+                for(var l = line; !done && l >= 1; l--){
+                    for(var column in this.donePreReg[l-1]){
+                        if(this.donePreReg[l-1][column][regIndex]){
+                            this.donePreReg[l-1][column][regIndex].undo = true;
+                            this.donePreReg[l-1][column][regIndex].endSuffix = undefined;
+                            if(checkLines.indexOf(l) == -1){
+                                checkLines.push(l);
+                            }
+                            done = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            //寻找待删除行之后最近的所有suffixReg行
+            for(var regIndex=0; regIndex<pairReg.length; regIndex++){
+                var done = false;
+                for(var l = line+length+1; !done && l <= this.linesText.getLength(); l++){
+                    for(var column in this.doneSuffixReg[l-1]){
+                        if(this.doneSuffixReg[l-1][column][regIndex]){
+                            this.doneSuffixReg[l-1][column][regIndex].undo = true;
+                            if(!checkLines.indexOf(l) == -1){
+                                checkLines.push(l);
+                            }
+                            done = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            for (var i = 1; i < length; i++) {
+                //多行匹配pre记录前移一位
+                this.donePreReg.splice(line, 1);
+                //多行匹配suffix记录前移一位
+                this.doneSuffixReg.splice(line, 1);
+            }
+            this.resetDoneRegLine(line+1);
+            Util.sortNum(checkLines);
+            for(var i = 0; i<checkLines.length; i++){
+                this.pairHighlight(checkLines[i]);
+            }
         }
     }
     window.SubJsMode = JsMode;
