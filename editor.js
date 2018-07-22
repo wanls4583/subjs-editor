@@ -210,7 +210,7 @@
             if(!newContent){
                 newContent = _content[line - 1];
             }
-            _htmlDom[line-1].html(newContent);
+            _htmlDom[line-1].find('.code').html(newContent);
         }
     }
     /**
