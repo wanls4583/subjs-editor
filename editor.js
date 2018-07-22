@@ -135,8 +135,9 @@
     /**
      * 文本容器类
      */
-    function LinesText() {
+    function LinesContext() {
         var _content = [], //存储每行文本
+            _htmlDom = [], //存储每行文本对应的dom元素
             _width = [], //记录每行文本的宽度
             maxObj = { line: 1, width: 0 }, //文本当前最大宽度
             findMax = false; //是否要重新计算最大宽度
@@ -157,7 +158,12 @@
         }
         //在指定行添加一行文本
         this.add = function(line, txt) {
+            var $dom = $('\
+                <div style="position:relative;margin:0;height:' + SubJs.charHight + 'px;" class="pre_code_line">\
+                    <div class="code" style="display:inline-block;position:relative;height:100%;min-width:100%;white-space:pre"></div>\
+                </div>');
             _content.splice(line - 1, 0, txt);
+            _htmlDom.splice(line-1, 0, $dom);
             _width.splice(line - 1, 0, 0);
             _width[line - 1] = Util.getStrWidth(txt, SubJs.charWidth, SubJs.fullAngleCharWidth);
             if (_width[line - 1] > maxObj.width) {
@@ -169,6 +175,8 @@
         //删除一行文本
         this.delete = function(line) {
             _content.splice(line - 1, 1);
+            _htmlDom[line - 1].remove();
+            _htmlDom.splice(line - 1, 1);
             _width.splice(line - 1, 1);
             if (line == maxObj.line) {
                 findMax = true;
@@ -193,10 +201,21 @@
             }
             return maxObj.width;
         }
+        //获取dom
+        this.getDom = function(line){
+            return _htmlDom[line - 1];
+        }
+        //更新dom
+        this.mount = function(line,newContent){
+            if(!newContent){
+                newContent = _content[line - 1];
+            }
+            _htmlDom[line-1].html(newContent);
+        }
     }
     /**
      * 编辑器
-     * @param {[object]} options [配置]
+     * @param {object} options [配置]
      *  options.$wrapper 容器
      *  options.tabsize tab键所占空格数
      */
@@ -216,13 +235,12 @@
     var _proto = SubJs.prototype;
     _proto._init = function() {
         var self = this;
-        this.linesText = new LinesText(); //所有的行
-        this.linesDom = []; //行对应的dom
+        this.linesContext = new LinesContext(); //所有的行
         this.leftNumDom = []; //行号dom
         this.cursorPos = { line: 0, column: 0 }; //光标位置
         this.selection = {};
         this.firstLine = 1;
-        this.mode = window.SubJsMode && new SubJsMode(this.linesText, this.linesDom);
+        this.mode = window.SubJsMode && new SubJsMode(this.linesContext);
         this.creatContext();
         this.getCharWidth();
         this.createLeftNumBg();
@@ -349,7 +367,7 @@
     _proto.posToPx = function(line, column) {
         var self = this;
         var top = (line - this.firstLine) * SubJs.charHight + Util.pxToNum(Util.getStyleVal(this.$context[0], 'top'));
-        var str = this.linesText.getText(line).substring(0, column);
+        var str = this.linesContext.getText(line).substring(0, column);
         var match = str.match(Util.fullAngleReg);
         var left = str.length * SubJs.charWidth;
         var rect = Util.getRect(this.$scroller[0]);
@@ -378,11 +396,11 @@
             line = line + this.firstLine - 1;
         }
         line = line < 1 ? 1 : line;
-        if (line > this.linesText.getLength()) {
-            line = this.linesText.getLength();
-            column = this.linesText.getText(this.linesText.getLength()).length;
+        if (line > this.linesContext.getLength()) {
+            line = this.linesContext.getLength();
+            column = this.linesContext.getText(this.linesContext.getLength()).length;
         } else {
-            var str = this.linesText.getText(line);
+            var str = this.linesContext.getText(line);
             column = Math.ceil(left / SubJs.charWidth);
             column = column < 0 ? 0 : column;
             column = column > str.length ? str.length : column;
@@ -395,7 +413,7 @@
                 left = maxWidth;
             } else {
                 while (column > 0) {
-                    var str = this.linesText.getText(line).substring(0, column);
+                    var str = this.linesContext.getText(line).substring(0, column);
                     var match = str.match(Util.fullAngleReg);
                     var _left = str.length * SubJs.charWidth;
                     if (match) {
@@ -449,13 +467,13 @@
             realBarWidth = Util.getScrBarWidth();
         //设置编辑区宽度
         this.$context.css({
-            'min-width': this.linesText.getMaxWidth() + realBarWidth + 15 + 'px'
+            'min-width': this.linesContext.getMaxWidth() + realBarWidth + 15 + 'px'
         })
         //横线滚动条会占用一定高度
         if (scroller.scrollWidth > scroller.clientWidth) {
             hasHBar = true;
         }
-        if (this.linesText.getLength() >= this.maxVisualLine - 1) {
+        if (this.linesContext.getLength() >= this.maxVisualLine - 1) {
             hasVBar = 22;
         }
         //设置横向滚动条左边距离
@@ -464,7 +482,7 @@
         })
         //设置纵向滚动条高度
         this.$vScrollBar.css({
-            height: this.linesText.getLength() * SubJs.charHight + Util.pxToNum(Util.getStyleVal(scroller, 'paddingTop')) + 'px'
+            height: this.linesContext.getLength() * SubJs.charHight + Util.pxToNum(Util.getStyleVal(scroller, 'paddingTop')) + 'px'
         })
         //设置横向滚动条宽度度
         this.$hScrollBar.css({
@@ -518,22 +536,17 @@
      * @param  {string} val 插入的内容
      */
     _proto.insertContent = function(newContent) {
-        var str = this.linesText.getText(this.cursorPos.line) || '',
+        var str = this.linesContext.getText(this.cursorPos.line) || '',
             strs = null,
             firstLine;
         str = str.substring(0, this.cursorPos.column) + newContent + str.substr(this.cursorPos.column);
         strs = str.split(/\r\n|\r|\n/);
         if (strs[0]) { //'\n'.split(/\r\n|\r|\n/)->['','']
-            this.linesText.setText(this.cursorPos.line, strs[0]);
+            this.linesContext.setText(this.cursorPos.line, strs[0]);
         }
         //粘贴操作可能存在换号符,需要添加新行
         for (var tmp = 1; tmp < strs.length; tmp++) {
-            this.linesText.add(this.cursorPos.line + tmp, strs[tmp]);
-            var $dom = $('\
-                <div style="position:relative;margin:0;height:' + SubJs.charHight + 'px;" class="pre_code_line">\
-                    <div class="code" style="display:inline-block;position:relative;height:100%;min-width:100%;white-space:pre"></div>\
-                </div>');
-            this.linesDom.splice(this.cursorPos.line + tmp - 1, 0, $dom);
+            this.linesContext.add(this.cursorPos.line + tmp, strs[tmp]);
         }
         if (this.mode) {
             this.mode.onInsertContent(this.cursorPos.line, strs.length);
@@ -558,25 +571,23 @@
         if (typeof startPos == 'number') {
             var line = startPos;
             if (line > 1) {
-                startPos = { line: line - 1, column: this.linesText.getText(line - 1).length };
+                startPos = { line: line - 1, column: this.linesContext.getText(line - 1).length };
             } else {
                 startPos = { line: line, column: 0 };
             }
-            endPos = { line: line, column: this.linesText.getText(line).length };
+            endPos = { line: line, column: this.linesContext.getText(line).length };
         }
         if (startPos.line == endPos.line) {
-            var str = this.linesText.getText(startPos.line);
-            this.linesText.setText(startPos.line, str.substring(0, startPos.column) + str.substring(endPos.column));
+            var str = this.linesContext.getText(startPos.line);
+            this.linesContext.setText(startPos.line, str.substring(0, startPos.column) + str.substring(endPos.column));
             this.cursorPos.column = startPos.column;
         } else {
-            var str = this.linesText.getText(startPos.line).substring(0, startPos.column) + this.linesText.getText(endPos.line).substring(endPos.column);
-            this.linesText.setText(startPos.line, str);
+            var str = this.linesContext.getText(startPos.line).substring(0, startPos.column) + this.linesContext.getText(endPos.line).substring(endPos.column);
+            this.linesContext.setText(startPos.line, str);
             this.hightlight(startPos.line);
             //删除行
             for (var i = startPos.line + 1; i <= endPos.line; i++) {
-                this.linesText.delete(startPos.line + 1);
-                this.linesDom[startPos.line].remove();
-                this.linesDom.splice(startPos.line, 1);
+                this.linesContext.delete(startPos.line + 1);
             }
             this.cursorPos.line = startPos.line;
             this.cursorPos.column = startPos.column;
@@ -597,7 +608,7 @@
         if (this.mode) {
             this.mode.onUpdateLine(line);
         } else {
-            this.linesDom[line - 1].html(this.linesText.getText(line));
+            this.linesContext.mount(line);
         }
     }
     /**
@@ -628,14 +639,14 @@
         self.selection.startPos = startPos;
         self.selection.endPos = endPos;
         if (startPos.line == endPos.line) {
-            var str = self.linesText.getText(startPos.line);
+            var str = self.linesContext.getText(startPos.line);
             var width = Util.getStrWidth(str, SubJs.charWidth, SubJs.fullAngleCharWidth, startPos.column, endPos.column);
             var px = self.posToPx(startPos.line, startPos.column);
             self.renderRange(px.top, px.left, width);
             self.selection.selectText = str.substring(startPos.column, endPos.column);
             self.$lineBg.hide(); //隐藏当前行背景
         } else {
-            var str = self.linesText.getText(startPos.line);
+            var str = self.linesContext.getText(startPos.line);
             var maxWidth = self.$context[0].scrollWidth - 1; //防止$context真实宽度有小数（scrollWidth将被四舍五入）
             var width = Util.getStrWidth(str, SubJs.charWidth, SubJs.fullAngleCharWidth, 0, startPos.column);
             var px = self.posToPx(startPos.line, startPos.column);
@@ -644,9 +655,9 @@
             for (var l = startPos.line + 1; l < endPos.line; l++) {
                 px = self.posToPx(l, 0);
                 self.renderRange(px.top, rect.paddingLeft, maxWidth);
-                self.selection.selectText += '\n' + self.linesText.getText(l);
+                self.selection.selectText += '\n' + self.linesContext.getText(l);
             }
-            str = self.linesText.getText(endPos.line);
+            str = self.linesContext.getText(endPos.line);
             width = Util.getStrWidth(str, SubJs.charWidth, SubJs.fullAngleCharWidth, 0, endPos.column);
             px = self.posToPx(endPos.line, 0);
             self.renderRange(px.top, px.left, width);
@@ -680,9 +691,9 @@
             allDom[i - this.firstLine] && allDom[i - this.firstLine].remove();
         }
         //遍历可视区域的元素是否已经挂载
-        for (var i = firstLine; i < firstLine + this.maxVisualLine && i <= this.linesDom.length; i++) {
-            var $dom = this.linesDom[i - 1];
-            var $preDom = this.linesDom[i - 2];
+        for (var i = firstLine; i < firstLine + this.maxVisualLine && i <= this.linesContext.getLength(); i++) {
+            var $dom = this.linesContext.getDom(i);
+            var $preDom = this.linesContext.getDom(i - 1);
             if (!$dom[0].isConnected) {
                 _hightlight(i);
                 if (i == firstLine) {
@@ -701,16 +712,16 @@
         this.firstLine = firstLine;
         //高亮代码
         function _hightlight(line) {
-            if (!self.linesDom[line - 1].hasHightLight) {
+            if (!self.linesContext.getDom(line).hasHightLight) {
                 self.hightlight(line);
-                self.linesDom[line - 1].hasHightLight = true;
+                self.linesContext.getDom(line).hasHightLight = true;
             }
         }
     }
     //全选
     _proto.selectAll = function() {
         var startPos = { line: 1, column: 0 };
-        var endPos = { line: this.linesText.getLength(), column: this.linesText.getText(this.linesText.getLength()).length }
+        var endPos = { line: this.linesContext.getLength(), column: this.linesContext.getText(this.linesContext.getLength()).length }
         this.renderSelectBg(startPos, endPos);
     }
     //选中事件
@@ -756,7 +767,7 @@
         this.$wrapper.on('mousemove', function(e) {
             e.stopPropagation();
             if (select) {
-                var vBarWidth = self.linesText.getLength() >= self.maxVisualLine ? Util.getScrBarWidth() : 0,
+                var vBarWidth = self.linesContext.getLength() >= self.maxVisualLine ? Util.getScrBarWidth() : 0,
                     hBarHeight = self.$scroller[0].scrollWidth > self.$scroller[0].clientWidth ? Util.getScrBarWidth() : 0;
                 Util.nextFrame(function() {
                     var rect = Util.getRect(self.$scroller[0]);
@@ -843,7 +854,7 @@
             var hScrollWrap = self.$hScrollWrap[0];
             var startPos = { line: originStartPos.line, column: originStartPos.column };
             var endPos = null;
-            var vBarWidth = self.linesText.getLength() >= self.maxVisualLine ? Util.getScrBarWidth() : 0,
+            var vBarWidth = self.linesContext.getLength() >= self.maxVisualLine ? Util.getScrBarWidth() : 0,
                 hBarHeight = self.$scroller[0].scrollWidth > self.$scroller[0].clientWidth ? Util.getScrBarWidth() : 0;
             if (autoDirect) {
                 switch (autoDirect) {
@@ -1024,7 +1035,7 @@
                             self.cursorPos.column--;
                         } else if (self.cursorPos.line > 1) {
                             self.cursorPos.line--;
-                            self.cursorPos.column = self.linesText.getText(self.cursorPos.line).length;
+                            self.cursorPos.column = self.linesContext.getText(self.cursorPos.line).length;
                         }
                         break;
                     case 38: //up arrow
@@ -1044,9 +1055,9 @@
                             self.cursorPos.column = self.selection.endPos.column;
                             self.$selectBg.html('');
                             self.selection = {};
-                        } else if (self.cursorPos.column < self.linesText.getText(self.cursorPos.line).length) {
+                        } else if (self.cursorPos.column < self.linesContext.getText(self.cursorPos.line).length) {
                             self.cursorPos.column++;
-                        } else if (self.cursorPos.line < self.linesText.getLength()) {
+                        } else if (self.cursorPos.line < self.linesContext.getLength()) {
                             self.cursorPos.line++;
                             self.cursorPos.column = 0;
                         }
@@ -1057,7 +1068,7 @@
                             self.cursorPos.column = self.selection.endPos.column;
                             self.$selectBg.html('');
                             self.selection = {};
-                        } else if (self.cursorPos.line < self.linesText.getLength()) {
+                        } else if (self.cursorPos.line < self.linesContext.getLength()) {
                             self.cursorPos.line++;
                             self.cursorPos.column = self.pxToPos(self.cursorPos.line, self.cursorPos.left, true).column;
                         }
@@ -1080,7 +1091,7 @@
                                 var endPos = { line: self.cursorPos.line, column: self.cursorPos.column };
                                 self.deleteContent(startPos, endPos);
                             } else if (self.cursorPos.line > 1) {
-                                var startPos = { line: self.cursorPos.line - 1, column: self.linesText.getText(self.cursorPos.line - 1) };
+                                var startPos = { line: self.cursorPos.line - 1, column: self.linesContext.getText(self.cursorPos.line - 1) };
                                 var endPos = { line: self.cursorPos.line, column: 0 };
                                 self.deleteContent(self.cursorPos.line);
                             }
@@ -1098,8 +1109,8 @@
                                 space = Util.space(self.options.tabsize);
                             for (var i = startPos.line; i <= endPos.line; i++) {
                                 if (!e.shiftKey) { //想后移动
-                                    self.linesDom[i - 1].find('.code').prepend(space);
-                                    self.linesText.setText(i, space + self.linesText.getText(i));
+                                    self.linesContext.getDom(i).find('.code').prepend(space);
+                                    self.linesContext.setText(i, space + self.linesContext.getText(i));
                                 } else { //像前移动
                                     _shiftTab(i);
                                 }
@@ -1146,28 +1157,28 @@
             }
 
             function _shiftTab(line) {
-                var hl = self.linesDom[line - 1].find('.code').html();
+                var hl = self.linesContext.getDom(line).find('.code').html();
                 if (hl.indexOf('    ') == 0) {
-                    self.linesDom[line - 1].find('.code').html(hl.substr(4));
-                    self.linesText.setText(line, self.linesText.getText(line).substr(4));
+                    self.linesContext.getDom(line).find('.code').html(hl.substr(4));
+                    self.linesContext.setText(line, self.linesContext.getText(line).substr(4));
                     if (line == self.cursorPos.line) {
                         self.cursorPos.column -= 4;
                     }
                 } else if (hl.indexOf('   ') == 0) {
-                    self.linesDom[line - 1].find('.code').html(hl.substr(3));
-                    self.linesText.setText(line, self.linesText.getText(line).substr(3));
+                    self.linesContext.getDom(line).find('.code').html(hl.substr(3));
+                    self.linesContext.setText(line, self.linesContext.getText(line).substr(3));
                     if (line == self.cursorPos.line) {
                         self.cursorPos.column -= 3;
                     }
                 } else if (hl.indexOf('  ') == 0) {
-                    self.linesDom[line - 1].find('.code').html(hl.substr(2));
-                    self.linesText.setText(line, self.linesText.getText(line).substr(2));
+                    self.linesContext.getDom(line).find('.code').html(hl.substr(2));
+                    self.linesContext.setText(line, self.linesContext.getText(line).substr(2));
                     if (line == self.cursorPos.line) {
                         self.cursorPos.column -= 2;
                     }
                 } else if (hl.indexOf(' ') == 0) {
-                    self.linesDom[line - 1].find('.code').html(hl.substr(1));
-                    self.linesText.setText(line, self.linesText.getText(line).substr(1));
+                    self.linesContext.getDom(line).find('.code').html(hl.substr(1));
+                    self.linesContext.setText(line, self.linesContext.getText(line).substr(1));
                     if (line == self.cursorPos.line) {
                         self.cursorPos.column -= 1;
                     }
