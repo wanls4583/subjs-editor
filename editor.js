@@ -549,7 +549,11 @@
             this.linesContext.add(this.cursorPos.line + tmp, strs[tmp]);
         }
         if (this.mode) {
-            this.mode.onInsertContent(this.cursorPos.line, strs.length);
+            if(this.cursorPos.line < 1){
+                this.mode.onInsertContent(1, 1);
+            }else{
+                this.mode.onInsertContent(this.cursorPos.line, strs.length);
+            }
         }
         firstLine = this.firstLine;
         //计算可视区域的首行

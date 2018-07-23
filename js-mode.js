@@ -272,14 +272,43 @@
             }
         });
         this.lineDecorations[currentLine - 1] = lineDecoration;
+        this.renderHTML(currentLine);
     }
     //多行代码高亮
     _proto.pairHighlight = function(startLine) {
         var self = this;
-        var checkLines = [startLine];
+        _resetMatch(startLine);
         _doMatch(startLine);
+        _checkSuffixMatchs(startLine);
+        _checkPreMatchs(startLine);
+        _checkIfOnPair(startLine);
+        //撤销修饰
+        function _resetMatch(startLine) {
+            var obj = self.suffixMatchs[startLine - 1];
+            if (obj) {
+                for (var start in obj) {
+                    for (var regIndex in obj[start]) {
+                        var suffixMatch = obj[start][regIndex];
+                        if (suffixMatch.preMatch) {
+                            _resetMatchLine(suffixMatch.preMatch);
+                        }
+                    }
+                }
+            }
+            var obj = self.preMatchs[startLine - 1];
+            if (obj) {
+                for (var start in obj) {
+                    for (var regIndex in obj[start]) {
+                        var preMatch = obj[start][regIndex];
+                        _resetMatchLine(preMatch);
+                    }
+                }
+            }
+        }
         //查找多好匹配标识
         function _doMatch(startLine) {
+            self.preMatchs[startLine - 1] = undefined;
+            self.suffixMatchs[startLine - 1] = undefined;
             __exec(true);
             __exec(false);
             //正则匹配
@@ -288,70 +317,95 @@
                     var reg = ifPre ? pairRegs[regIndex].pre : pairRegs[regIndex].suffix,
                         className = pairRegs[regIndex].className,
                         exclude = ifPre ? pairRegs[regIndex].pre_exclude : pairRegs[regIndex].suffix_exclude,
-                        str = this.linesContext.getText(startLine);
+                        str = self.linesContext.getText(startLine);
                     var result = Util.execReg(reg, exclude, str);
                     for (var j = 0; j < result.length; j++) {
                         if (ifPre) {
-                            this.preMatchs[startLine - 1] = this.preMatchs[startLine - 1] || {};
-                            this.preMatchs[startLine - 1][result[j].start] = this.preMatchs[startLine][result[j].start] || {}；
-                            this.preMatchs[startLine - 1][result[j].start][regIndex] = { line: startLine, start: result[j].start, end: result[j].end, regIndex: regIndex, className: className };
+                            self.preMatchs[startLine - 1] = self.preMatchs[startLine - 1] || {};
+                            self.preMatchs[startLine - 1][result[j].start] = self.preMatchs[startLine - 1][result[j].start] || {};
+                            self.preMatchs[startLine - 1][result[j].start][regIndex] = { line: startLine, start: result[j].start, end: result[j].end, regIndex: regIndex, className: className };
                         } else {
-                            this.suffixMatchs[startLine - 1] = this.suffixMatchs[startLine - 1] || {};
-                            this.suffixMatchs[startLine - 1][result[j].start] = this.suffixMatchs[startLine][result[j].start] || {}；
-                            this.suffixMatchs[startLine - 1][result[j].start][regIndex] = { line: startLine, start: result[j].start, end: result[j].end, regIndex: regIndex, className: className };
+                            self.suffixMatchs[startLine - 1] = self.suffixMatchs[startLine - 1] || {};
+                            self.suffixMatchs[startLine - 1][result[j].start] = self.suffixMatchs[startLine - 1][result[j].start] || {};
+                            self.suffixMatchs[startLine - 1][result[j].start][regIndex] = { line: startLine, start: result[j].start, end: result[j].end, regIndex: regIndex, className: className };
                         }
                     }
                 }
             }
         }
-        //检查suffixMatchs
+        //检查suffixMatchs并渲染修饰
         function _checkSuffixMatchs(startLine) {
             var obj = self.suffixMatchs[startLine - 1];
             if (obj) {
                 for (var start in obj) {
                     for (var regIndex in obj[start]) {
-                        var preMatch = obj[start][regIndex];
-                        //preMatch已被删除
-                        if (!self.preMatchs[preMatch.line - 1] ||
-                            !self.preMatchs[preMatch.line - 1][preMatch.start] ||
-                            !self.preMatchs[preMatch.line - 1][preMatch.start][regIndex]) {
-                            _resetMatchLine(preMatch);
-                            delete obj[start][regIndex];
-                            if (!Util.keys(obj[start]).length) {
-                                delete obj[start];
+                        var suffixMatch = obj[start][regIndex];
+                        suffixMatch.preMatch = __findPre(suffixMatch);
+                        if (suffixMatch.preMatch) {
+                            suffixMatch.preMatch.suffixMatch = suffixMatch;
+                            _renderMatchLine(suffixMatch.preMatch);
+                        }
+                    }
+                }
+            }
+            //寻找匹配的pre
+            function __findPre(suffixMatch) {
+                for (var i = 1; i <= suffixMatch.line; i++) {
+                    var obj = self.preMatchs[i - 1];
+                    if (obj) {
+                        var cols = Util.keys(obj);
+                        Util.sortNum(cols);
+                        for (var j = 0; j < cols.length; j++) {
+                            var preMatch = obj[cols[j]][suffixMatch.regIndex];
+                            if (preMatch &&
+                                (preMatch.line < suffixMatch.line ||
+                                    preMatch.start < suffixMatch.start) &&
+                                (!preMatch.suffixMatch ||
+                                    preMatch.suffixMatch.line > suffixMatch.line ||
+                                    preMatch.suffixMatch.line == suffixMatch.line && preMatch.suffixMatch.start > suffixMatch.start)) {
+                                _resetMatchLine(preMatch);
+                                return preMatch;
                             }
-                        } else if (checkLines.indexOf(preMatch.line) == -1) {
-                            checkLines.push(preMatch.line);
-                            Util.sortNum(checkLines);
                         }
                     }
                 }
             }
         }
-        //检查preMatchs
-        function _checkPreMatchs(checkLines) {
-            for (var i = 0; i < checkLines.length; i++) {
-                var startLine = checkLines[i];
-                var obj = self.preMatchs[startLine - 1];
-                if (!obj) {
-                    continue
-                }
-                for (var start in obj) {
-                    for (var regIndex in obj[start]) {
-                        var preMatch = obj[start][regIndex];
-                        _resetMatchLine(preMatch);
+        //检查preMatchs并渲染修饰
+        function _checkPreMatchs(startLine) {
+            var obj = self.preMatchs[startLine - 1];
+            for (var start in obj) {
+                for (var regIndex in obj[start]) {
+                    var preMatch = obj[start][regIndex];
+                    if(!preMatch.suffixMatch){
                         preMatch.suffixMatch = __findSuffix(preMatch);
+                        if (preMatch.suffixMatch) {
+                            preMatch.suffixMatch.preMatch = preMatch;
+                        }
                         _renderMatchLine(preMatch);
                     }
                 }
             }
             //寻找匹配的suffix
             function __findSuffix(preMatch) {
-                for (var i = preMatch.line; i <= this.linesContext.getLength(); i++) {
-                    if (self.suffixMatchs[i] && self.suffixMatchs[i][regIndex]) {
-                        var suffixMatch = self.suffixMatchs[i][regIndex];
-                        if (!suffixMatch.preMatch || suffixMatch.line > preMatch.line || suffixMatch.start > preMatch.start) {
-                            return suffixMatch;
+                for (var i = preMatch.line; i <= self.linesContext.getLength(); i++) {
+                    var obj = self.suffixMatchs[i - 1];
+                    if (obj) {
+                        var cols = Util.keys(obj);
+                        Util.sortNum(cols);
+                        for (var j = 0; j < cols.length; j++) {
+                            var suffixMatch = obj[cols[j]][preMatch.regIndex];
+                            if (suffixMatch &&
+                                (suffixMatch.lien > preMatch.line ||
+                                    suffixMatch.start > preMatch.start) &&
+                                (!suffixMatch.preMatch ||
+                                    suffixMatch.preMatch.line > preMatch.line ||
+                                    suffixMatch.preMatch.line == preMatch.line && suffixMatch.preMatch.start > preMatch.start)) {
+                                if(suffixMatch.preMatch){
+                                    _resetMatchLine(suffixMatch.preMatch);
+                                }
+                                return suffixMatch;
+                            }
                         }
                     }
                 }
@@ -369,7 +423,7 @@
                 }
             }
             decoration.push(match);
-            lineDecoration.sort(function(arg1, arg2) {
+            decoration.sort(function(arg1, arg2) {
                 if (arg1.start < arg2.start) {
                     return -1
                 } else if (arg1.start == arg2.start) {
@@ -399,17 +453,18 @@
             if (preMatch.suffixMatch) {
                 endLine = preMatch.suffixMatch.line - 1;
                 if (preMatch.line == preMatch.suffixMatch.line) {
-                    _insertDecoration({ start: preMatch.start, end: preMatch.suffixMatch.end });
+                    _insertDecoration({ line: preMatch.line, start: preMatch.start, end: preMatch.suffixMatch.end, className: preMatch.className });
                     self.renderHTML(preMatch.line);
                 } else {
-                    _insertDecoration({ start: preMatch.start, end: self.linesContext.getText(preMatch.line).length - 1 });
+                    _insertDecoration({ line: preMatch.line, start: preMatch.start, end: self.linesContext.getText(preMatch.line).length - 1, className: preMatch.className });
                     self.renderHTML(preMatch.line);
-                    _insertDecoration({ start: 0, end: preMatch.suffixMatch.end });
+                    _insertDecoration({ line: preMatch.suffixMatch.line, start: 0, end: preMatch.suffixMatch.end, className: preMatch.className });
                     self.renderHTML(preMatch.suffixMatch.line);
                 }
             } else {
-                _insertDecoration({ start: preMatch.start, end: self.linesContext.getText(preMatch.line).length - 1 });
+                _insertDecoration({ line: preMatch.line, start: preMatch.start, end: self.linesContext.getText(preMatch.line).length - 1, className: preMatch.className });
                 self.renderHTML(preMatch.line);
+                self.endMatch = preMatch;
             }
             for (var i = preMatch.line + 1; i <= endLine; i++) {
                 self.linesContext.getDom(i).find('.code').html(self.linesContext.getText(i));
@@ -421,21 +476,28 @@
          * @param  {object} preMatch 匹配头
          */
         function _resetMatchLine(preMatch) {
-            var endLine = self.linesContext.getLength();
+            var endLine = (self.endMatch == preMatch && self.linesContext.getLength()) || -1;
             if (preMatch.suffixMatch) {
                 endLine = preMatch.suffixMatch.line - 1;
                 if (preMatch.line == preMatch.suffixMatch.line) {
-                    _delDecoration({ start: preMatch.start, end: preMatch.suffixMatch.end });
+                    _delDecoration({ line: preMatch.line, start: preMatch.start, end: preMatch.suffixMatch.end });
                     self.renderHTML(preMatch.line);
                 } else {
-                    _delDecoration({ start: preMatch.start, end: self.linesContext.getText(preMatch.line).length - 1 });
+                    _delDecoration({ line: preMatch.line, start: preMatch.start, end: self.linesContext.getText(preMatch.line).length - 1 });
                     self.renderHTML(preMatch.line);
-                    _delDecoration({ start: 0, end: preMatch.suffixMatch.end });
+                    _delDecoration({ line: preMatch.suffixMatch.line, start: 0, end: preMatch.suffixMatch.end });
                     self.renderHTML(preMatch.suffixMatch.line);
                 }
             } else {
-                _delDecoration({ start: preMatch.start, end: self.linesContext.getText(preMatch.line).length - 1 });
+                _delDecoration({ line: preMatch.line, start: preMatch.start, end: self.linesContext.getText(preMatch.line).length - 1 });
                 self.renderHTML(preMatch.line);
+                if(self.endMatch == preMatch){
+                    self.endMatch = undefined;
+                }
+            }
+            if(preMatch.suffixMatch){
+                preMatch.suffixMatch.preMatch = undefined;
+                preMatch.suffixMatch = undefined;
             }
             for (var i = preMatch.line + 1; i <= endLine; i++) {
                 self.renderHTML(i);
@@ -454,9 +516,10 @@
                 }
                 for (var start in obj) {
                     for (var regIndex in obj[start]) {
-                        if (!obj[start][regIndex].preMatch || obj[start][regIndex].preMatch.line > line) {
+                        if (!obj[start][regIndex].suffixMatch || obj[start][regIndex].suffixMatch.line > line) {
                             self.linesContext.getDom(line).find('.code').html(self.linesContext.getText(line));
-                            self.linesContext.getDom(line).find('.code').addClass(obj[start][regIndex].preMatch.className);
+                            self.linesContext.getDom(line).find('.code').addClass(obj[start][regIndex].className);
+                            break;
                         }
                     }
                 }
@@ -469,7 +532,10 @@
      */
     _proto.renderHTML = function(line) {
         var str = this.linesContext.getText(line);
-        var doneRangeOnline = this.linesDecoration[line - 1];
+        var doneRangeOnline = this.lineDecorations[line - 1];
+        if (!doneRangeOnline) {
+            return;
+        }
         //处理HTML转义'>,<'--'&gt;,&lt;'
         var reg = />|</g,
             match = null,
@@ -497,7 +563,7 @@
             str = Util.insertStr(str, obj.end + 1, '</span>');
             str = Util.insertStr(str, obj.start, '<span class="' + obj.className + '">');
         }
-        this.linesContext.getDom('.code').html(str);
+        this.linesContext.getDom(line).find('.code').html(str);
     }
     /**
      * 当更新一行时触发
@@ -517,6 +583,7 @@
             for (var i = 1; i < length; i++) {
                 this.preMatchs.splice(line, 0, undefined);
                 this.suffixMatchs.splice(line, 0, undefined);
+                this.lineDecorations.splice(line, 0, undefined);
             }
             //重置行号
             for (var i = line + 1; i < this.linesContext.getLength(); i++) {
@@ -544,7 +611,9 @@
                 }
             }
         }
-        this.onUpdateLine(line);
+        for (var i = line; i < line + length; i++) {
+            this.onUpdateLine(i);
+        }
     }
     /**
      * 当删除内容时触发多行匹配
@@ -553,7 +622,7 @@
      */
     _proto.onDeleteContent = function(line, length) {
         var checkLines = [line];
-        
+
     }
     window.SubJsMode = JsMode;
 }()
