@@ -134,7 +134,7 @@
         htmlTrans: function(cont) {
             return cont.replace(/</g, '&lt;').replace(/>/g, '&gt;');
         },
-        copyObj: function(obj){
+        copyObj: function(obj) {
             return JSON.parse(JSON.stringify(obj));
         }
     }
@@ -374,11 +374,11 @@
                             var oldSuffix = suffixMatch.preMatch.suffixMatch;
                             suffixMatch.preMatch.suffixMatch = suffixMatch;
                             _renderMatchLine(suffixMatch.preMatch);
-                            var preMatch = __findNextPre(suffixMatch,oldSuffix);
-                            if(oldSuffix){
+                            var preMatch = __findNextPre(suffixMatch, oldSuffix);
+                            if (oldSuffix) {
                                 oldSuffix.preMatch = undefined;
                             }
-                            if(preMatch){
+                            if (preMatch) {
                                 console.log(preMatch);
                                 self.pairHighlight(preMatch.line);
                             }
@@ -715,7 +715,7 @@
                 }
             }
         }
-        for(var i = line; i<line+length; i++){
+        for (var i = line; i < line + length; i++) {
             this.onUpdateLine(i);
         }
     }
@@ -725,8 +725,74 @@
      * @param  {Number} length 删除的行数
      */
     _proto.onDeleteContent = function(line, length) {
-        var checkLines = [line];
+        var self = this,
+            lines = [line];
+        if (length > 2) {
+            var matchs = _findReCheckLines(line, line + length - 1);
+            //重置行号
+            for (var i = line + length; i < this.linesContext.getLength(); i++) {
+                var obj = this.preMatchs[i - 1];
+                if (obj) {
+                    for (var start in obj) {
+                        for (var regIndex in obj[start]) {
+                            obj.line = i;
+                            if (obj.suffixMatch && obj.suffixMatch.line > line + length - 1) {
+                                obj.suffixMatch.line -= length - 1;
+                            }
+                        }
+                    }
+                }
+                var obj = this.suffixMatchs[i - 1];
+                if (obj) {
+                    for (var start in obj) {
+                        for (var regIndex in obj[start]) {
+                            obj.line = i;
+                            if (obj.preMatch && obj.preMatch.line > line + length - 1) {
+                                obj.preMatch.line -= length - 1;
+                            }
+                        }
+                    }
+                }
+            }
+            for (var i = 0; i < matchs.length; i++) {
+                lines.push(matchs[i].line);
+            }
+            Util.sortNum(lines);
+        }
 
+        for (var i = 0; i < lines.length; i++) {
+            this.onUpdateLine(lines[i]);
+        }
+
+        //查找需要重新检查代码高亮的行（删除区域的多行匹配符可能影响删除区域外的行）
+        function _findReCheckLines(startLine, endLine) {
+            var matchs = [];
+            for (var i = startLine; i <= endLine; i++) {
+                var obj = self.preMatchs[i - 1];
+                if (obj) {
+                    for (var start in obj) {
+                        for (var regIndex in obj[start]) {
+                            var match = obj[start][regIndex];
+                            if (match.suffixMatch && match.suffixMatch.line > endLine) {
+                                matchs.push(match);
+                            }
+                        }
+                    }
+                }
+                var obj = self.suffixMatchs[i - 1];
+                if (obj) {
+                    for (var start in obj) {
+                        for (var regIndex in obj[start]) {
+                            var match = obj[start][regIndex];
+                            if (match.preMatch && match.preMatch.line < startLine) {
+                                matchs.push(match);
+                            }
+                        }
+                    }
+                }
+            }
+            return matchs;
+        }
     }
     window.SubJsMode = JsMode;
 }()

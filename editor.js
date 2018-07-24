@@ -543,6 +543,13 @@
         strs = str.split(/\r\n|\r|\n/);
         if (strs[0]) { //'\n'.split(/\r\n|\r|\n/)->['','']
             this.linesContext.setText(this.cursorPos.line, strs[0]);
+            if(strs.length > 1){
+                this.cursorPos.column = strs[strs.length - 1].length;
+            }else{
+                this.cursorPos.column = this.cursorPos.column+newContent.length;
+            }
+        }else{
+            this.cursorPos.column = 0;
         }
         //粘贴操作可能存在换号符,需要添加新行
         for (var tmp = 1; tmp < strs.length; tmp++) {
@@ -562,7 +569,6 @@
         }
         this.renderLine(firstLine);
         this.cursorPos.line = this.cursorPos.line + strs.length - 1;
-        this.cursorPos.column = strs[strs.length - 1].length;
         this.updateCursorPos();
         this.updateScroll(true);
     }
@@ -588,7 +594,6 @@
         } else {
             var str = this.linesContext.getText(startPos.line).substring(0, startPos.column) + this.linesContext.getText(endPos.line).substring(endPos.column);
             this.linesContext.setText(startPos.line, str);
-            this.hightlight(startPos.line);
             //删除行
             for (var i = startPos.line + 1; i <= endPos.line; i++) {
                 this.linesContext.delete(startPos.line + 1);
@@ -603,17 +608,6 @@
         this.updateScroll();
         this.$selectBg.html('');
         this.selection = {};
-    }
-    /**
-     * 高亮一行代码
-     * @param  {number} line 行号
-     */
-    _proto.hightlight = function(line) {
-        if (this.mode) {
-            this.mode.onUpdateLine(line);
-        } else {
-            this.linesContext.mount(line);
-        }
     }
     /**
      * 更新行号
