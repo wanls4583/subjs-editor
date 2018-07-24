@@ -1,12 +1,16 @@
 ! function() {
     var Util = {
+        /**
+         * 在字符串指定位置插入新的内容
+         * @param  {String} str   原字符串
+         * @param  {Number} index 插入的位置
+         * @param  {String} cont  插入的内容
+         * @return {String}       处理后的内容
+         */
         insertStr: function(str, index, cont) {
             return str.substring(0, index) + cont + str.substr(index);
         },
-        deleteStr: function(str, index, size) {
-            if (!size) size = 0;
-            return str.substring(0, index) + cont + str.substr(index + size);
-        },
+        //兼容Object.keys
         keys: function(obj) {
             if (Object.keys) {
                 return Object.keys(obj);
@@ -18,11 +22,20 @@
                 return arr;
             }
         },
+        //使用数字排序（数组默认以字符排序）
         sortNum: function(arr) {
             arr.sort(function(arg1, arg2) {
                 return Number(arg1) - Number(arg2);
             })
         },
+        /**
+         * 匹配正则
+         * @param  {RegExp}   reg      匹配的正则
+         * @param  {RegExp}   exclude  需要排除的正则
+         * @param  {String}   str      待匹配的字符串
+         * @param  {Function} callback 二次处理回调（防止正则太复杂，使用二次处理）
+         * @return {Array}             结果数组：[{start:start,end:end}]
+         */
         execReg: function(reg, exclude, str, callback) {
             var result = [];
             if (reg instanceof Array) {
@@ -85,10 +98,21 @@
                 return result;
             }
         },
+        /**
+         * 生成正则表达式，用来排除字符串中的正则
+         * @param  {RegExp} reg 正则对象
+         * @return {RegExp}     正则对象
+         */
         excludeStrReg: function(reg) {
             var res = reg.source;
             return new RegExp('\'[^\']*?' + res + '[^\']*?\'|' + '\"[^\"]*?' + res + '[^\"]*?\"', 'g');
         },
+        /**
+         * 处理函数的参数列表
+         * @param  {String} str   包含参数的字符串
+         * @param  {Number} start 参数开始的索引
+         * @param  {Number} end   参数结束的索引
+         */
         execArgsReg: function(str, start, end) {
             str = str.substring(start, end + 1);
             var args = str.split(','),
@@ -106,6 +130,7 @@
             }
             return result;
         },
+        //<,>转义
         htmlTrans: function(cont) {
             return cont.replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }
@@ -340,7 +365,8 @@
                 for (var start in obj) {
                     for (var regIndex in obj[start]) {
                         var suffixMatch = obj[start][regIndex];
-                        suffixMatch.preMatch = __findPre(suffixMatch);
+                        var preSuffxiMatch = __findPreSuffix(suffixMatch);
+                        suffixMatch.preMatch = __findPre(suffixMatch, preSuffxiMatch && preSuffxiMatch.line);
                         if (suffixMatch.preMatch) {
                             suffixMatch.preMatch.suffixMatch = suffixMatch;
                             _renderMatchLine(suffixMatch.preMatch);
@@ -348,9 +374,13 @@
                     }
                 }
             }
-            //寻找匹配的pre
-            function __findPre(suffixMatch) {
-                for (var i = 1; i <= suffixMatch.line; i++) {
+            /**
+             * 寻找匹配的pre
+             * @param  {Object} suffixMatch 匹配尾
+             * @param  {Number} startLine   开始寻找的行
+             */
+            function __findPre(suffixMatch, startLine) {
+                for (var i = startLine || 1; i <= suffixMatch.line; i++) {
                     var obj = self.preMatchs[i - 1];
                     if (obj) {
                         var cols = Util.keys(obj);
@@ -370,6 +400,22 @@
                     }
                 }
             }
+            //寻找前一个suffix（从该suffix之后的位置开始寻找pre）
+            function __findPreSuffix(suffixMatch) {
+                for (var i = suffixMatch.line; i >= 1; i--) {
+                    var obj = self.suffixMatchs[i - 1];
+                    if (obj) {
+                        var cols = Util.keys(obj);
+                        Util.sortNum(cols);
+                        for (var j = cols.length - 1; j >= 0; j--) {
+                            var _suffixMatch = obj[cols[j]][suffixMatch.regIndex];
+                            if (_suffixMatch.line < suffixMatch.line || _suffixMatch.start < suffixMatch.start) {
+                                return _suffixMatch;
+                            }
+                        }
+                    }
+                }
+            }
         }
         //检查preMatchs并渲染修饰
         function _checkPreMatchs(startLine) {
@@ -377,7 +423,7 @@
             for (var start in obj) {
                 for (var regIndex in obj[start]) {
                     var preMatch = obj[start][regIndex];
-                    if(!preMatch.suffixMatch){
+                    if (!preMatch.suffixMatch) {
                         preMatch.suffixMatch = __findSuffix(preMatch);
                         if (preMatch.suffixMatch) {
                             preMatch.suffixMatch.preMatch = preMatch;
@@ -401,7 +447,7 @@
                                 (!suffixMatch.preMatch ||
                                     suffixMatch.preMatch.line > preMatch.line ||
                                     suffixMatch.preMatch.line == preMatch.line && suffixMatch.preMatch.start > preMatch.start)) {
-                                if(suffixMatch.preMatch){
+                                if (suffixMatch.preMatch) {
                                     _resetMatchLine(suffixMatch.preMatch);
                                 }
                                 return suffixMatch;
@@ -446,7 +492,7 @@
         }
         /**
          * 根据preMatch挂载带修饰的HTML
-         * @param  {object} preMatch 匹配头
+         * @param  {Object} preMatch 匹配头
          */
         function _renderMatchLine(preMatch) {
             var endLine = self.linesContext.getLength();
@@ -461,19 +507,24 @@
                     _insertDecoration({ line: preMatch.suffixMatch.line, start: 0, end: preMatch.suffixMatch.end, className: preMatch.className });
                     self.renderHTML(preMatch.suffixMatch.line);
                 }
-            } else {
+                __addWholeLineDec();
+            } else if (!self.endMatch) {
                 _insertDecoration({ line: preMatch.line, start: preMatch.start, end: self.linesContext.getText(preMatch.line).length - 1, className: preMatch.className });
                 self.renderHTML(preMatch.line);
                 self.endMatch = preMatch;
+                __addWholeLineDec();
             }
-            for (var i = preMatch.line + 1; i <= endLine; i++) {
-                self.linesContext.getDom(i).find('.code').html(self.linesContext.getText(i));
-                self.linesContext.getDom(i).find('.code').addClass(preMatch.className);
+            //添加整行修饰
+            function __addWholeLineDec() {
+                for (var i = preMatch.line + 1; i <= endLine; i++) {
+                    self.linesContext.getDom(i).find('.code').html(self.linesContext.getText(i));
+                    self.linesContext.getDom(i).find('.code').addClass(preMatch.className);
+                }
             }
         }
         /**
          * 撤销preMatch挂载的修饰
-         * @param  {object} preMatch 匹配头
+         * @param  {Object} preMatch 匹配头
          */
         function _resetMatchLine(preMatch) {
             var endLine = (self.endMatch == preMatch && self.linesContext.getLength()) || -1;
@@ -488,25 +539,28 @@
                     _delDecoration({ line: preMatch.suffixMatch.line, start: 0, end: preMatch.suffixMatch.end });
                     self.renderHTML(preMatch.suffixMatch.line);
                 }
-            } else {
+                __delWholeLineDec();
+            } else if (self.endMatch == preMatch) {
                 _delDecoration({ line: preMatch.line, start: preMatch.start, end: self.linesContext.getText(preMatch.line).length - 1 });
                 self.renderHTML(preMatch.line);
-                if(self.endMatch == preMatch){
-                    self.endMatch = undefined;
-                }
+                self.endMatch = undefined;
+                __delWholeLineDec();
             }
-            if(preMatch.suffixMatch){
+            if (preMatch.suffixMatch) {
                 preMatch.suffixMatch.preMatch = undefined;
                 preMatch.suffixMatch = undefined;
             }
-            for (var i = preMatch.line + 1; i <= endLine; i++) {
-                self.renderHTML(i);
-                self.linesContext.getDom(i).find('.code').removeClass(preMatch.className);
+            //删除整行修饰
+            function __delWholeLineDec() {
+                for (var i = preMatch.line + 1; i <= endLine; i++) {
+                    self.renderHTML(i);
+                    self.linesContext.getDom(i).find('.code').removeClass(preMatch.className);
+                }
             }
         }
         /**
          * 检查行是否在多行匹配范围内
-         * @param  {number} line 行号
+         * @param  {Number} line 行号
          */
         function _checkIfOnPair(line) {
             for (var i = line - 1; i >= 1; i--) {
@@ -516,7 +570,8 @@
                 }
                 for (var start in obj) {
                     for (var regIndex in obj[start]) {
-                        if (!obj[start][regIndex].suffixMatch || obj[start][regIndex].suffixMatch.line > line) {
+                        if (!obj[start][regIndex].suffixMatch && self.endMatch == obj[start][regIndex] ||
+                            obj[start][regIndex].suffixMatch && obj[start][regIndex].suffixMatch.line > line) {
                             self.linesContext.getDom(line).find('.code').html(self.linesContext.getText(line));
                             self.linesContext.getDom(line).find('.code').addClass(obj[start][regIndex].className);
                             break;
@@ -528,7 +583,7 @@
     }
     /**
      * 挂载带修饰的HTML
-     * @param  {number} line 行号
+     * @param  {Number} line 行号
      */
     _proto.renderHTML = function(line) {
         var str = this.linesContext.getText(line);
@@ -575,8 +630,8 @@
     }
     /**
      * 当插入内容时触发
-     * @param  {number} line   首行
-     * @param  {number} length 插入的行数
+     * @param  {Number} line   首行
+     * @param  {Number} length 插入的行数
      */
     _proto.onInsertContent = function(line, length) {
         if (length > 1) {
@@ -617,8 +672,8 @@
     }
     /**
      * 当删除内容时触发多行匹配
-     * @param  {number} line   首行
-     * @param  {number} length 删除的行数
+     * @param  {Number} line   首行
+     * @param  {Number} length 删除的行数
      */
     _proto.onDeleteContent = function(line, length) {
         var checkLines = [line];
