@@ -377,7 +377,7 @@
             for (var start in obj) {
                 for (var regIndex in obj[start]) {
                     var preMatch = obj[start][regIndex];
-                    if(!preMatch.suffixMatch){
+                    if (!preMatch.suffixMatch) {
                         preMatch.suffixMatch = __findSuffix(preMatch);
                         if (preMatch.suffixMatch) {
                             preMatch.suffixMatch.preMatch = preMatch;
@@ -395,16 +395,16 @@
                         Util.sortNum(cols);
                         for (var j = 0; j < cols.length; j++) {
                             var suffixMatch = obj[cols[j]][preMatch.regIndex];
-                            if (suffixMatch &&
-                                (suffixMatch.lien > preMatch.line ||
-                                    suffixMatch.start > preMatch.start) &&
-                                (!suffixMatch.preMatch ||
+                            if (suffixMatch && (suffixMatch.lien > preMatch.line || suffixMatch.start > preMatch.start)) {
+                                if (!suffixMatch.preMatch ||
                                     suffixMatch.preMatch.line > preMatch.line ||
-                                    suffixMatch.preMatch.line == preMatch.line && suffixMatch.preMatch.start > preMatch.start)) {
-                                if(suffixMatch.preMatch){
-                                    _resetMatchLine(suffixMatch.preMatch);
+                                    suffixMatch.preMatch.line == preMatch.line && suffixMatch.preMatch.start > preMatch.start) {
+                                    if (suffixMatch.preMatch) {
+                                        _resetMatchLine(suffixMatch.preMatch);
+                                    }
+                                    return suffixMatch;
                                 }
-                                return suffixMatch;
+                                return;
                             }
                         }
                     }
@@ -491,11 +491,11 @@
             } else {
                 _delDecoration({ line: preMatch.line, start: preMatch.start, end: self.linesContext.getText(preMatch.line).length - 1 });
                 self.renderHTML(preMatch.line);
-                if(self.endMatch == preMatch){
+                if (self.endMatch == preMatch) {
                     self.endMatch = undefined;
                 }
             }
-            if(preMatch.suffixMatch){
+            if (preMatch.suffixMatch) {
                 preMatch.suffixMatch.preMatch = undefined;
                 preMatch.suffixMatch = undefined;
             }
