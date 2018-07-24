@@ -699,7 +699,6 @@
             var $dom = this.linesContext.getDom(i);
             var $preDom = this.linesContext.getDom(i - 1);
             if (!$dom[0].isConnected) {
-                _hightlight(i);
                 if (i == firstLine) {
                     this.$context.prepend($dom);
                 } else {
@@ -714,13 +713,6 @@
         }
         this.updateNum(firstLine);
         this.firstLine = firstLine;
-        //高亮代码
-        function _hightlight(line) {
-            if (!self.linesContext.getDom(line).hasHightLight) {
-                self.hightlight(line);
-                self.linesContext.getDom(line).hasHightLight = true;
-            }
-        }
     }
     //全选
     _proto.selectAll = function() {

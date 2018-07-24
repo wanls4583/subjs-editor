@@ -133,6 +133,9 @@
         //<,>转义
         htmlTrans: function(cont) {
             return cont.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        },
+        copyObj: function(obj){
+            return JSON.parse(JSON.stringify(obj));
         }
     }
     //多行匹配 ie. /*....*/
@@ -368,14 +371,23 @@
                         var preSuffxiMatch = __findPreSuffix(suffixMatch);
                         suffixMatch.preMatch = __findPre(suffixMatch, preSuffxiMatch && preSuffxiMatch.line);
                         if (suffixMatch.preMatch) {
+                            var oldSuffix = suffixMatch.preMatch.suffixMatch;
                             suffixMatch.preMatch.suffixMatch = suffixMatch;
                             _renderMatchLine(suffixMatch.preMatch);
+                            var preMatch = __findNextPre(suffixMatch,oldSuffix);
+                            if(oldSuffix){
+                                oldSuffix.preMatch = undefined;
+                            }
+                            if(preMatch){
+                                console.log(preMatch);
+                                self.pairHighlight(preMatch.line);
+                            }
                         }
                     }
                 }
             }
             /**
-             * 寻找匹配的pre
+             * 寻找前面匹配的pre
              * @param  {Object} suffixMatch 匹配尾
              * @param  {Number} startLine   开始寻找的行
              */
@@ -400,7 +412,13 @@
                     }
                 }
             }
-            //寻找前一个suffix（从该suffix之后的位置开始寻找pre）
+            /*
+            寻找前一个suffix（从该suffix之后的位置开始寻找pre）
+            pre...
+            preSuffix...
+            pre...
+            nowSffix
+             */
             function __findPreSuffix(suffixMatch) {
                 for (var i = suffixMatch.line; i >= 1; i--) {
                     var obj = self.suffixMatchs[i - 1];
@@ -411,6 +429,35 @@
                             var _suffixMatch = obj[cols[j]][suffixMatch.regIndex];
                             if (_suffixMatch.line < suffixMatch.line || _suffixMatch.start < suffixMatch.start) {
                                 return _suffixMatch;
+                            }
+                        }
+                    }
+                }
+            }
+            /*
+            寻找后一个pre
+            防止出现如下情况：nextPre与oldSuffix/end可以重新配对
+            pre...
+            nowSuffix...
+            nextPre...
+            oldSuffix/end...
+            */
+            function __findNextPre(nowSuffix, oldSuffix) {
+                var endLine = self.linesContext.getLength();
+                if (oldSuffix) {
+                    endLine = oldSuffix.line;
+                }
+                for (var i = nowSuffix.line; i <= endLine; i++) {
+                    var obj = self.preMatchs[i - 1];
+                    if (obj) {
+                        var cols = Util.keys(obj);
+                        Util.sortNum(cols);
+                        for (var j = 0; j < cols.length; j++) {
+                            var preMatch = obj[cols[j]][suffixMatch.regIndex];
+                            if (preMatch &&
+                                (preMatch.line > nowSuffix.line || preMatch.start > nowSuffix.start) &&
+                                (!oldSuffix || preMatch.line < oldSuffix.line || preMatch.start < oldSuffix.start)) {
+                                return preMatch;
                             }
                         }
                     }
@@ -441,7 +488,7 @@
                         Util.sortNum(cols);
                         for (var j = 0; j < cols.length; j++) {
                             var suffixMatch = obj[cols[j]][preMatch.regIndex];
-                            if (suffixMatch && (suffixMatch.lien > preMatch.line || suffixMatch.start > preMatch.start)) {
+                            if (suffixMatch && (suffixMatch.line > preMatch.line || suffixMatch.start > preMatch.start)) {
                                 if (!suffixMatch.preMatch ||
                                     suffixMatch.preMatch.line > preMatch.line ||
                                     suffixMatch.preMatch.line == preMatch.line && suffixMatch.preMatch.start > preMatch.start) {
@@ -587,10 +634,12 @@
      */
     _proto.renderHTML = function(line) {
         var str = this.linesContext.getText(line);
-        var doneRangeOnline = this.lineDecorations[line - 1];
-        if (!doneRangeOnline) {
+        var decRangeOnline = this.lineDecorations[line - 1];
+        if (!decRangeOnline) {
             return;
         }
+        var copyDec = Util.copyObj(decRangeOnline);
+
         //处理HTML转义'>,<'--'&gt;,&lt;'
         var reg = />|</g,
             match = null,
@@ -601,8 +650,8 @@
         //倒序移动位置
         for (var i = indexs.length - 1; i >= 0; i--) {
             var index = indexs[i];
-            for (var j = doneRangeOnline.length - 1; j >= 0; j--) {
-                var obj = doneRangeOnline[j];
+            for (var j = copyDec.length - 1; j >= 0; j--) {
+                var obj = copyDec[j];
                 if (obj.start > index) {
                     obj.start += 3;
                 }
@@ -613,8 +662,8 @@
         }
         str = Util.htmlTrans(str);
         //生成HTML
-        for (var i = doneRangeOnline.length - 1; i >= 0; i--) {
-            var obj = doneRangeOnline[i];
+        for (var i = copyDec.length - 1; i >= 0; i--) {
+            var obj = copyDec[i];
             str = Util.insertStr(str, obj.end + 1, '</span>');
             str = Util.insertStr(str, obj.start, '<span class="' + obj.className + '">');
         }
@@ -666,7 +715,7 @@
                 }
             }
         }
-        for (var i = line; i < line + length; i++) {
+        for(var i = line; i<line+length; i++){
             this.onUpdateLine(i);
         }
     }
