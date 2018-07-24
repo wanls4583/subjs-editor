@@ -441,16 +441,16 @@
                         Util.sortNum(cols);
                         for (var j = 0; j < cols.length; j++) {
                             var suffixMatch = obj[cols[j]][preMatch.regIndex];
-                            if (suffixMatch &&
-                                (suffixMatch.lien > preMatch.line ||
-                                    suffixMatch.start > preMatch.start) &&
-                                (!suffixMatch.preMatch ||
+                            if (suffixMatch && (suffixMatch.lien > preMatch.line || suffixMatch.start > preMatch.start)) {
+                                if (!suffixMatch.preMatch ||
                                     suffixMatch.preMatch.line > preMatch.line ||
-                                    suffixMatch.preMatch.line == preMatch.line && suffixMatch.preMatch.start > preMatch.start)) {
-                                if (suffixMatch.preMatch) {
-                                    _resetMatchLine(suffixMatch.preMatch);
+                                    suffixMatch.preMatch.line == preMatch.line && suffixMatch.preMatch.start > preMatch.start) {
+                                    if (suffixMatch.preMatch) {
+                                        _resetMatchLine(suffixMatch.preMatch);
+                                    }
+                                    return suffixMatch;
                                 }
-                                return suffixMatch;
+                                return;
                             }
                         }
                     }
