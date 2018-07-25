@@ -774,7 +774,7 @@
                         for (var regIndex in obj[start]) {
                             var match = obj[start][regIndex];
                             if (match.suffixMatch && match.suffixMatch.line > endLine) {
-                                matchs.push(match);
+                                matchs.push(match.suffixMatch);
                             }
                         }
                     }
@@ -785,7 +785,7 @@
                         for (var regIndex in obj[start]) {
                             var match = obj[start][regIndex];
                             if (match.preMatch && match.preMatch.line < startLine) {
-                                matchs.push(match);
+                                matchs.push(match.preMatch);
                             }
                         }
                     }
