@@ -779,13 +779,14 @@
             }
             this.resetLineNum(line);
             for (var i = 0; i < matchs.length; i++) {
-                lines.push(matchs[i].line);
                 var match = matchs[i];
-                if(match.preMatch){
+                !match.del && lines.push(match.line);
+                if(match.preMatch || match.del){
+                    match = match.del ? match : match.preMatch;
                     //删除preMatch后面的修饰
-                    match.preMatch.line = line;
-                    match.preMatch.start = -1;
-                    self.resetMatchLine(match.preMatch);
+                    match.line = line;
+                    match.start = -1;
+                    self.resetMatchLine(match);
                 }
             }
         }
@@ -804,6 +805,10 @@
                         var match = obj[start][regIndex];
                         if (match.suffixMatch && match.suffixMatch.line > endLine) {
                             matchs.push(match.suffixMatch);
+                        }else if(!match.suffixMatch){
+                            //需要删除preMatch后的修饰
+                            match.del = true;
+                            matchs.push(match);
                         }
                     }
                 }
