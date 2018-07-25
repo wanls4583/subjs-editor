@@ -322,7 +322,7 @@
                     for (var regIndex in obj[start]) {
                         var suffixMatch = obj[start][regIndex];
                         if (suffixMatch.preMatch) {
-                            _resetMatchLine(suffixMatch.preMatch);
+                            self.resetMatchLine(suffixMatch.preMatch);
                         }
                     }
                 }
@@ -332,7 +332,7 @@
                 for (var start in obj) {
                     for (var regIndex in obj[start]) {
                         var preMatch = obj[start][regIndex];
-                        _resetMatchLine(preMatch);
+                        self.resetMatchLine(preMatch);
                     }
                 }
             }
@@ -376,7 +376,7 @@
                     if (suffixMatch.preMatch) {
                         var oldSuffix = suffixMatch.preMatch.suffixMatch;
                         suffixMatch.preMatch.suffixMatch = suffixMatch;
-                        _renderMatchLine(suffixMatch.preMatch);
+                        self.renderMatchLine(suffixMatch.preMatch);
                         var preMatch = _findNextPre(suffixMatch, oldSuffix);
                         if (oldSuffix) {
                             oldSuffix.preMatch = undefined;
@@ -413,7 +413,7 @@
                         if (preMatch.suffixMatch) {
                             preMatch.suffixMatch.preMatch = preMatch;
                         }
-                        _renderMatchLine(preMatch);
+                        self.renderMatchLine(preMatch);
                     }
                 }
             }
@@ -450,7 +450,7 @@
                             (!preMatch.suffixMatch ||
                                 preMatch.suffixMatch.line > suffixMatch.line ||
                                 preMatch.suffixMatch.line == suffixMatch.line && preMatch.suffixMatch.start > suffixMatch.start)) {
-                            _resetMatchLine(preMatch);
+                            self.resetMatchLine(preMatch);
                             return preMatch;
                         }
                     }
@@ -507,7 +507,7 @@
                                 suffixMatch.preMatch.line > preMatch.line ||
                                 suffixMatch.preMatch.line == preMatch.line && suffixMatch.preMatch.start > preMatch.start) {
                                 if (suffixMatch.preMatch) {
-                                    _resetMatchLine(suffixMatch.preMatch);
+                                    self.resetMatchLine(suffixMatch.preMatch);
                                 }
                                 return suffixMatch;
                             }
@@ -542,110 +542,6 @@
                 }
             }
         }
-        //插入多行匹配修饰
-        function _insertDecoration(match) {
-            var decoration = self.lineDecorations[match.line - 1];
-            for (var i = 0; i < decoration.length; i++) {
-                var obj = decoration[i];
-                //有交叉则删除
-                if (!(obj.end < match.start || obj.start > match.end)) {
-                    decoration.splice(i, 1);
-                    i--;
-                }
-            }
-            decoration.push(match);
-            decoration.sort(function(arg1, arg2) {
-                if (arg1.start < arg2.start) {
-                    return -1
-                } else if (arg1.start == arg2.start) {
-                    return 0;
-                } else {
-                    return 1;
-                }
-            });
-        }
-        //删除多行修饰
-        function _delDecoration(match) {
-            var decoration = self.lineDecorations[match.line - 1];
-            for (var i = 0; i < decoration.length; i++) {
-                var obj = decoration[i];
-                if (match.start == obj.start && match.end == obj.end) {
-                    decoration.splice(i, 1);
-                    return;
-                }
-            }
-        }
-        /**
-         * 根据preMatch挂载带修饰的HTML
-         * @param  {Object} preMatch 匹配头
-         */
-        function _renderMatchLine(preMatch) {
-            var endLine = self.linesContext.getLength();
-            if (preMatch.suffixMatch) {
-                endLine = preMatch.suffixMatch.line - 1;
-                if (preMatch.line == preMatch.suffixMatch.line) {
-                    _insertDecoration({ line: preMatch.line, start: preMatch.start, end: preMatch.suffixMatch.end, className: preMatch.className });
-                    self.renderHTML(preMatch.line);
-                } else {
-                    _insertDecoration({ line: preMatch.line, start: preMatch.start, end: self.linesContext.getText(preMatch.line).length - 1, className: preMatch.className });
-                    self.renderHTML(preMatch.line);
-                    _insertDecoration({ line: preMatch.suffixMatch.line, start: 0, end: preMatch.suffixMatch.end, className: preMatch.className });
-                    self.renderHTML(preMatch.suffixMatch.line);
-                }
-                __addWholeLineDec();
-            } else if (!preMatch.hasAfterSuffix &&
-                (!self.endMatch ||
-                    preMatch.line < self.endMatch.line ||
-                    preMatch.line == self.endMatch.line && preMatch.start < self.endMatch.start)) {
-                _insertDecoration({ line: preMatch.line, start: preMatch.start, end: self.linesContext.getText(preMatch.line).length - 1, className: preMatch.className });
-                self.renderHTML(preMatch.line);
-                self.endMatch = preMatch;
-                __addWholeLineDec();
-            }
-            //添加整行修饰
-            function __addWholeLineDec() {
-                for (var i = preMatch.line + 1; i <= endLine; i++) {
-                    self.linesContext.getDom(i).find('.code').html(self.linesContext.getText(i));
-                    self.linesContext.getDom(i).find('.code').addClass(preMatch.className);
-                }
-            }
-        }
-        /**
-         * 撤销preMatch挂载的修饰
-         * @param  {Object} preMatch 匹配头
-         */
-        function _resetMatchLine(preMatch) {
-            var endLine = (self.endMatch == preMatch && self.linesContext.getLength()) || -1;
-            if (preMatch.suffixMatch) {
-                endLine = preMatch.suffixMatch.line - 1;
-                if (preMatch.line == preMatch.suffixMatch.line) {
-                    _delDecoration({ line: preMatch.line, start: preMatch.start, end: preMatch.suffixMatch.end });
-                    self.renderHTML(preMatch.line);
-                } else {
-                    _delDecoration({ line: preMatch.line, start: preMatch.start, end: self.linesContext.getText(preMatch.line).length - 1 });
-                    self.renderHTML(preMatch.line);
-                    _delDecoration({ line: preMatch.suffixMatch.line, start: 0, end: preMatch.suffixMatch.end });
-                    self.renderHTML(preMatch.suffixMatch.line);
-                }
-                __delWholeLineDec();
-            } else if (self.endMatch == preMatch) {
-                _delDecoration({ line: preMatch.line, start: preMatch.start, end: self.linesContext.getText(preMatch.line).length - 1 });
-                self.renderHTML(preMatch.line);
-                self.endMatch = undefined;
-                __delWholeLineDec();
-            }
-            if (preMatch.suffixMatch) {
-                preMatch.suffixMatch.preMatch = undefined;
-                preMatch.suffixMatch = undefined;
-            }
-            //删除整行修饰
-            function __delWholeLineDec() {
-                for (var i = preMatch.line + 1; i <= endLine; i++) {
-                    self.renderHTML(i);
-                    self.linesContext.getDom(i).find('.code').removeClass(preMatch.className);
-                }
-            }
-        }
         /**
          * 检查行是否在多行匹配范围内
          * @param  {Number} line 行号
@@ -666,6 +562,115 @@
                         }
                     }
                 }
+            }
+        }
+    }
+    //插入多行匹配修饰
+    _proto.insertDecoration = function(match) {
+        var decoration = this.lineDecorations[match.line - 1];
+        if (!decoration) {
+            decoration = this.lineDecorations[match.line - 1] = {};
+        }
+        for (var i = 0; i < decoration.length; i++) {
+            var obj = decoration[i];
+            //有交叉则删除
+            if (!(obj.end < match.start || obj.start > match.end)) {
+                decoration.splice(i, 1);
+                i--;
+            }
+        }
+        decoration.push(match);
+        decoration.sort(function(arg1, arg2) {
+            if (arg1.start < arg2.start) {
+                return -1
+            } else if (arg1.start == arg2.start) {
+                return 0;
+            } else {
+                return 1;
+            }
+        });
+    }
+    //删除多行修饰
+    _proto.delDecoration = function(match) {
+        var decoration = this.lineDecorations[match.line - 1];
+        for (var i = 0; i < decoration.length; i++) {
+            var obj = decoration[i];
+            if (match.start == obj.start && match.end == obj.end) {
+                decoration.splice(i, 1);
+                return;
+            }
+        }
+    }
+    /**
+     * 根据preMatch挂载带修饰的HTML
+     * @param  {Object} preMatch 匹配头
+     */
+    _proto.renderMatchLine = function(preMatch) {
+        var self = this;
+        var endLine = self.linesContext.getLength();
+        if (preMatch.suffixMatch) {
+            endLine = preMatch.suffixMatch.line - 1;
+            if (preMatch.line == preMatch.suffixMatch.line) {
+                self.insertDecoration({ line: preMatch.line, start: preMatch.start, end: preMatch.suffixMatch.end, className: preMatch.className });
+                self.renderHTML(preMatch.line);
+            } else {
+                self.insertDecoration({ line: preMatch.line, start: preMatch.start, end: self.linesContext.getText(preMatch.line).length - 1, className: preMatch.className });
+                self.renderHTML(preMatch.line);
+                self.insertDecoration({ line: preMatch.suffixMatch.line, start: 0, end: preMatch.suffixMatch.end, className: preMatch.className });
+                self.renderHTML(preMatch.suffixMatch.line);
+            }
+            __addWholeLineDec();
+        } else if (!preMatch.hasAfterSuffix &&
+            (!self.endMatch ||
+                preMatch.line < self.endMatch.line ||
+                preMatch.line == self.endMatch.line && preMatch.start < self.endMatch.start)) {
+            self.insertDecoration({ line: preMatch.line, start: preMatch.start, end: self.linesContext.getText(preMatch.line).length - 1, className: preMatch.className });
+            self.renderHTML(preMatch.line);
+            self.endMatch = preMatch;
+            __addWholeLineDec();
+        }
+        //添加整行修饰
+        function __addWholeLineDec() {
+            for (var i = preMatch.line + 1; i <= endLine; i++) {
+                self.linesContext.getDom(i).find('.code').html(self.linesContext.getText(i));
+                self.linesContext.getDom(i).find('.code').addClass(preMatch.className);
+            }
+        }
+    }
+    /**
+     * 撤销preMatch挂载的修饰
+     * @param  {Object} preMatch 匹配头
+     */
+    _proto.resetMatchLine = function(preMatch) {
+        var self = this;
+        var endLine = (self.endMatch == preMatch && self.linesContext.getLength()) || -1;
+        if (preMatch.suffixMatch) {
+            endLine = preMatch.suffixMatch.line - 1;
+            if (preMatch.line == preMatch.suffixMatch.line) {
+                self.delDecoration({ line: preMatch.line, start: preMatch.start, end: preMatch.suffixMatch.end });
+                self.renderHTML(preMatch.line);
+            } else {
+                self.delDecoration({ line: preMatch.line, start: preMatch.start, end: self.linesContext.getText(preMatch.line).length - 1 });
+                self.renderHTML(preMatch.line);
+                self.delDecoration({ line: preMatch.suffixMatch.line, start: 0, end: preMatch.suffixMatch.end });
+                self.renderHTML(preMatch.suffixMatch.line);
+            }
+            __delWholeLineDec();
+        } else if (self.endMatch == preMatch) {
+            self.delDecoration({ line: preMatch.line, start: preMatch.start, end: self.linesContext.getText(preMatch.line).length - 1 });
+            self.renderHTML(preMatch.line);
+            self.endMatch = undefined;
+            __delWholeLineDec();
+        }
+        if (preMatch.suffixMatch) {
+            preMatch.suffixMatch.preMatch = undefined;
+            preMatch.suffixMatch = undefined;
+        }
+        //删除整行修饰
+        function __delWholeLineDec() {
+            for (var i = preMatch.line + 1; i <= endLine; i++) {
+                self.renderHTML(i);
+                self.linesContext.getDom(i).find('.code').removeClass(preMatch.className);
             }
         }
     }
@@ -714,7 +719,7 @@
      * 重置match对象行号（新增行或删除行后）
      * @param  {Number} startLine 需要开始重置行号的首页
      */
-    _proto.resetLineNum = function(startLine){
+    _proto.resetLineNum = function(startLine) {
         //重置行号
         for (var i = startLine; i < this.linesContext.getLength(); i++) {
             var obj = this.preMatchs[i - 1];
@@ -775,6 +780,13 @@
             this.resetLineNum(line);
             for (var i = 0; i < matchs.length; i++) {
                 lines.push(matchs[i].line);
+                var match = matchs[i];
+                if(match.preMatch){
+                    //删除preMatch后面的修饰
+                    match.preMatch.line = line;
+                    match.preMatch.start = -1;
+                    self.resetMatchLine(match.preMatch);
+                }
             }
         }
 
@@ -787,24 +799,21 @@
             var matchs = [];
             for (var i = startLine; i <= endLine; i++) {
                 var obj = self.preMatchs[i - 1];
-                if (obj) {
-                    for (var start in obj) {
-                        for (var regIndex in obj[start]) {
-                            var match = obj[start][regIndex];
-                            if (match.suffixMatch && match.suffixMatch.line > endLine) {
-                                matchs.push(match.suffixMatch);
-                            }
+                for (var start in obj) {
+                    for (var regIndex in obj[start]) {
+                        var match = obj[start][regIndex];
+                        if (match.suffixMatch && match.suffixMatch.line > endLine) {
+                            matchs.push(match.suffixMatch);
                         }
                     }
                 }
                 var obj = self.suffixMatchs[i - 1];
-                if (obj) {
-                    for (var start in obj) {
-                        for (var regIndex in obj[start]) {
-                            var match = obj[start][regIndex];
-                            if (match.preMatch && match.preMatch.line < startLine) {
-                                matchs.push(match.preMatch);
-                            }
+                for (var start in obj) {
+                    for (var regIndex in obj[start]) {
+                        var match = obj[start][regIndex];
+                        if (match.preMatch && match.preMatch.line < startLine) {
+                            match.preMatch.suffixMatch = undefined;
+                            matchs.push(match.preMatch);
                         }
                     }
                 }
