@@ -711,6 +711,27 @@
         this.linesContext.getDom(line).find('.code').html(str);
     }
     /**
+     * 重置match对象行号（新增行或删除行后）
+     * @param  {Number} startLine 需要开始重置行号的首页
+     */
+    _proto.resetLineNum = function(startLine){
+        //重置行号
+        for (var i = startLine; i < this.linesContext.getLength(); i++) {
+            var obj = this.preMatchs[i - 1];
+            for (var start in obj) {
+                for (var regIndex in obj[start]) {
+                    obj[start][regIndex].line = i;
+                }
+            }
+            var obj = this.suffixMatchs[i - 1];
+            for (var start in obj) {
+                for (var regIndex in obj[start]) {
+                    obj[start][regIndex].line = i;
+                }
+            }
+        }
+    }
+    /**
      * 当更新一行时触发
      * @param  {行号} line 行号
      */
@@ -730,31 +751,7 @@
                 this.suffixMatchs.splice(line, 0, undefined);
                 this.lineDecorations.splice(line, 0, undefined);
             }
-            //重置行号
-            for (var i = line + 1; i < this.linesContext.getLength(); i++) {
-                var obj = this.preMatchs[i - 1];
-                if (obj) {
-                    for (var start in obj) {
-                        for (var regIndex in obj[start]) {
-                            obj.line = i;
-                            if (obj.suffixMatch && obj.suffixMatch.line > line) {
-                                obj.suffixMatch.line += length - 1;
-                            }
-                        }
-                    }
-                }
-                var obj = this.suffixMatchs[i - 1];
-                if (obj) {
-                    for (var start in obj) {
-                        for (var regIndex in obj[start]) {
-                            obj.line = i;
-                            if (obj.preMatch && obj.preMatch.line > line) {
-                                obj.preMatch.line += length - 1;
-                            }
-                        }
-                    }
-                }
-            }
+            this.resetLineNum(line);
         }
         for (var i = line; i < line + length; i++) {
             this.onUpdateLine(i);
@@ -775,33 +772,7 @@
                 this.suffixMatchs.splice(line, 1);
                 this.lineDecorations.splice(line, 1);
             }
-            //重置行号
-            for (var i = line + length; i < this.linesContext.getLength(); i++) {
-                var obj = this.preMatchs[i - 1];
-                if (obj) {
-                    for (var start in obj) {
-                        for (var regIndex in obj[start]) {
-                            var match = obj[start][regIndex];
-                            match.line = i;
-                            if (match.suffixMatch && match.suffixMatch.line > line + length - 1) {
-                                match.suffixMatch.line -= length - 1;
-                            }
-                        }
-                    }
-                }
-                var obj = this.suffixMatchs[i - 1];
-                if (obj) {
-                    for (var start in obj) {
-                        for (var regIndex in obj[start]) {
-                            var match = obj[start][regIndex];
-                            match.line = i;
-                            if (match.preMatch && match.preMatch.line > line + length - 1) {
-                                match.preMatch.line -= length - 1;
-                            }
-                        }
-                    }
-                }
-            }
+            this.resetLineNum(line);
             for (var i = 0; i < matchs.length; i++) {
                 lines.push(matchs[i].line);
             }
