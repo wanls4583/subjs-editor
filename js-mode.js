@@ -143,9 +143,9 @@
     //多行匹配 ie. /*....*/
     var pairRegs = [{
         pre: /\/\*/g,
-        pre_exclude: [Util.excludeStrReg(/\/\*/), /\*\/\*/g,/\/\//g],
+        pre_exclude: [Util.excludeStrReg(/\/\*/), /\*\/\*/g,/\/\/[^\n]*/g],
         suffix: /\*\//g,
-        suffix_exclude: [Util.excludeStrReg(/\*\//),/\/\//g],
+        suffix_exclude: [Util.excludeStrReg(/\*\//),/\/\/[^\n]*/g],
         className: 'pair_comment'
     }]
     //单行匹配
