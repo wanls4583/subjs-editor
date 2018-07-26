@@ -1167,10 +1167,12 @@
                         if (preCode > 222 && e.keyCode == 16) { //中文输入后shift延迟较大
                             setTimeout(function() {
                                 _insertContent();
+                                self.updateCursorPos();
                             }, 150);
                         } else {
                             setTimeout(function() {
                                 _insertContent();
+                                self.updateCursorPos();
                             }, 0)
                         }
                 }

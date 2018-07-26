@@ -143,89 +143,26 @@
     //多行匹配 ie. /*....*/
     var pairRegs = [{
         pre: /\/\*/g,
-        pre_exclude: [Util.excludeStrReg(/\/\*/), /\*\/\*/g],
+        pre_exclude: [Util.excludeStrReg(/\/\*/), /\*\/\*/g,/\/\//g],
         suffix: /\*\//g,
-        suffix_exclude: Util.excludeStrReg(/\*\//),
+        suffix_exclude: [Util.excludeStrReg(/\*\//),/\/\//g],
         className: 'pair_comment'
     }]
     //单行匹配
     var regs = [{
-        reg: /\bcontinue\b/g,
-        className: 'key'
-    }, {
-        reg: /\bdo\b/g,
-        className: 'key'
-    }, {
-        reg: /\belse\b/g,
-        className: 'key'
-    }, {
-        reg: /\bfor\b/g,
-        className: 'key'
-    }, {
-        reg: /\bif\b/g,
-        className: 'key'
-    }, {
-        reg: /\bnew\b/g,
-        className: 'key'
-    }, {
-        reg: /\breturn\b/g,
+        reg: /\bcontinue\b|\bdo\b|\belse\b|\bfor\b|\bif\b|\bnew\b|\breturn\b/g,
         className: 'key'
     }, {
         reg: /\bclass\b/g,
         className: 'class'
     }, {
-        reg: /\+/g,
+        reg: /\+|\-|\*|\/|\=|\!|>|<|\&|\||\?/g,
         className: 'oprator'
     }, {
-        reg: /\-/g,
-        className: 'oprator'
-    }, {
-        reg: /\*/g,
-        className: 'oprator'
-    }, {
-        reg: /\//g,
-        className: 'oprator'
-    }, {
-        reg: /\=/g,
-        className: 'oprator'
-    }, {
-        reg: /\!/g,
-        className: 'oprator'
-    }, {
-        reg: />/g,
-        className: 'oprator'
-    }, {
-        reg: /</g,
-        className: 'oprator'
-    }, {
-        reg: /\&/g,
-        className: 'oprator'
-    }, {
-        reg: /\|/g,
-        className: 'oprator'
-    }, {
-        reg: /\?/g,
-        className: 'oprator'
-    }, {
-        reg: /\:/g,
-        className: 'oprator'
-    }, {
-        reg: /\b\d+\b/g,
+        reg: /\b\d+\b|\b0[xX][a-zA-Z0-9]*?\b|\bundefined\b|\bnull\b/g,
         className: 'number'
     }, {
-        reg: /\b0[xX][a-zA-Z0-9]*?\b/g,
-        className: 'number'
-    }, {
-        reg: /\bundefined\b/g,
-        className: 'number'
-    }, {
-        reg: /\bnull\b/g,
-        className: 'number'
-    }, {
-        reg: /\bvar\b/g,
-        className: 'type'
-    }, {
-        reg: /\bfunction\b/g,
+        reg: /\bvar\b|\bfunction\b/g,
         className: 'type'
     }, {
         reg: /[.]?([\$_a-zA-Z][\$_a-zA-Z0-9]*?)(?=\()/g, //ie. test(),.test()
@@ -248,11 +185,12 @@
         className: 'function_arg',
         callback: Util.execArgsReg
     }, {
-        reg: /\/\/[^\n]*/g,
-        className: 'comment'
-    }, {
         reg: /'[^']*?'|"[^"]*?"/g,
         className: 'string'
+    }, {
+        reg: /\/\/[^\n]*/g,
+        exclude: Util.excludeStrReg(/\/\//),
+        className: 'comment'
     }]
     /**
      * JS 语法高亮
