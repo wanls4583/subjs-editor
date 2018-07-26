@@ -556,7 +556,7 @@
                     for (var regIndex in obj[start]) {
                         if (!obj[start][regIndex].suffixMatch && self.endMatch == obj[start][regIndex] ||
                             obj[start][regIndex].suffixMatch && obj[start][regIndex].suffixMatch.line > line) {
-                            self.linesContext.getDom(line).find('.code').html(self.linesContext.getText(line));
+                            self.linesContext.getDom(line).find('.code').html(Util.htmlTrans(self.linesContext.getText(line)));
                             self.linesContext.getDom(line).find('.code').addClass(obj[start][regIndex].className);
                             break;
                         }
@@ -632,7 +632,7 @@
         //添加整行修饰
         function __addWholeLineDec() {
             for (var i = preMatch.line + 1; i <= endLine; i++) {
-                self.linesContext.getDom(i).find('.code').html(self.linesContext.getText(i));
+                self.linesContext.getDom(i).find('.code').html(Util.htmlTrans(self.linesContext.getText(i)));
                 self.linesContext.getDom(i).find('.code').addClass(preMatch.className);
             }
         }

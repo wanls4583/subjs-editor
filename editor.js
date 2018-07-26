@@ -205,13 +205,6 @@
         this.getDom = function(line) {
             return _htmlDom[line - 1];
         }
-        //更新dom
-        this.mount = function(line, newContent) {
-            if (!newContent) {
-                newContent = _content[line - 1];
-            }
-            _htmlDom[line - 1].find('.code').html(newContent);
-        }
     }
     /**
      * 编辑器
