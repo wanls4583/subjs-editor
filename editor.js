@@ -201,6 +201,10 @@
             }
             return maxObj.width;
         }
+        //获取一行文本的宽度
+        this.getLineWidth = function(line){
+            return _width[line-1] || 0;
+        }
         //获取dom
         this.getDom = function(line) {
             return _htmlDom[line - 1];
@@ -880,6 +884,10 @@
                             vScrollWrap.scrollTop -= speed;
                             endPos = self.pxToPos(0, 0);
                             endPos.column = originEndPos.column;
+                        }else{
+                            endPos = {};
+                            endPos.line = 1;
+                            endPos.column = 0;
                         }
                         break;
                     case 'down':
@@ -887,6 +895,10 @@
                             vScrollWrap.scrollTop += speed;
                             endPos = self.pxToPos(self.$scroller[0].clientHeight - hBarHeight, 0);
                             endPos.column = originEndPos.column;
+                        }else{
+                            endPos = {};
+                            endPos.line = self.linesContext.getLength();
+                            endPos.column = self.linesContext.getText(endPos.line).length;
                         }
                         break;
                     case 'left':
