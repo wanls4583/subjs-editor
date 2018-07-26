@@ -431,6 +431,14 @@
             column: column
         }
     }
+    /**
+     * 更新光标行列坐标
+     * @param {Object} pos {line,column}
+     */
+    _proto.setCursorPos = function(pos){
+        this.cursorPos.line = pos.line;
+        this.cursorPos.column = pos.column;
+    }
     //更新光标坐标
     _proto.updateCursorPos = function() {
         var pos = this.posToPx(this.cursorPos.line, this.cursorPos.column);
@@ -569,7 +577,6 @@
         }
         this.renderLine(firstLine);
         this.cursorPos.line = this.cursorPos.line + strs.length - 1;
-        this.updateCursorPos();
         this.updateScroll(true);
     }
     /**
@@ -737,6 +744,7 @@
         var startPos = { line: 1, column: 0 };
         var endPos = { line: this.linesContext.getLength(), column: this.linesContext.getText(this.linesContext.getLength()).length }
         this.renderSelectBg(startPos, endPos);
+        this.setCursorPos(endPos);
     }
     //选中事件
     _proto.bindSelectEvent = function() {
@@ -793,6 +801,7 @@
                     var startPos = { line: originStartPos.line, column: originStartPos.column };
                     var endPos = self.pxToPos(endPx.top, endPx.left);
                     originEndPos = endPos;
+                    self.setCursorPos(endPos);
                     //处理顺序
                     if (startPos.line > endPos.line) {
                         var tmp = startPos;
@@ -858,6 +867,7 @@
             select = false;
             autoDirect = '';
             Util.cancelNextFrame(timer);
+            self.updateCursorPos();
         });
         /**
          * 鼠标选择超出编辑区域时，自动滚动并选中
@@ -907,6 +917,7 @@
             }
 
             function _render(endPos) {
+                self.setCursorPos(endPos);
                 //处理顺序
                 if (startPos.line > endPos.line) {
                     var tmp = startPos;
