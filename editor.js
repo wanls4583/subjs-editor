@@ -163,7 +163,7 @@
                     <div class="code" style="display:inline-block;position:relative;height:100%;min-width:100%;white-space:pre"></div>\
                 </div>');
             _content.splice(line - 1, 0, txt);
-            _htmlDom.splice(line-1, 0, $dom);
+            _htmlDom.splice(line - 1, 0, $dom);
             _width.splice(line - 1, 0, 0);
             _width[line - 1] = Util.getStrWidth(txt, SubJs.charWidth, SubJs.fullAngleCharWidth);
             if (_width[line - 1] > maxObj.width) {
@@ -189,7 +189,7 @@
         this.getMaxWidth = function() {
             if (findMax) {
                 var max = 0;
-                maxObj = {line: 1,width: 0};
+                maxObj = { line: 1, width: 0 };
                 for (var i = 0; i < _width.length; i++) {
                     if (_width[i] > max) {
                         maxObj.line = i + 1;
@@ -202,20 +202,20 @@
             return maxObj.width;
         }
         //获取dom
-        this.getDom = function(line){
+        this.getDom = function(line) {
             return _htmlDom[line - 1];
         }
         //更新dom
-        this.mount = function(line,newContent){
-            if(!newContent){
+        this.mount = function(line, newContent) {
+            if (!newContent) {
                 newContent = _content[line - 1];
             }
-            _htmlDom[line-1].find('.code').html(newContent);
+            _htmlDom[line - 1].find('.code').html(newContent);
         }
     }
     /**
      * 编辑器
-     * @param {object} options [配置]
+     * @param {Object} options [配置]
      *  options.$wrapper 容器
      *  options.tabsize tab键所占空格数
      */
@@ -362,7 +362,7 @@
      * 将行列坐标转换成像素坐标（相对于scroller容器）
      * @param  {number} line   行号
      * @param  {number} column 列号
-     * @return {object}        top,left
+     * @return {Object}        top,left
      */
     _proto.posToPx = function(line, column) {
         var self = this;
@@ -383,7 +383,7 @@
      * 将像素坐标转换成行列坐标（相对于scroller容器）
      * @param  {number} top    相对scrolller顶部的距离
      * @param  {number} column 相对scroller左边框的距离
-     * @return {object}        {line,column}
+     * @return {Object}        {line,column}
      */
     _proto.pxToPos = function(top, left, ifLine) {
         var column = this.cursorPos.column;
@@ -543,12 +543,12 @@
         strs = str.split(/\r\n|\r|\n/);
         if (strs[0]) { //'\n'.split(/\r\n|\r|\n/)->['','']
             this.linesContext.setText(this.cursorPos.line, strs[0]);
-            if(strs.length > 1){
+            if (strs.length > 1) {
                 this.cursorPos.column = strs[strs.length - 1].length;
-            }else{
-                this.cursorPos.column = this.cursorPos.column+newContent.length;
+            } else {
+                this.cursorPos.column = this.cursorPos.column + newContent.length;
             }
-        }else{
+        } else {
             this.cursorPos.column = 0;
         }
         //粘贴操作可能存在换号符,需要添加新行
@@ -556,9 +556,9 @@
             this.linesContext.add(this.cursorPos.line + tmp, strs[tmp]);
         }
         if (this.mode) {
-            if(this.cursorPos.line < 1){
+            if (this.cursorPos.line < 1) {
                 this.mode.onInsertContent(1, 1);
-            }else{
+            } else {
                 this.mode.onInsertContent(this.cursorPos.line, strs.length);
             }
         }
@@ -575,7 +575,7 @@
     /**
      * 从编辑器中删除多行
      * @param  {object/number} startPos 开始行列坐标{line,column}/行号
-     * @param  {object} endPos   结束行列坐标{line,column}
+     * @param  {Object} endPos   结束行列坐标{line,column}
      */
     _proto.deleteContent = function(startPos, endPos) {
         if (typeof startPos == 'number') {
@@ -627,12 +627,12 @@
     }
     /**
      * 渲染选中背景
-     * @param  {object} startPos 开始行列坐标{line,column}
-     * @param  {object} endPos   结束行列坐标{line,column}
+     * @param  {Object} startPos 开始行列坐标{line,column}
+     * @param  {Object} endPos   结束行列坐标{line,column}
      */
     _proto.renderSelectBg = function(startPos, endPos) {
-        var self = this;
-        var rect = Util.getRect(self.$scroller[0]);
+        var self = this,
+            rect = Util.getRect(self.$scroller[0]);
         self.$selectBg.html('');
         self.selection.startPos = startPos;
         self.selection.endPos = endPos;
@@ -640,7 +640,7 @@
             var str = self.linesContext.getText(startPos.line);
             var width = Util.getStrWidth(str, SubJs.charWidth, SubJs.fullAngleCharWidth, startPos.column, endPos.column);
             var px = self.posToPx(startPos.line, startPos.column);
-            self.renderRange(px.top, px.left, width);
+            _renderRange(px.top, px.left, width);
             self.selection.selectText = str.substring(startPos.column, endPos.column);
             self.$lineBg.hide(); //隐藏当前行背景
         } else {
@@ -648,30 +648,54 @@
             var maxWidth = self.$context[0].scrollWidth - 1; //防止$context真实宽度有小数（scrollWidth将被四舍五入）
             var width = Util.getStrWidth(str, SubJs.charWidth, SubJs.fullAngleCharWidth, 0, startPos.column);
             var px = self.posToPx(startPos.line, startPos.column);
-            self.renderRange(px.top, px.left, maxWidth - width);
+            _renderRange(px.top, px.left, maxWidth - width);
             self.selection.selectText = str;
             for (var l = startPos.line + 1; l < endPos.line; l++) {
-                px = self.posToPx(l, 0);
-                self.renderRange(px.top, rect.paddingLeft, maxWidth);
                 self.selection.selectText += '\n' + self.linesContext.getText(l);
             }
+            _renderBlock(startPos, endPos, rect.paddingLeft, maxWidth);
             str = self.linesContext.getText(endPos.line);
             width = Util.getStrWidth(str, SubJs.charWidth, SubJs.fullAngleCharWidth, 0, endPos.column);
             px = self.posToPx(endPos.line, 0);
-            self.renderRange(px.top, px.left, width);
+            _renderRange(px.top, px.left, width);
             self.selection.selectText += '\n' + str.substring(0, endPos.column);
             self.$lineBg.hide(); //隐藏当前行背景
         }
-    }
-    /**
-     * 渲染一行背景
-     * @param  {number} top   距离scroller容器顶部的距离
-     * @param  {number} left  距离scroller容器左边的距离
-     * @param  {number} width 背景的宽度
-     */
-    _proto.renderRange = function(top, left, width) {
-        if (top > -SubJs.charHight && top < this.$scroller[0].clientHeight) {
-            this.$selectBg.append('<div class="selection_line_bg" style="position:absolute;top:' + top + 'px;left:' + left + 'px;width:' + width + 'px;height:' + SubJs.charHight + 'px;background-color:rgb(181, 213, 255)"></div>');
+        /**
+         * 渲染中间的多行背景形成一个大的块
+         * @param  {Object} startPos 开始行列坐标{line,column}
+         * @param  {Object} endPos   结束行列坐标{line,column}
+         * @param  {Number} left     到scroller容器的距离
+         * @param  {Number} maxWidth 最大行的宽度
+         */
+        function _renderBlock(startPos, endPos, left, maxWidth) {
+            var firstSelectLine = startPos.line + 1,
+                lastSelectLine = endPos.line - 1,
+                endLine = self.firstLine + self.maxVisualLine - 1;
+            if (firstSelectLine > endLine || lastSelectLine < self.firstSelectLine) {
+                return;
+            }
+            if (firstSelectLine < self.firstLine) {
+                firstSelectLine = self.firstLine;
+            }
+            if (lastSelectLine > endLine) {
+                lastSelectLine = endLine;
+            }
+            var height = (lastSelectLine - firstSelectLine + 1)*SubJs.charHight;
+            var top = self.posToPx(firstSelectLine, 0).top;
+            _renderRange(top, left , maxWidth, height);
+        }
+        /**
+         * 渲染一行背景
+         * @param  {number} top   距离scroller容器顶部的距离
+         * @param  {number} left  距离scroller容器左边的距离
+         * @param  {number} width 背景的宽度
+         */
+        function _renderRange(top, left, width, height) {
+            !height && (height = SubJs.charHight)
+            if (top > -SubJs.charHight && top < self.$scroller[0].clientHeight) {
+                self.$selectBg.append('<div class="selection_line_bg" style="position:absolute;top:' + top + 'px;left:' + left + 'px;width:' + width + 'px;height:' + height + 'px;background-color:rgb(181, 213, 255)"></div>');
+            }
         }
     }
     /**
