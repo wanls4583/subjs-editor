@@ -168,6 +168,7 @@
             _width[line - 1] = Util.getStrWidth(txt, SubJs.charWidth, SubJs.fullAngleCharWidth);
             if (_width[line - 1] > maxObj.width) {
                 maxObj.width = _width[line - 1];
+                maxObj.line = line;
             } else if (line == maxObj.line) {
                 maxObj.line = line + 1;
             }
@@ -178,9 +179,7 @@
             _htmlDom[line - 1].remove();
             _htmlDom.splice(line - 1, 1);
             _width.splice(line - 1, 1);
-            if (line == maxObj.line) {
-                findMax = true;
-            }
+            findMax = true;
         }
         //获取总行数
         this.getLength = function() {
@@ -190,6 +189,7 @@
         this.getMaxWidth = function() {
             if (findMax) {
                 var max = 0;
+                maxObj = {line: 1,width: 0};
                 for (var i = 0; i < _width.length; i++) {
                     if (_width[i] > max) {
                         maxObj.line = i + 1;
