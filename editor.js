@@ -229,6 +229,10 @@
                     $dom.find('.code').attr('class','code');
                     $dom.find('.code').html(_engine(_content[line - 1], _lineDecs[line - 1]));
                 }
+                //设置更新标识
+                if(!$dom.hasUpdate){
+                    $dom.hasUpdate = true;
+                }
             }
         }
         /**
@@ -786,6 +790,10 @@
                     this.$context.prepend($dom);
                 } else {
                     $dom.insertAfter($preDom);
+                }
+                if(!$dom.hasUpdate){
+                    //更新dom
+                    this.linesContext.updateDom(i);
                 }
             }
         }
