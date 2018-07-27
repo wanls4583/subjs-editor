@@ -219,6 +219,7 @@
         //更新dom
         this.updateDom = function(line) {
             var $dom = _htmlDom[line - 1];
+            $dom && ($dom.hasUpdate = false);
             //只有挂载到页面的元素才真正更新
             if ($dom && $dom[0].isConnected) {
                 var wholeLineDec = _lineWholeDecs[line - 1];
@@ -781,20 +782,21 @@
         for (var i = this.firstLine; i > 0 && i < firstLine; i++) {
             allDom[i - this.firstLine] && allDom[i - this.firstLine].remove();
         }
-        //遍历可视区域的元素是否已经挂载
+        //遍历可视区域的元素是否需要挂载或更新
         for (var i = firstLine; i < firstLine + this.maxVisualLine && i <= this.linesContext.getLength(); i++) {
             var $dom = this.linesContext.getDom(i);
             var $preDom = this.linesContext.getDom(i - 1);
+            //元素尚未挂载
             if (!$dom[0].isConnected) {
                 if (i == firstLine) {
                     this.$context.prepend($dom);
                 } else {
                     $dom.insertAfter($preDom);
                 }
-                if(!$dom.hasUpdate){
-                    //更新dom
-                    this.linesContext.updateDom(i);
-                }
+            }
+            //元素有更新
+            if(!$dom.hasUpdate){
+                this.linesContext.updateDom(i);
             }
         }
         allDom = this.$context.find('.pre_code_line');

@@ -320,7 +320,6 @@
                             oldSuffix.preMatch = undefined;
                         }
                         if (preMatch) {
-                            console.log(preMatch);
                             self.pairHighlight(preMatch.line);
                         }
                     }
@@ -332,6 +331,9 @@
                     var suffixMatch = copyNowSuffixMatch[start][regIndex];
                     if (!obj || !obj[start] || !obj[start][regIndex]) {
                         var preSuffxiMatch = _findPreSuffix(suffixMatch);
+                        if(preSuffxiMatch.line != startLine){
+                            break;
+                        }
                         var preMatch = _findPre(suffixMatch, preSuffxiMatch && preSuffxiMatch.line);
                         if (startLine != preMatch.line) {
                             _checkPreMatchs(preMatch.line);
@@ -359,6 +361,9 @@
             for (var start in copyNowPreMatch) {
                 for (var regIndex in copyNowPreMatch[start]) {
                     var preMatch = copyNowPreMatch[start][regIndex];
+                    if(preMatch.line != startLine){
+                        break;
+                    }
                     if (!obj || !obj[start] || !obj[start][regIndex]) {
                         var nextPre = _findNextPre(preMatch, preMatch.suffixMatch);
                         if (nextPre && nextPre.line != startLine) {
