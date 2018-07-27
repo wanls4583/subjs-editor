@@ -507,7 +507,7 @@
     _proto.insertDecoration = function(match) {
         var decoration = this.lineDecorations[match.line - 1];
         if (!decoration) {
-            decoration = this.lineDecorations[match.line - 1] = {};
+            decoration = this.lineDecorations[match.line - 1] = [];
         }
         for (var i = 0; i < decoration.length; i++) {
             var obj = decoration[i];
