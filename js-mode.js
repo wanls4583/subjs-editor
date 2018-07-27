@@ -143,9 +143,9 @@
     //多行匹配 ie. /*....*/
     var pairRegs = [{
         pre: /\/\*/g,
-        pre_exclude: [Util.excludeStrReg(/\/\*/), /\*\/\*/g,/\/\/[^\n]*/g],
+        pre_exclude: [Util.excludeStrReg(/\/\*/), /\*\/\*/g, /\/\/[^\n]*/g],
         suffix: /\*\//g,
-        suffix_exclude: [Util.excludeStrReg(/\*\//),/\/\/[^\n]*/g],
+        suffix_exclude: [Util.excludeStrReg(/\*\//), /\/\/[^\n]*/g],
         className: 'pair_comment'
     }]
     //单行匹配
@@ -200,7 +200,7 @@
         this.linesContext = linesContext;
         this.preMatchs = []; //多行匹配开始记录
         this.suffixMatchs = []; //多行匹配结束记录
-        this.lineDecorations = []; //行对应的修饰
+        linesContext.setDecEngine(decEngine); //设置修饰对象的处理引擎
     }
     var _proto = JsMode.prototype;
     //单行代码高亮
@@ -239,8 +239,8 @@
                 return 1;
             }
         });
-        this.lineDecorations[currentLine - 1] = lineDecoration;
-        this.renderHTML(currentLine);
+        this.linesContext.setLineDec(currentLine, lineDecoration);
+        this.linesContext.updateDom(currentLine);
     }
     //多行代码高亮
     _proto.pairHighlight = function(startLine) {
@@ -494,8 +494,8 @@
                     for (var regIndex in obj[start]) {
                         if (!obj[start][regIndex].suffixMatch && self.endMatch == obj[start][regIndex] ||
                             obj[start][regIndex].suffixMatch && obj[start][regIndex].suffixMatch.line > line) {
-                            self.linesContext.getDom(line).find('.code').html(Util.htmlTrans(self.linesContext.getText(line)));
-                            self.linesContext.getDom(line).find('.code').addClass(obj[start][regIndex].className);
+                            self.linesContext.setWhoeLineDec(line, obj[start][regIndex].className);
+                            self.linesContext.updateDom(line);
                             break;
                         }
                     }
@@ -505,10 +505,7 @@
     }
     //插入多行匹配修饰
     _proto.insertDecoration = function(match) {
-        var decoration = this.lineDecorations[match.line - 1];
-        if (!decoration) {
-            decoration = this.lineDecorations[match.line - 1] = [];
-        }
+        var decoration = this.linesContext.getLineDec(match.line);
         for (var i = 0; i < decoration.length; i++) {
             var obj = decoration[i];
             //有交叉则删除
@@ -530,7 +527,7 @@
     }
     //删除多行修饰
     _proto.delDecoration = function(match) {
-        var decoration = this.lineDecorations[match.line - 1];
+        var decoration = this.linesContext.getLineDec(match.line);
         for (var i = 0; i < decoration.length; i++) {
             var obj = decoration[i];
             if (match.start == obj.start && match.end == obj.end) {
@@ -550,12 +547,12 @@
             endLine = preMatch.suffixMatch.line - 1;
             if (preMatch.line == preMatch.suffixMatch.line) {
                 self.insertDecoration({ line: preMatch.line, start: preMatch.start, end: preMatch.suffixMatch.end, className: preMatch.className });
-                self.renderHTML(preMatch.line);
+                self.linesContext.updateDom(preMatch.line);
             } else {
                 self.insertDecoration({ line: preMatch.line, start: preMatch.start, end: self.linesContext.getText(preMatch.line).length - 1, className: preMatch.className });
-                self.renderHTML(preMatch.line);
+                self.linesContext.updateDom(preMatch.line);
                 self.insertDecoration({ line: preMatch.suffixMatch.line, start: 0, end: preMatch.suffixMatch.end, className: preMatch.className });
-                self.renderHTML(preMatch.suffixMatch.line);
+                self.linesContext.updateDom(preMatch.suffixMatch.line);
             }
             __addWholeLineDec();
         } else if (!preMatch.hasAfterSuffix &&
@@ -563,15 +560,15 @@
                 preMatch.line < self.endMatch.line ||
                 preMatch.line == self.endMatch.line && preMatch.start < self.endMatch.start)) {
             self.insertDecoration({ line: preMatch.line, start: preMatch.start, end: self.linesContext.getText(preMatch.line).length - 1, className: preMatch.className });
-            self.renderHTML(preMatch.line);
+            self.linesContext.updateDom(preMatch.line);
             self.endMatch = preMatch;
             __addWholeLineDec();
         }
         //添加整行修饰
         function __addWholeLineDec() {
             for (var i = preMatch.line + 1; i <= endLine; i++) {
-                self.linesContext.getDom(i).find('.code').html(Util.htmlTrans(self.linesContext.getText(i)));
-                self.linesContext.getDom(i).find('.code').addClass(preMatch.className);
+                self.linesContext.setWhoeLineDec(i, preMatch.className);
+                self.linesContext.updateDom(i);
             }
         }
     }
@@ -586,17 +583,17 @@
             endLine = preMatch.suffixMatch.line - 1;
             if (preMatch.line == preMatch.suffixMatch.line) {
                 self.delDecoration({ line: preMatch.line, start: preMatch.start, end: preMatch.suffixMatch.end });
-                self.renderHTML(preMatch.line);
+                self.linesContext.updateDom(preMatch.line);
             } else {
                 self.delDecoration({ line: preMatch.line, start: preMatch.start, end: self.linesContext.getText(preMatch.line).length - 1 });
-                self.renderHTML(preMatch.line);
+                self.linesContext.updateDom(preMatch.line);
                 self.delDecoration({ line: preMatch.suffixMatch.line, start: 0, end: preMatch.suffixMatch.end });
-                self.renderHTML(preMatch.suffixMatch.line);
+                self.linesContext.updateDom(preMatch.suffixMatch.line);
             }
             __delWholeLineDec();
         } else if (self.endMatch == preMatch) {
             self.delDecoration({ line: preMatch.line, start: preMatch.start, end: self.linesContext.getText(preMatch.line).length - 1 });
-            self.renderHTML(preMatch.line);
+            self.linesContext.updateDom(preMatch.line);
             self.endMatch = undefined;
             __delWholeLineDec();
         }
@@ -607,51 +604,10 @@
         //删除整行修饰
         function __delWholeLineDec() {
             for (var i = preMatch.line + 1; i <= endLine; i++) {
-                self.renderHTML(i);
-                self.linesContext.getDom(i).find('.code').removeClass(preMatch.className);
+                self.linesContext.setWhoeLineDec(i, '');
+                self.linesContext.updateDom(i);
             }
         }
-    }
-    /**
-     * 挂载带修饰的HTML
-     * @param  {Number} line 行号
-     */
-    _proto.renderHTML = function(line) {
-        var str = this.linesContext.getText(line);
-        var decRangeOnline = this.lineDecorations[line - 1];
-        if (!decRangeOnline) {
-            return;
-        }
-        var copyDec = Util.copyObj(decRangeOnline);
-
-        //处理HTML转义'>,<'--'&gt;,&lt;'
-        var reg = />|</g,
-            match = null,
-            indexs = [];
-        while (match = reg.exec(str)) {
-            indexs.push(match.index);
-        }
-        //倒序移动位置
-        for (var i = indexs.length - 1; i >= 0; i--) {
-            var index = indexs[i];
-            for (var j = copyDec.length - 1; j >= 0; j--) {
-                var obj = copyDec[j];
-                if (obj.start > index) {
-                    obj.start += 3;
-                }
-                if (obj.end >= index) {
-                    obj.end += 3;
-                }
-            }
-        }
-        str = Util.htmlTrans(str);
-        //生成HTML
-        for (var i = copyDec.length - 1; i >= 0; i--) {
-            var obj = copyDec[i];
-            str = Util.insertStr(str, obj.end + 1, '</span>');
-            str = Util.insertStr(str, obj.start, '<span class="' + obj.className + '">');
-        }
-        this.linesContext.getDom(line).find('.code').html(str);
     }
     /**
      * 重置match对象行号（新增行或删除行后）
@@ -692,7 +648,6 @@
             for (var i = 1; i < length; i++) {
                 this.preMatchs.splice(line, 0, undefined);
                 this.suffixMatchs.splice(line, 0, undefined);
-                this.lineDecorations.splice(line, 0, undefined);
             }
             this.resetLineNum(line);
         }
@@ -713,13 +668,12 @@
             for (var i = 1; i < length; i++) {
                 this.preMatchs.splice(line, 1);
                 this.suffixMatchs.splice(line, 1);
-                this.lineDecorations.splice(line, 1);
             }
             this.resetLineNum(line);
             for (var i = 0; i < matchs.length; i++) {
                 var match = matchs[i];
                 !match.del && lines.push(match.line);
-                if(match.preMatch || match.del){
+                if (match.preMatch || match.del) {
                     match = match.del ? match : match.preMatch;
                     //删除preMatch后面的修饰
                     match.line = line;
@@ -743,7 +697,7 @@
                         var match = obj[start][regIndex];
                         if (match.suffixMatch && match.suffixMatch.line > endLine) {
                             matchs.push(match.suffixMatch);
-                        }else if(!match.suffixMatch){
+                        } else if (!match.suffixMatch) {
                             //需要删除preMatch后的修饰
                             match.del = true;
                             matchs.push(match);
@@ -763,6 +717,42 @@
             }
             return matchs;
         }
+    }
+    /**
+     * 修饰引擎，用来处理修饰，生成HTML字符串
+     * @param  {String} content 一行内容
+     * @param  {Object} lineDec 修饰对象
+     * @return {String}         HTML字符串
+     */
+    function decEngine(content, lineDec) {
+        //处理HTML转义'>,<'--'&gt;,&lt;'
+        var reg = />|</g,
+            match = null,
+            indexs = [];
+        while (match = reg.exec(content)) {
+            indexs.push(match.index);
+        }
+        //倒序移动位置
+        for (var i = indexs.length - 1; i >= 0; i--) {
+            var index = indexs[i];
+            for (var j = lineDec.length - 1; j >= 0; j--) {
+                var obj = lineDec[j];
+                if (obj.start > index) {
+                    obj.start += 3;
+                }
+                if (obj.end >= index) {
+                    obj.end += 3;
+                }
+            }
+        }
+        content = Util.htmlTrans(content);
+        //生成HTML
+        for (var i = lineDec.length - 1; i >= 0; i--) {
+            var obj = lineDec[i];
+            content = Util.insertStr(content, obj.end + 1, '</span>');
+            content = Util.insertStr(content, obj.start, '<span class="' + obj.className + '">');
+        }
+        return content;
     }
     window.SubJsMode = JsMode;
 }()

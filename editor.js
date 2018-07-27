@@ -139,8 +139,12 @@
         var _content = [], //存储每行文本
             _htmlDom = [], //存储每行文本对应的dom元素
             _width = [], //记录每行文本的宽度
-            maxObj = { line: 1, width: 0 }, //文本当前最大宽度
-            findMax = false; //是否要重新计算最大宽度
+            _maxObj = { line: 1, width: 0 }, //文本当前最大宽度
+            _findMax = false, //是否要重新计算最大宽度
+            _maxVisualLine = 0, //最大可视行数
+            _lineDecs = [], //存储行内修饰
+            _lineWholeDecs = [], //存储整行修饰
+            _engine = function(content) { return content }; //默认处理引擎直接返回传入的内容
         //获取一行文本
         this.getText = function(line) {
             return _content[line - 1];
@@ -149,28 +153,26 @@
         this.setText = function(line, txt) {
             _content[line - 1] = txt;
             _width[line - 1] = Util.getStrWidth(txt, SubJs.charWidth, SubJs.fullAngleCharWidth);
-            if (_width[line - 1] > maxObj.width) {
-                maxObj.width = _width[line - 1];
-                maxObj.line = line;
-            } else if (line == maxObj.line) {
-                findMax = true;
+            if (_width[line - 1] > _maxObj.width) {
+                _maxObj.width = _width[line - 1];
+                _maxObj.line = line;
+            } else if (line == _maxObj.line) {
+                _findMax = true;
             }
         }
         //在指定行添加一行文本
         this.add = function(line, txt) {
-            var $dom = $('\
-                <div style="position:relative;margin:0;height:' + SubJs.charHight + 'px;" class="pre_code_line">\
-                    <div class="code" style="display:inline-block;position:relative;height:100%;min-width:100%;white-space:pre"></div>\
-                </div>');
             _content.splice(line - 1, 0, txt);
-            _htmlDom.splice(line - 1, 0, $dom);
+            _htmlDom.splice(line - 1, 0, undefined);
             _width.splice(line - 1, 0, 0);
+            _lineDecs.splice(line - 1, 0, {});
+            _lineWholeDecs.splice(line - 1, 0, '');
             _width[line - 1] = Util.getStrWidth(txt, SubJs.charWidth, SubJs.fullAngleCharWidth);
-            if (_width[line - 1] > maxObj.width) {
-                maxObj.width = _width[line - 1];
-                maxObj.line = line;
-            } else if (line == maxObj.line) {
-                maxObj.line = line + 1;
+            if (_width[line - 1] > _maxObj.width) {
+                _maxObj.width = _width[line - 1];
+                _maxObj.line = line;
+            } else if (line == _maxObj.line) {
+                _maxObj.line = line + 1;
             }
         }
         //删除一行文本
@@ -179,7 +181,9 @@
             _htmlDom[line - 1].remove();
             _htmlDom.splice(line - 1, 1);
             _width.splice(line - 1, 1);
-            findMax = true;
+            _lineDecs.splice(line - 1, 1);
+            _lineWholeDecs.splice(line - 1, 1);
+            _findMax = true;
         }
         //获取总行数
         this.getLength = function() {
@@ -187,27 +191,84 @@
         }
         //获取文本最大宽度
         this.getMaxWidth = function() {
-            if (findMax) {
+            if (_findMax) {
                 var max = 0;
-                maxObj = { line: 1, width: 0 };
+                _maxObj = { line: 1, width: 0 };
                 for (var i = 0; i < _width.length; i++) {
                     if (_width[i] > max) {
-                        maxObj.line = i + 1;
-                        maxObj.width = _width[i];
+                        _maxObj.line = i + 1;
+                        _maxObj.width = _width[i];
                         max = _width[i];
                     }
                 }
-                findMax = false;
+                _findMax = false;
             }
-            return maxObj.width;
-        }
-        //获取一行文本的宽度
-        this.getLineWidth = function(line){
-            return _width[line-1] || 0;
+            return _maxObj.width;
         }
         //获取dom
         this.getDom = function(line) {
+            if (!_htmlDom[line - 1]) {
+                var $dom = $('\
+                <div style="position:relative;margin:0;height:' + SubJs.charHight + 'px;" class="pre_code_line">\
+                    <div class="code" style="display:inline-block;position:relative;height:100%;min-width:100%;white-space:pre"></div>\
+                </div>');
+                _htmlDom[line - 1] = $dom;
+            }
             return _htmlDom[line - 1];
+        }
+        //更新dom
+        this.updateDom = function(line) {
+            var $dom = _htmlDom[line - 1];
+            //只有挂载到页面的元素才真正更新
+            if ($dom && $dom[0].isConnected) {
+                var wholeLineDec = _lineWholeDecs[line - 1];
+                if (wholeLineDec) {
+                    $dom.find('.code').html(_content[line - 1]);
+                    $dom.find('.code').addClass(wholeLineDec);
+                } else {
+                    $dom.find('.code').attr('class','code');
+                    $dom.find('.code').html(_engine(_content[line - 1], _lineDecs[line - 1]));
+                }
+            }
+        }
+        /**
+         * 设置行内修饰
+         * @param {Number} line       行号
+         * @param {Object} decoration 修饰对象
+         */
+        this.setLineDec = function(line, decoration) {
+            _lineDecs[line - 1] = decoration;
+        }
+        /**
+         * 获取行内的修饰
+         * @param  {Number} line 行号
+         * @return {Object}      该行对应的修饰对象
+         */
+        this.getLineDec = function(line) {
+            return _lineDecs[line - 1];
+        }
+        /**
+         * 添加整行修饰
+         * @param {Number} line       行号
+         * @param {String} className  class
+         */
+        this.setWhoeLineDec = function(line, className) {
+            _lineWholeDecs[line - 1] = className;
+        }
+        /**
+         * 获取整行修饰
+         * @param  {Number} line 行号
+         * @return {Array}       该行对应的整行修饰数组
+         */
+        this.getWholeLineDec = function(line) {
+            return _lineWholeDecs[line - 1];
+        }
+        /**
+         * 设置修饰对象的处理引擎
+         * @param {Function} engine 修饰对象的处理引擎
+         */
+        this.setDecEngine = function(engine) {
+            _engine = engine;
         }
     }
     /**
@@ -432,7 +493,7 @@
      * 更新光标行列坐标
      * @param {Object} pos {line,column}
      */
-    _proto.setCursorPos = function(pos){
+    _proto.setCursorPos = function(pos) {
         this.cursorPos.line = pos.line;
         this.cursorPos.column = pos.column;
     }
@@ -560,19 +621,19 @@
         for (var tmp = 1; tmp < strs.length; tmp++) {
             this.linesContext.add(this.cursorPos.line + tmp, strs[tmp]);
         }
-        if (this.mode) {
-            if (this.cursorPos.line < 1) {
-                this.mode.onInsertContent(1, 1);
-            } else {
-                this.mode.onInsertContent(this.cursorPos.line, strs.length);
-            }
-        }
         firstLine = this.firstLine;
         //计算可视区域的首行
         if (this.cursorPos.line - this.firstLine + strs.length > this.maxVisualLine) {
             firstLine = this.cursorPos.line + strs.length - this.maxVisualLine;
         }
         this.renderLine(firstLine);
+        if (this.mode) {
+            if (this.cursorPos.line < 1) { //初始化坐标为(0,0)
+                this.mode.onInsertContent(1, 1, 1);
+            } else {
+                this.mode.onInsertContent(this.cursorPos.line, strs.length);
+            }
+        }
         this.cursorPos.line = this.cursorPos.line + strs.length - 1;
         this.updateScroll(true);
     }
@@ -605,10 +666,10 @@
             this.cursorPos.line = startPos.line;
             this.cursorPos.column = startPos.column;
         }
+        this.renderLine();
         if (this.mode) {
             this.mode.onDeleteContent(startPos.line, endPos.line - startPos.line + 1);
         }
-        this.renderLine();
         this.updateScroll();
         this.$selectBg.html('');
         this.selection = {};
@@ -685,9 +746,9 @@
             if (lastSelectLine > endLine) {
                 lastSelectLine = endLine;
             }
-            var height = (lastSelectLine - firstSelectLine + 1)*SubJs.charHight;
+            var height = (lastSelectLine - firstSelectLine + 1) * SubJs.charHight;
             var top = self.posToPx(firstSelectLine, 0).top;
-            _renderRange(top, left , maxWidth, height);
+            _renderRange(top, left, maxWidth, height);
         }
         /**
          * 渲染一行背景
@@ -884,7 +945,7 @@
                             vScrollWrap.scrollTop -= speed;
                             endPos = self.pxToPos(0, 0);
                             endPos.column = originEndPos.column;
-                        }else{
+                        } else {
                             endPos = {};
                             endPos.line = 1;
                             endPos.column = 0;
@@ -895,7 +956,7 @@
                             vScrollWrap.scrollTop += speed;
                             endPos = self.pxToPos(self.$scroller[0].clientHeight - hBarHeight, 0);
                             endPos.column = originEndPos.column;
-                        }else{
+                        } else {
                             endPos = {};
                             endPos.line = self.linesContext.getLength();
                             endPos.column = self.linesContext.getText(endPos.line).length;
