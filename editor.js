@@ -143,6 +143,7 @@
             _findMax = false, //是否要重新计算最大宽度
             _maxVisualLine = 0, //最大可视行数
             _lineDecs = [], //存储行内修饰
+            _priorLineDecs = [], //存储高优先级行内修饰
             _lineWholeDecs = [], //存储整行修饰
             _engine = function(content) { return content }; //默认处理引擎直接返回传入的内容
         //获取一行文本
@@ -166,6 +167,7 @@
             _htmlDom.splice(line - 1, 0, undefined);
             _width.splice(line - 1, 0, 0);
             _lineDecs.splice(line - 1, 0, []);
+            _priorLineDecs.splice(line - 1, 0, undefined);
             _lineWholeDecs.splice(line - 1, 0, '');
             _width[line - 1] = Util.getStrWidth(txt, SubJs.charWidth, SubJs.fullAngleCharWidth);
             if (_width[line - 1] > _maxObj.width) {
@@ -182,6 +184,7 @@
             _htmlDom.splice(line - 1, 1);
             _width.splice(line - 1, 1);
             _lineDecs.splice(line - 1, 1);
+            _priorLineDecs.splice(line - 1, 1);
             _lineWholeDecs.splice(line - 1, 1);
             _findMax = true;
         }
@@ -227,11 +230,11 @@
                     $dom.find('.code').html(_content[line - 1]);
                     $dom.find('.code').addClass(wholeLineDec);
                 } else {
-                    $dom.find('.code').attr('class','code');
-                    $dom.find('.code').html(_engine(_content[line - 1], _lineDecs[line - 1]));
+                    $dom.find('.code').attr('class', 'code');
+                    $dom.find('.code').html(_engine(_content[line - 1], _lineDecs[line - 1], _priorLineDecs[line - 1]));
                 }
                 //设置更新标识
-                if(!$dom.hasUpdate){
+                if (!$dom.hasUpdate) {
                     $dom.hasUpdate = true;
                 }
             }
@@ -251,6 +254,22 @@
          */
         this.getLineDec = function(line) {
             return _lineDecs[line - 1];
+        }
+        /**
+         * 设置高优先级行内修饰
+         * @param {Number} line       行号
+         * @param {Object} decoration 修饰对象
+         */
+        this.setPriorLineDecs = function(line, decoration) {
+            _priorLineDecs[line - 1] = decoration;
+        }
+        /**
+         * 获取高优先级行内的修饰
+         * @param  {Number} line 行号
+         * @return {Object}      该行对应的修饰对象
+         */
+        this.getPriorLineDecs = function(line) {
+            return _priorLineDecs[line - 1];
         }
         /**
          * 添加整行修饰
@@ -796,7 +815,7 @@
                 }
             }
             //元素有更新
-            if(!$dom.hasUpdate){
+            if (!$dom.hasUpdate) {
                 this.linesContext.updateDom(i);
             }
         }

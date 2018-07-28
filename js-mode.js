@@ -43,12 +43,13 @@
          * @param  {Objec} obj 待处理的U对象
          * @param  {Function} callback 处理函数
          * @param  {Number}   starKey  开始位置
-         * @param  {number}   endKey   结束位置
+         * @param  {Number}   endKey   结束位置
+         * @param  {Boolean}  reverse  是否从大到小处理
          */
-        eachByKeyOrder: function(obj, callback, starKey, endKey) {
+        eachByKeyOrder: function(obj, callback, starKey, endKey, reverse) {
             var keys = this.keys(obj);
             this.sortNum(keys);
-            if (starKey <= endKey) { //顺序
+            if (!reverse) { //顺序
                 for (var i = 0; i < keys.length; i++) {
                     var key = Number(keys[i]);
                     if (key >= starKey && key <= endKey) {
@@ -60,6 +61,8 @@
                                 continue;
                             }
                         }
+                    } else if (key > endKey) {
+                        break;
                     }
                 }
             } else { //倒序
@@ -77,6 +80,8 @@
                                 continue;
                             }
                         }
+                    } else if (key < starKey) {
+                        break;
                     }
                 }
             }
@@ -296,7 +301,7 @@
         _checkSuffixMatchs(startLine);
         _checkPreMatchs(startLine);
         _checkIfOnPair(startLine);
-        //撤销修饰
+        //撤销多行修饰
         function _resetMatch(startLine) {
             var obj = self.suffixMatchs[startLine];
             for (var start in obj) {
@@ -315,7 +320,7 @@
                 }
             }
         }
-        //查找多好匹配标识
+        //查找多行匹配标识
         function _doMatch(startLine) {
             delete self.preMatchs[startLine]
             delete self.suffixMatchs[startLine];
@@ -525,62 +530,41 @@
                         return _suffixMatch;
                     }
                 }
-            }, suffixMatch.line, 1);
+            }, suffixMatch.line, 1, true);
         }
         /**
          * 检查行是否在多行匹配范围内
          * @param  {Number} line 行号
          */
         function _checkIfOnPair(line) {
-            Util.eachByKeyOrder(self.preMatchs, function(item) {
-                if (!item) {
-                    return false;
-                }
-                for (var start in item) {
-                    for (var regIndex in item[start]) {
-                        if (!item[start][regIndex].suffixMatch && self.endMatch == item[start][regIndex] ||
-                            item[start][regIndex].suffixMatch && item[start][regIndex].suffixMatch.line > line) {
-                            self.linesContext.setWhoeLineDec(line, item[start][regIndex].className);
-                            self.linesContext.updateDom(line);
-                            return true;
+            if(line > 1){
+                Util.eachByKeyOrder(self.preMatchs, function(item) {
+                    var cols = Util.keys(item);
+                    Util.sortNum(cols);
+                    for (var j = cols.length - 1; j >= 0; j--) {
+                        var start = cols[j];
+                        for (var regIndex in item[start]) {
+                            if (!item[start][regIndex].suffixMatch && self.endMatch == item[start][regIndex] ||
+                                item[start][regIndex].suffixMatch && item[start][regIndex].suffixMatch.line > line) {
+                                self.linesContext.setWhoeLineDec(line, item[start][regIndex].className);
+                                self.linesContext.updateDom(line);
+                                return true;
+                            }
                         }
                     }
-                }
-            }, line - 1, 1);
+                    //最近的一个多行匹配头不匹配后可确定前面也没有匹配头与之匹配了
+                    return true;
+                }, line - 1, 1, true);
+            }
         }
     }
     //插入多行匹配修饰
     _proto.insertDecoration = function(match) {
-        var decoration = this.linesContext.getLineDec(match.line);
-        for (var i = 0; i < decoration.length; i++) {
-            var obj = decoration[i];
-            //有交叉则删除
-            if (!(obj.end < match.start || obj.start > match.end)) {
-                decoration.splice(i, 1);
-                i--;
-            }
-        }
-        decoration.push(match);
-        decoration.sort(function(arg1, arg2) {
-            if (arg1.start < arg2.start) {
-                return -1
-            } else if (arg1.start == arg2.start) {
-                return 0;
-            } else {
-                return 1;
-            }
-        });
+        this.linesContext.setPriorLineDecs(match.line, match);
     }
     //删除多行修饰
     _proto.delDecoration = function(match) {
-        var decoration = this.linesContext.getLineDec(match.line);
-        for (var i = 0; i < decoration.length; i++) {
-            var obj = decoration[i];
-            if (match.start == obj.start && match.end == obj.end) {
-                decoration.splice(i, 1);
-                return;
-            }
-        }
+        this.linesContext.setPriorLineDecs(match.line, undefined);
     }
     /**
      * 根据preMatch挂载带修饰的HTML
@@ -646,6 +630,7 @@
         if (preMatch.suffixMatch) {
             preMatch.suffixMatch.preMatch = undefined;
             preMatch.suffixMatch = undefined;
+            preMatch.hasAfterSuffix = false;
         }
         //删除整行修饰
         function __delWholeLineDec() {
@@ -697,17 +682,19 @@
             Util.eachByKeyOrder(this.preMatchs, function(item, line) {
                 delete self.preMatchs[line];
                 self.preMatchs[line + length - 1] = item;
-            }, this.linesContext.getLength(), line + 1);
+            }, this.linesContext.getLength(), line + 1, true);
             Util.eachByKeyOrder(this.suffixMatchs, function(item, line) {
                 delete self.suffixMatchs[line];
                 self.suffixMatchs[line + length - 1] = item;
-            }, this.linesContext.getLength(), line + 1);
+            }, this.linesContext.getLength(), line + 1, true);
             //重置行号
             this.resetLineNum(line + 1);
         }
+        var t = new Date().getTime();
         for (var i = line; i < line + length; i++) {
             this.onUpdateLine(i);
         }
+        console.log('times', new Date().getTime() - t);
     }
     /**
      * 当删除内容时触发多行匹配
@@ -789,15 +776,38 @@
      * @param  {Object} lineDec 修饰对象
      * @return {String}         HTML字符串
      */
-    function decEngine(content, lineDec) {
+    function decEngine(content, lineDec, priorLineDec) {
         //处理HTML转义'>,<'--'&gt;,&lt;'
         var reg = />|</g,
             match = null,
             indexs = [],
-            copyDec = Util.copyObj(lineDec);
+            copyDec = Util.copyObj(lineDec); //避免原始修饰start被修改
         while (match = reg.exec(content)) {
             indexs.push(match.index);
         }
+        //高优先级修饰覆盖(多行匹配的头尾修饰)
+        if (priorLineDec && priorLineDec.className) {
+            for (var i = 0; i < copyDec.length; i++) {
+                var obj = copyDec[i];
+                //有交叉则删除
+                if (!(obj.end < priorLineDec.start || obj.start > priorLineDec.end)) {
+                    copyDec.splice(i, 1);
+                    i--;
+                }
+            }
+            copyDec.push(priorLineDec);
+            copyDec.sort(function(arg1, arg2) {
+                if (arg1.start < arg2.start) {
+                    return -1
+                } else if (arg1.start == arg2.start) {
+                    return 0;
+                } else {
+                    return 1;
+                }
+            });
+        }
+        //避免原始修饰start被修改
+        copyDec = Util.copyObj(copyDec);
         //倒序移动位置
         for (var i = indexs.length - 1; i >= 0; i--) {
             var index = indexs[i];
