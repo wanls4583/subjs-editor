@@ -28,6 +28,59 @@
                 return Number(arg1) - Number(arg2);
             })
         },
+        //<,>转义
+        htmlTrans: function(cont) {
+            return cont.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        },
+        //克隆对象
+        copyObj: function(obj) {
+            if (typeof obj == 'object') {
+                return JSON.parse(JSON.stringify(obj));
+            }
+        },
+        /**
+         * 以key的数字排序顺序处理对象的每一项
+         * @param  {Objec} obj 待处理的U对象
+         * @param  {Function} callback 处理函数
+         * @param  {Number}   starKey  开始位置
+         * @param  {number}   endKey   结束位置
+         */
+        eachByKeyOrder: function(obj, callback, starKey, endKey) {
+            var keys = this.keys(obj);
+            this.sortNum(keys);
+            if (starKey <= endKey) { //顺序
+                for (var i = 0; i < keys.length; i++) {
+                    var key = Number(keys[i]);
+                    if (key >= starKey && key <= endKey) {
+                        var result = callback(obj[keys[i]], key);
+                        if (typeof result == 'boolean') {
+                            if (result) {
+                                break;
+                            } else {
+                                continue;
+                            }
+                        }
+                    }
+                }
+            } else { //倒序
+                var tmp = starKey;
+                starKey = endKey;
+                endKey = tmp;
+                for (var i = keys.length - 1; i >= 0; i--) {
+                    var key = Number(keys[i]);
+                    if (key >= starKey && key <= endKey) {
+                        var result = callback(obj[keys[i]], key);
+                        if (typeof result == 'boolean') {
+                            if (result) {
+                                break;
+                            } else {
+                                continue;
+                            }
+                        }
+                    }
+                }
+            }
+        },
         /**
          * 匹配正则
          * @param  {RegExp}   reg      匹配的正则
@@ -129,15 +182,6 @@
                 }
             }
             return result;
-        },
-        //<,>转义
-        htmlTrans: function(cont) {
-            return cont.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        },
-        copyObj: function(obj) {
-            if (typeof obj == 'object') {
-                return JSON.parse(JSON.stringify(obj));
-            }
         }
     }
     //多行匹配 ie. /*....*/
@@ -198,8 +242,8 @@
      */
     function JsMode(linesContext) {
         this.linesContext = linesContext;
-        this.preMatchs = []; //多行匹配开始记录
-        this.suffixMatchs = []; //多行匹配结束记录
+        this.preMatchs = {}; //多行匹配开始记录
+        this.suffixMatchs = {}; //多行匹配结束记录
         linesContext.setDecEngine(decEngine); //设置修饰对象的处理引擎
     }
     var _proto = JsMode.prototype;
@@ -245,8 +289,8 @@
     //多行代码高亮
     _proto.pairHighlight = function(startLine) {
         var self = this,
-            copyNowPreMatch = this.preMatchs[startLine - 1],
-            copyNowSuffixMatch = this.suffixMatchs[startLine - 1];
+            copyNowPreMatch = this.preMatchs[startLine],
+            copyNowSuffixMatch = this.suffixMatchs[startLine];
         _resetMatch(startLine);
         _doMatch(startLine);
         _checkSuffixMatchs(startLine);
@@ -254,31 +298,27 @@
         _checkIfOnPair(startLine);
         //撤销修饰
         function _resetMatch(startLine) {
-            var obj = self.suffixMatchs[startLine - 1];
-            if (obj) {
-                for (var start in obj) {
-                    for (var regIndex in obj[start]) {
-                        var suffixMatch = obj[start][regIndex];
-                        if (suffixMatch.preMatch) {
-                            self.resetMatchLine(suffixMatch.preMatch);
-                        }
+            var obj = self.suffixMatchs[startLine];
+            for (var start in obj) {
+                for (var regIndex in obj[start]) {
+                    var suffixMatch = obj[start][regIndex];
+                    if (suffixMatch.preMatch) {
+                        self.resetMatchLine(suffixMatch.preMatch);
                     }
                 }
             }
-            var obj = self.preMatchs[startLine - 1];
-            if (obj) {
-                for (var start in obj) {
-                    for (var regIndex in obj[start]) {
-                        var preMatch = obj[start][regIndex];
-                        self.resetMatchLine(preMatch);
-                    }
+            var obj = self.preMatchs[startLine];
+            for (var start in obj) {
+                for (var regIndex in obj[start]) {
+                    var preMatch = obj[start][regIndex];
+                    self.resetMatchLine(preMatch);
                 }
             }
         }
         //查找多好匹配标识
         function _doMatch(startLine) {
-            self.preMatchs[startLine - 1] = undefined;
-            self.suffixMatchs[startLine - 1] = undefined;
+            delete self.preMatchs[startLine]
+            delete self.suffixMatchs[startLine];
             __exec(true);
             __exec(false);
             //正则匹配
@@ -291,13 +331,13 @@
                     var result = Util.execReg(reg, exclude, str);
                     for (var j = 0; j < result.length; j++) {
                         if (ifPre) {
-                            self.preMatchs[startLine - 1] = self.preMatchs[startLine - 1] || {};
-                            self.preMatchs[startLine - 1][result[j].start] = self.preMatchs[startLine - 1][result[j].start] || {};
-                            self.preMatchs[startLine - 1][result[j].start][regIndex] = { line: startLine, start: result[j].start, end: result[j].end, regIndex: regIndex, className: className };
+                            self.preMatchs[startLine] = self.preMatchs[startLine] || {};
+                            self.preMatchs[startLine][result[j].start] = self.preMatchs[startLine][result[j].start] || {};
+                            self.preMatchs[startLine][result[j].start][regIndex] = { line: startLine, start: result[j].start, end: result[j].end, regIndex: regIndex, className: className };
                         } else {
-                            self.suffixMatchs[startLine - 1] = self.suffixMatchs[startLine - 1] || {};
-                            self.suffixMatchs[startLine - 1][result[j].start] = self.suffixMatchs[startLine - 1][result[j].start] || {};
-                            self.suffixMatchs[startLine - 1][result[j].start][regIndex] = { line: startLine, start: result[j].start, end: result[j].end, regIndex: regIndex, className: className };
+                            self.suffixMatchs[startLine] = self.suffixMatchs[startLine] || {};
+                            self.suffixMatchs[startLine][result[j].start] = self.suffixMatchs[startLine][result[j].start] || {};
+                            self.suffixMatchs[startLine][result[j].start][regIndex] = { line: startLine, start: result[j].start, end: result[j].end, regIndex: regIndex, className: className };
                         }
                     }
                 }
@@ -305,7 +345,7 @@
         }
         //检查suffixMatchs并渲染修饰
         function _checkSuffixMatchs(startLine) {
-            var obj = self.suffixMatchs[startLine - 1];
+            var obj = self.suffixMatchs[startLine];
             for (var start in obj) {
                 for (var regIndex in obj[start]) {
                     var suffixMatch = obj[start][regIndex];
@@ -329,7 +369,7 @@
             for (var start in copyNowSuffixMatch) {
                 for (var regIndex in copyNowSuffixMatch[start]) {
                     var suffixMatch = copyNowSuffixMatch[start][regIndex];
-                    if(suffixMatch.line != startLine){
+                    if (suffixMatch.line != startLine) {
                         break;
                     }
                     if (!obj || !obj[start] || !obj[start][regIndex]) {
@@ -344,7 +384,7 @@
         }
         //检查preMatchs并渲染修饰
         function _checkPreMatchs(startLine) {
-            var obj = self.preMatchs[startLine - 1];
+            var obj = self.preMatchs[startLine];
             for (var start in obj) {
                 for (var regIndex in obj[start]) {
                     var preMatch = obj[start][regIndex];
@@ -361,7 +401,7 @@
             for (var start in copyNowPreMatch) {
                 for (var regIndex in copyNowPreMatch[start]) {
                     var preMatch = copyNowPreMatch[start][regIndex];
-                    if(preMatch.line != startLine){
+                    if (preMatch.line != startLine) {
                         break;
                     }
                     if (!obj || !obj[start] || !obj[start][regIndex]) {
@@ -380,13 +420,14 @@
          * @return {Object}             preMatch
          */
         function _findPre(suffixMatch, startLine) {
-            for (var i = startLine || 1; i <= suffixMatch.line; i++) {
-                var obj = self.preMatchs[i - 1];
-                if (obj) {
-                    var cols = Util.keys(obj);
+            var startLine = startLine || 1,
+                result = null;
+            Util.eachByKeyOrder(self.preMatchs, function(item) {
+                if (item) {
+                    var cols = Util.keys(item);
                     Util.sortNum(cols);
                     for (var j = 0; j < cols.length; j++) {
-                        var preMatch = obj[cols[j]][suffixMatch.regIndex];
+                        var preMatch = item[cols[j]][suffixMatch.regIndex];
                         if (preMatch &&
                             (preMatch.line < suffixMatch.line ||
                                 preMatch.line == suffixMatch.line && preMatch.start < suffixMatch.start) &&
@@ -394,11 +435,13 @@
                                 preMatch.suffixMatch.line > suffixMatch.line ||
                                 preMatch.suffixMatch.line == suffixMatch.line && preMatch.suffixMatch.start > suffixMatch.start)) {
                             self.resetMatchLine(preMatch);
-                            return preMatch;
+                            result = preMatch;
+                            return true;
                         }
                     }
                 }
-            }
+            }, startLine, suffixMatch.line);
+            return result;
         }
         /*
         寻找后一个preMatch
@@ -409,27 +452,29 @@
         oldSuffixMatch/end...
         */
         function _findNextPre(nowMatch, oldSuffix) {
-            var endLine = self.linesContext.getLength();
+            var endLine = self.linesContext.getLength(),
+                result = null;
             if (oldSuffix) {
                 endLine = oldSuffix.line;
             }
-            for (var i = nowMatch.line; i <= endLine; i++) {
-                var obj = self.preMatchs[i - 1];
-                if (obj) {
-                    var cols = Util.keys(obj);
+            Util.eachByKeyOrder(self.preMatchs, function(item) {
+                if (item) {
+                    var cols = Util.keys(item);
                     Util.sortNum(cols);
                     for (var j = 0; j < cols.length; j++) {
-                        var preMatch = obj[cols[j]][nowMatch.regIndex];
+                        var preMatch = item[cols[j]][nowMatch.regIndex];
                         if (preMatch &&
                             (preMatch.line > nowMatch.line ||
                                 preMatch.line == nowMatch.line && preMatch.start > nowMatch.start) &&
                             (!oldSuffix || preMatch.line < oldSuffix.line ||
                                 preMatch.line == oldSuffix.line && preMatch.start < oldSuffix.start)) {
-                            return preMatch;
+                            result = preMatch;
+                            return true;
                         }
                     }
                 }
-            }
+            }, nowMatch.line, endLine);
+            return result;
         }
         /**
          * 寻找后面能与当前preMatch匹配的suffixMatchh
@@ -437,30 +482,29 @@
          * @return {Object}          匹配尾对象
          */
         function _findSuffix(preMatch) {
-            for (var i = preMatch.line; i <= self.linesContext.getLength(); i++) {
-                var obj = self.suffixMatchs[i - 1];
-                if (obj) {
-                    var cols = Util.keys(obj);
-                    Util.sortNum(cols);
-                    for (var j = 0; j < cols.length; j++) {
-                        var suffixMatch = obj[cols[j]][preMatch.regIndex];
-                        if (suffixMatch && (suffixMatch.line > preMatch.line ||
-                                suffixMatch.line == preMatch.line && suffixMatch.start > preMatch.start)) {
-                            if (!suffixMatch.preMatch ||
-                                suffixMatch.preMatch.line > preMatch.line ||
-                                suffixMatch.preMatch.line == preMatch.line && suffixMatch.preMatch.start > preMatch.start) {
-                                if (suffixMatch.preMatch) {
-                                    self.resetMatchLine(suffixMatch.preMatch);
-                                }
-                                return suffixMatch;
+            var result = null;
+            Util.eachByKeyOrder(self.suffixMatchs, function(item) {
+                var cols = Util.keys(item);
+                Util.sortNum(cols);
+                for (var j = 0; j < cols.length; j++) {
+                    var suffixMatch = item[cols[j]][preMatch.regIndex];
+                    if (suffixMatch && (suffixMatch.line > preMatch.line ||
+                            suffixMatch.line == preMatch.line && suffixMatch.start > preMatch.start)) {
+                        if (!suffixMatch.preMatch ||
+                            suffixMatch.preMatch.line > preMatch.line ||
+                            suffixMatch.preMatch.line == preMatch.line && suffixMatch.preMatch.start > preMatch.start) {
+                            if (suffixMatch.preMatch) {
+                                self.resetMatchLine(suffixMatch.preMatch);
                             }
-                            preMatch.hasAfterSuffix = true;
-                            return;
+                            result = suffixMatch;
                         }
+                        preMatch.hasAfterSuffix = true;
+                        return true;
                     }
-                    preMatch.hasAfterSuffix = false;
                 }
-            }
+                preMatch.hasAfterSuffix = false;
+            }, preMatch.line, self.linesContext.getLength());
+            return result;
         }
         /*
         寻找前一个suffixMatch（从该suffixMatch之后的位置开始寻找preMatch）
@@ -470,42 +514,39 @@
         nowSuffixMatch
          */
         function _findPreSuffix(suffixMatch) {
-            for (var i = suffixMatch.line; i >= 1; i--) {
-                var obj = self.suffixMatchs[i - 1];
-                if (obj) {
-                    var cols = Util.keys(obj);
-                    Util.sortNum(cols);
-                    for (var j = cols.length - 1; j >= 0; j--) {
-                        var _suffixMatch = obj[cols[j]][suffixMatch.regIndex];
-                        if (_suffixMatch.line < suffixMatch.line ||
-                            _suffixMatch.line == suffixMatch.line && _suffixMatch.start < suffixMatch.start) {
-                            return _suffixMatch;
-                        }
+            Util.eachByKeyOrder(self.suffixMatchs, function(item) {
+                var cols = Util.keys(item);
+                Util.sortNum(cols);
+                for (var j = cols.length - 1; j >= 0; j--) {
+                    var _suffixMatch = item[cols[j]][suffixMatch.regIndex];
+                    if (_suffixMatch &&
+                        (_suffixMatch.line < suffixMatch.line ||
+                            _suffixMatch.line == suffixMatch.line && _suffixMatch.start < suffixMatch.start)) {
+                        return _suffixMatch;
                     }
                 }
-            }
+            }, suffixMatch.line, 1);
         }
         /**
          * 检查行是否在多行匹配范围内
          * @param  {Number} line 行号
          */
         function _checkIfOnPair(line) {
-            for (var i = line - 1; i >= 1; i--) {
-                var obj = self.preMatchs[i - 1];
-                if (!obj) {
-                    continue;
+            Util.eachByKeyOrder(self.preMatchs, function(item) {
+                if (!item) {
+                    return false;
                 }
-                for (var start in obj) {
-                    for (var regIndex in obj[start]) {
-                        if (!obj[start][regIndex].suffixMatch && self.endMatch == obj[start][regIndex] ||
-                            obj[start][regIndex].suffixMatch && obj[start][regIndex].suffixMatch.line > line) {
-                            self.linesContext.setWhoeLineDec(line, obj[start][regIndex].className);
+                for (var start in item) {
+                    for (var regIndex in item[start]) {
+                        if (!item[start][regIndex].suffixMatch && self.endMatch == item[start][regIndex] ||
+                            item[start][regIndex].suffixMatch && item[start][regIndex].suffixMatch.line > line) {
+                            self.linesContext.setWhoeLineDec(line, item[start][regIndex].className);
                             self.linesContext.updateDom(line);
-                            break;
+                            return true;
                         }
                     }
                 }
-            }
+            }, line - 1, 1);
         }
     }
     //插入多行匹配修饰
@@ -620,20 +661,21 @@
      */
     _proto.resetLineNum = function(startLine) {
         //重置行号
-        for (var i = startLine; i < this.linesContext.getLength(); i++) {
-            var obj = this.preMatchs[i - 1];
-            for (var start in obj) {
-                for (var regIndex in obj[start]) {
-                    obj[start][regIndex].line = i;
+        Util.eachByKeyOrder(this.preMatchs, function(item, line) {
+            for (var start in item) {
+                for (var regIndex in item[start]) {
+                    item[start][regIndex].line = line;
                 }
             }
-            var obj = this.suffixMatchs[i - 1];
-            for (var start in obj) {
-                for (var regIndex in obj[start]) {
-                    obj[start][regIndex].line = i;
+        }, startLine, this.linesContext.getLength());
+        //重置行号
+        Util.eachByKeyOrder(this.suffixMatchs, function(item, line) {
+            for (var start in item) {
+                for (var regIndex in item[start]) {
+                    item[start][regIndex].line = line;
                 }
             }
-        }
+        }, startLine, this.linesContext.getLength());
     }
     /**
      * 当更新一行时触发
@@ -649,12 +691,19 @@
      * @param  {Number} length 插入的行数
      */
     _proto.onInsertContent = function(line, length) {
+        var self = this;
         if (length > 1) {
-            for (var i = 1; i < length; i++) {
-                this.preMatchs.splice(line, 0, undefined);
-                this.suffixMatchs.splice(line, 0, undefined);
-            }
-            this.resetLineNum(line);
+            //多行匹配符记录向后移动
+            Util.eachByKeyOrder(this.preMatchs, function(item, line) {
+                delete self.preMatchs[line];
+                self.preMatchs[line + length - 1] = item;
+            }, this.linesContext.getLength(), line + 1);
+            Util.eachByKeyOrder(this.suffixMatchs, function(item, line) {
+                delete self.suffixMatchs[line];
+                self.suffixMatchs[line + length - 1] = item;
+            }, this.linesContext.getLength(), line + 1);
+            //重置行号
+            this.resetLineNum(line + 1);
         }
         for (var i = line; i < line + length; i++) {
             this.onUpdateLine(i);
@@ -670,11 +719,22 @@
             lines = [line];
         if (length > 1) {
             var matchs = _findReCheckLines(line, line + length - 1);
-            for (var i = 1; i < length; i++) {
-                this.preMatchs.splice(line, 1);
-                this.suffixMatchs.splice(line, 1);
+            //删除
+            for (var i = line + 1; i < line + length; i++) {
+                delete this.preMatchs[i];
+                delete this.suffixMatchs[i];
             }
-            this.resetLineNum(line);
+            //多行匹配符记录向前移动
+            Util.eachByKeyOrder(this.preMatchs, function(item, line) {
+                delete self.preMatchs[line];
+                self.preMatchs[line - (length - 1)] = item;
+            }, line + length, this.linesContext.getLength());
+            Util.eachByKeyOrder(this.suffixMatchs, function(item, line) {
+                delete self.suffixMatchs[line];
+                self.suffixMatchs[line - (length - 1)] = item;
+            }, line + length, this.linesContext.getLength());
+            //重置行号
+            this.resetLineNum(line + 1);
             for (var i = 0; i < matchs.length; i++) {
                 var match = matchs[i];
                 !match.del && lines.push(match.line);
@@ -695,11 +755,10 @@
         //查找需要重新检查代码高亮的行（删除区域的多行匹配符可能影响删除区域外的行）
         function _findReCheckLines(startLine, endLine) {
             var matchs = [];
-            for (var i = startLine; i <= endLine; i++) {
-                var obj = self.preMatchs[i - 1];
-                for (var start in obj) {
-                    for (var regIndex in obj[start]) {
-                        var match = obj[start][regIndex];
+            Util.eachByKeyOrder(self.preMatchs, function(item) {
+                for (var start in item) {
+                    for (var regIndex in item[start]) {
+                        var match = item[start][regIndex];
                         if (match.suffixMatch && match.suffixMatch.line > endLine) {
                             matchs.push(match.suffixMatch);
                         } else if (!match.suffixMatch) {
@@ -709,17 +768,18 @@
                         }
                     }
                 }
-                var obj = self.suffixMatchs[i - 1];
-                for (var start in obj) {
-                    for (var regIndex in obj[start]) {
-                        var match = obj[start][regIndex];
+            }, startLine, endLine);
+            Util.eachByKeyOrder(self.suffixMatchs, function(item) {
+                for (var start in item) {
+                    for (var regIndex in item[start]) {
+                        var match = item[start][regIndex];
                         if (match.preMatch && match.preMatch.line < startLine) {
                             match.preMatch.suffixMatch = undefined;
                             matchs.push(match.preMatch);
                         }
                     }
                 }
-            }
+            }, startLine, endLine);
             return matchs;
         }
     }

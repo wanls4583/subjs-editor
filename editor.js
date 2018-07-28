@@ -641,6 +641,7 @@
         }
         this.cursorPos.line = this.cursorPos.line + strs.length - 1;
         this.updateScroll(true);
+        this.updateCursorPos();
     }
     /**
      * 从编辑器中删除多行
@@ -742,7 +743,7 @@
             var firstSelectLine = startPos.line + 1,
                 lastSelectLine = endPos.line - 1,
                 endLine = self.firstLine + self.maxVisualLine - 1;
-            if (firstSelectLine > endLine || lastSelectLine < self.firstSelectLine) {
+            if (firstSelectLine > endLine || lastSelectLine < firstSelectLine) {
                 return;
             }
             if (firstSelectLine < self.firstLine) {
@@ -1238,12 +1239,10 @@
                         if (preCode > 222 && e.keyCode == 16) { //中文输入后shift延迟较大
                             setTimeout(function() {
                                 _insertContent();
-                                self.updateCursorPos();
                             }, 150);
                         } else {
                             setTimeout(function() {
                                 _insertContent();
-                                self.updateCursorPos();
                             }, 0)
                         }
                 }
