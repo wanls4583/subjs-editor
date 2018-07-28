@@ -178,7 +178,7 @@
         //删除一行文本
         this.delete = function(line) {
             _content.splice(line - 1, 1);
-            _htmlDom[line - 1].remove();
+            _htmlDom[line - 1] && _htmlDom[line - 1].remove();
             _htmlDom.splice(line - 1, 1);
             _width.splice(line - 1, 1);
             _lineDecs.splice(line - 1, 1);
