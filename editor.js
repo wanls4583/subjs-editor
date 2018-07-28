@@ -165,7 +165,7 @@
             _content.splice(line - 1, 0, txt);
             _htmlDom.splice(line - 1, 0, undefined);
             _width.splice(line - 1, 0, 0);
-            _lineDecs.splice(line - 1, 0, {});
+            _lineDecs.splice(line - 1, 0, []);
             _lineWholeDecs.splice(line - 1, 0, '');
             _width[line - 1] = Util.getStrWidth(txt, SubJs.charWidth, SubJs.fullAngleCharWidth);
             if (_width[line - 1] > _maxObj.width) {

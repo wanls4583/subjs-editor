@@ -329,13 +329,13 @@
             for (var start in copyNowSuffixMatch) {
                 for (var regIndex in copyNowSuffixMatch[start]) {
                     var suffixMatch = copyNowSuffixMatch[start][regIndex];
+                    if(suffixMatch.line != startLine){
+                        break;
+                    }
                     if (!obj || !obj[start] || !obj[start][regIndex]) {
                         var preSuffxiMatch = _findPreSuffix(suffixMatch);
-                        if(preSuffxiMatch.line != startLine){
-                            break;
-                        }
                         var preMatch = _findPre(suffixMatch, preSuffxiMatch && preSuffxiMatch.line);
-                        if (startLine != preMatch.line) {
+                        if (preMatch && startLine != preMatch.line) {
                             _checkPreMatchs(preMatch.line);
                         }
                     }
@@ -733,15 +733,16 @@
         //处理HTML转义'>,<'--'&gt;,&lt;'
         var reg = />|</g,
             match = null,
-            indexs = [];
+            indexs = [],
+            copyDec = Util.copyObj(lineDec);
         while (match = reg.exec(content)) {
             indexs.push(match.index);
         }
         //倒序移动位置
         for (var i = indexs.length - 1; i >= 0; i--) {
             var index = indexs[i];
-            for (var j = lineDec.length - 1; j >= 0; j--) {
-                var obj = lineDec[j];
+            for (var j = copyDec.length - 1; j >= 0; j--) {
+                var obj = copyDec[j];
                 if (obj.start > index) {
                     obj.start += 3;
                 }
@@ -752,8 +753,8 @@
         }
         content = Util.htmlTrans(content);
         //生成HTML
-        for (var i = lineDec.length - 1; i >= 0; i--) {
-            var obj = lineDec[i];
+        for (var i = copyDec.length - 1; i >= 0; i--) {
+            var obj = copyDec[i];
             content = Util.insertStr(content, obj.end + 1, '</span>');
             content = Util.insertStr(content, obj.start, '<span class="' + obj.className + '">');
         }
