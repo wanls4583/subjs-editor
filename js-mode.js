@@ -282,10 +282,10 @@
                 _processQue.splice(index, 1);
             }
         }
-        this.get = function(index){
+        this.get = function(index) {
             return _processQue[index];
         }
-        this.getLength = function(){
+        this.getLength = function() {
             return _processQue.length;
         }
     }
@@ -816,7 +816,7 @@
                             match.del = true;
                             matchs.push(match);
                         }
-                        if (match.suffixMatch || match.hasAfterSuffix) {
+                        if (match.suffixMatch || match == self.endMatch) {
                             return true;
                         }
                     }
@@ -828,6 +828,9 @@
                         var match = item[start][regIndex];
                         if (match.preMatch && match.preMatch.line < startLine) {
                             matchs.push(match.preMatch);
+                            if (match.line > startLine) {
+                                match.preMatch.suffixMatch = undefined;
+                            }
                         }
                         if (match.preMatch) {
                             return true;

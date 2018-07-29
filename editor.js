@@ -1094,6 +1094,7 @@
             }
             setTimeout(function(){
                 self.$textWrap.show();
+                self.$textarea.focus();
             },0);
         })
         this.$textarea.on('cut', function() {
