@@ -177,15 +177,18 @@
                 _maxObj.line = line + 1;
             }
         }
-        //删除一行文本
-        this.delete = function(line) {
-            _content.splice(line - 1, 1);
-            _htmlDom[line - 1] && _htmlDom[line - 1].remove();
-            _htmlDom.splice(line - 1, 1);
-            _width.splice(line - 1, 1);
-            _lineDecs.splice(line - 1, 1);
-            _priorLineDecs.splice(line - 1, 1);
-            _lineWholeDecs.splice(line - 1, 1);
+        /**
+         * 删除多行（大数据处理时提高效率）
+         * @param  {Number} startLine       开始行
+         * @param  {Number} endLine         结束行
+         */
+        this.delete = function(startLine, endLine) {
+            _content.splice(startLine - 1, endLine - startLine + 1);
+            _htmlDom.splice(startLine - 1, endLine - startLine + 1);
+            _width.splice(startLine - 1, endLine - startLine + 1);
+            _lineDecs.splice(startLine - 1, endLine - startLine + 1);
+            _priorLineDecs.splice(startLine - 1, endLine - startLine + 1);
+            _lineWholeDecs.splice(startLine - 1, endLine - startLine + 1);
             _findMax = true;
         }
         //获取总行数
@@ -684,10 +687,13 @@
         } else {
             var str = this.linesContext.getText(startPos.line).substring(0, startPos.column) + this.linesContext.getText(endPos.line).substring(endPos.column);
             this.linesContext.setText(startPos.line, str);
-            //删除行
-            for (var i = startPos.line + 1; i <= endPos.line; i++) {
-                this.linesContext.delete(startPos.line + 1);
+             for (var i = this.firstLine; i < this.firstLine + this.maxVisualLine; i++) {
+                if (i >= startPos.line && i <= endPos.line) {
+                    this.linesContext.getDom(i).remove();
+                }
             }
+            //删除行
+            this.linesContext.delete(startPos.line + 1, endPos.line);
             this.cursorPos.line = startPos.line;
             this.cursorPos.column = startPos.column;
         }
