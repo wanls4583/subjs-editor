@@ -1086,9 +1086,15 @@
             } else {
                 self.copyText = copyText;
             }
+            //textarea含有大量数据时，布局将花费大量时间
+            self.$textWrap.hide();
+            self.$textarea.val('');
             if (copyText) {
                 self.insertContent(self.copyText);
             }
+            setTimeout(function(){
+                self.$textWrap.show();
+            },0);
         })
         this.$textarea.on('cut', function() {
             self.copyText = self.selection.selectText;
@@ -1147,8 +1153,6 @@
                 e.preventDefault();
                 self.selectAll();
             } else if (e.ctrlKey && e.keyCode == 67) { //ctrl+c
-                self.$textarea.val('');
-            } else if (e.ctrlKey && e.keyCode == 86) { //ctrl+v
                 self.$textarea.val('');
             } else {
                 switch (e.keyCode) {

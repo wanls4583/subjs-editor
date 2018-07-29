@@ -242,18 +242,18 @@
         className: 'comment'
     }]
 
-    function Processor(mode, processQue, linesContext) {
+    function Processor(mode, linesContext) {
         var _mode = mode;
         var _linesContext = linesContext;
-        var _processQue = processQue;
+        var _processQue = []; //带处理行队列
         var timer = null;
-
+        _processQue.hashMap = {};
         this.process = function() {
             var startTime = endTime = new Date().getTime(),
                 self = this;
             clearTimeout(timer);
             while (_processQue.length && endTime - startTime <= 17) {
-                mode.onUpdateLine(_processQue.pop());
+                mode.onUpdateLine(this.pop());
                 endTime = new Date().getTime();
             }
             if (_processQue.length) {
@@ -261,6 +261,32 @@
                     self.process();
                 }, 0);
             }
+        }
+
+        this.push = function(line) {
+            if (!_processQue.hashMap[line]) {
+                _processQue.push(line);
+                _processQue.hashMap[line] = true;
+            }
+        }
+        this.pop = function() {
+            if (_processQue.length) {
+                var line = _processQue.pop();
+                delete _processQue.hashMap[line];
+                return line;
+            }
+        }
+        this.del = function(index) {
+            if (_processQue[index]) {
+                delete _processQue.hashMap[_processQue[index]];
+                _processQue.splice(index, 1);
+            }
+        }
+        this.get = function(index){
+            return _processQue[index];
+        }
+        this.getLength = function(){
+            return _processQue.length;
         }
     }
     /**
@@ -271,8 +297,7 @@
         this.linesContext = linesContext;
         this.preMatchs = {}; //多行匹配开始记录
         this.suffixMatchs = {}; //多行匹配结束记录
-        this.processQue = []; //待处理h行队列
-        this.processor = new Processor(this, this.processQue, linesContext); //待处理队列
+        this.processor = new Processor(this, linesContext); //待处理队列
         linesContext.setDecEngine(decEngine); //设置修饰对象的处理引擎
     }
     var _proto = JsMode.prototype;
@@ -712,17 +737,16 @@
             //重置行号
             this.resetLineNum(line + 1);
         }
+        var queLength = this.processor.getLength();
         //待处理队列行重置
-        for (var i = 0; i < this.processQue.length; i++) {
-            if (this.processQue[i] > line) {
-                this.processQue[i] += length - 1;
+        for (var i = 0; i < queLength; i++) {
+            if (this.processor.get(i) > line) {
+                this.processor.get(i) += length - 1;
             }
         }
         //添加到待处理队列
         for (var i = line; i < line + length; i++) {
-            if (this.processQue.indexOf(i) == -1) {
-                this.processQue.push(i);
-            }
+            this.processor.push(i);
         }
         this.processor.process();
     }
@@ -764,18 +788,17 @@
                 }
             }
         }
+        var queLength = this.processor.getLength();
         //待处理队列行重置
-        for (var i = 0; i < this.processQue.length; i++) {
-            if (this.processQue[i] > line) {
-                this.processQue[i] -= length - 1;
-                this.processQue[i] < 1 && this.processQue.splice(i, 1), i--;
+        for (var i = 0; i < queLength; i++) {
+            if (this.processor.get(i) > line) {
+                this.processor.get(i) -= length - 1;
+                this.processor.get(i) < 1 && processQue.del(i), i--;
             }
         }
         //添加到待处理队列
-        for (var i = 0; i < lines.length; i++) {
-            if (this.processQue.indexOf(lines[i]) == -1) {
-                this.processQue.push(lines[i]);
-            }
+        for (var i = lines.length - 1; i >= 0; i--) {
+            this.processor.push(lines[i]);
         }
         this.processor.process();
 
@@ -793,7 +816,7 @@
                             match.del = true;
                             matchs.push(match);
                         }
-                        if(match.suffixMatch || match.hasAfterSuffix){
+                        if (match.suffixMatch || match.hasAfterSuffix) {
                             return true;
                         }
                     }
@@ -804,10 +827,9 @@
                     for (var regIndex in item[start]) {
                         var match = item[start][regIndex];
                         if (match.preMatch && match.preMatch.line < startLine) {
-                            match.preMatch.suffixMatch = undefined;
                             matchs.push(match.preMatch);
                         }
-                        if(match.preMatch){
+                        if (match.preMatch) {
                             return true;
                         }
                     }
