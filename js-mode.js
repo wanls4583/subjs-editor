@@ -297,7 +297,7 @@
         this.set = function(index, line) {
             delete _processQue.hashMap[_processQue[index]];
             _processQue.hashMap[line] = index;
-            _processQuep[index] = line;
+            _processQue[index] = line;
         }
         //获取待处理行的数量
         this.getLength = function() {
@@ -818,12 +818,12 @@
             Util.eachByKeyOrder(this.preMatchs, function(item, line) {
                 delete self.preMatchs[line];
                 self.preMatchs[line - (length - 1)] = item;
-            }, line + length, this.linesContext.getLength(), false);
+            }, line + length, this.linesContext.getLength() + length, false);
 
             Util.eachByKeyOrder(this.suffixMatchs, function(item, line) {
                 delete self.suffixMatchs[line];
                 self.suffixMatchs[line - (length - 1)] = item;
-            }, line + length, this.linesContext.getLength(), false);
+            }, line + length, this.linesContext.getLength() + length, false);
 
             //更新key列表
             this.preKeys = Util.keys(this.preMatchs);
@@ -883,6 +883,7 @@
                     }
                 }
             }, endLine, startLine, true, self.preKeys);
+            
             Util.eachByKeyOrder(self.suffixMatchs, function(item) {
                 for (var start in item) {
                     for (var regIndex in item[start]) {
