@@ -242,13 +242,16 @@
         exclude: Util.excludeStrReg(/\/\//),
         className: 'comment'
     }]
-
+    /**
+     * 处理器
+     * @param {Object} mode         语法高亮对象
+     * @param {Object} linesContext 文本容器对象
+     */
     function Processor(mode, linesContext) {
-        var _mode = mode;
-        var _linesContext = linesContext;
-        var _processQue = []; //带处理行队列
-        var timer = null;
-        _processQue.hashMap = {};
+        var _processQue = [], //带处理行队列
+            timer = null;
+        _processQue.hashMap = {}; //纪录待处理行，避免indexOf操作
+        //执行
         this.process = function() {
             var startTime = endTime = new Date().getTime(),
                 self = this;
@@ -263,7 +266,7 @@
                 }, 0);
             }
         }
-
+        //添加待处理行
         this.push = function(line) {
             if (!_processQue.hashMap[line]) {
                 _processQue.push(line);
@@ -271,6 +274,7 @@
                 _processQue.hashMap[line] = _processQue.length - 1;
             }
         }
+        //退出最后一个待处理行
         this.pop = function() {
             if (_processQue.length) {
                 var line = _processQue.pop();
@@ -278,15 +282,24 @@
                 return line;
             }
         }
+        //删出一个待处理行
         this.del = function(index) {
             if (_processQue[index]) {
                 delete _processQue.hashMap[_processQue[index]];
                 _processQue.splice(index, 1);
             }
         }
+        //获取待处理行
         this.get = function(index) {
             return _processQue[index];
         }
+        //重设待处理行
+        this.set = function(index, line) {
+            delete _processQue.hashMap[_processQue[index]];
+            _processQue.hashMap[line] = index;
+            _processQuep[index] = line;
+        }
+        //获取待处理行的数量
         this.getLength = function() {
             return _processQue.length;
         }
@@ -297,11 +310,16 @@
                 var lines = _processQue.splice(0, index + 1),
                     hashMap = {};
                 _processQue = _processQue.concat(lines);
-                for (var i = 0, length = _processQue.length; i < length; i++) {
-                    hashMap[_processQue[i]] = i;
-                }
-                _processQue.hashMap = hashMap;
+                this.updateHashMap();
             }
+        }
+        //更新hash
+        this.updateHashMap = function() {
+            var hashMap = {};
+            for (var i = 0, length = _processQue.length; i < length; i++) {
+                hashMap[_processQue[i]] = i;
+            }
+            _processQue.hashMap = hashMap;
         }
     }
     /**
@@ -751,19 +769,28 @@
             Util.eachByKeyOrder(this.preMatchs, function(item, line) {
                 delete self.preMatchs[line];
                 self.preMatchs[line + length - 1] = item;
-            }, this.linesContext.getLength(), line + 1, true, self.preKeys);
+            }, this.linesContext.getLength(), line + 1, true, this.preKeys);
+
             Util.eachByKeyOrder(this.suffixMatchs, function(item, line) {
                 delete self.suffixMatchs[line];
                 self.suffixMatchs[line + length - 1] = item;
-            }, this.linesContext.getLength(), line + 1, true, self.suffixKeys);
-            //重置行号
+            }, this.linesContext.getLength(), line + 1, true, this.suffixKeys);
+
+            //更新key列表
+            this.preKeys = Util.keys(this.preMatchs);
+            this.suffixKeys = Util.keys(this.suffixMatchs);
+
+            //更新行号
             this.resetLineNum(line + 1);
         }
+
+
         var queLength = this.processor.getLength();
         //待处理队列行重置
         for (var i = 0; i < queLength; i++) {
-            if (this.processor.get(i) > line) {
-                this.processor.get(i) += length - 1;
+            var _line = this.processor.get(i);
+            if (_line > line) {
+                this.processor.set(i, _line + length - 1);
             }
         }
         //添加到待处理队列
@@ -781,7 +808,7 @@
         var self = this,
             lines = [line];
         if (length > 1) {
-            var matchs = _findReCheckLines(line, line + length - 1);
+            var matchs = _findReCheckLines(line + 1, line + length - 1);
             //删除
             for (var i = line + 1; i < line + length; i++) {
                 delete this.preMatchs[i];
@@ -791,13 +818,20 @@
             Util.eachByKeyOrder(this.preMatchs, function(item, line) {
                 delete self.preMatchs[line];
                 self.preMatchs[line - (length - 1)] = item;
-            }, line + length, this.linesContext.getLength(), false, self.preKeys);
+            }, line + length, this.linesContext.getLength(), false);
+
             Util.eachByKeyOrder(this.suffixMatchs, function(item, line) {
                 delete self.suffixMatchs[line];
                 self.suffixMatchs[line - (length - 1)] = item;
-            }, line + length, this.linesContext.getLength(), false, self.suffixKeys);
-            //重置行号
+            }, line + length, this.linesContext.getLength(), false);
+
+            //更新key列表
+            this.preKeys = Util.keys(this.preMatchs);
+            this.suffixKeys = Util.keys(this.suffixMatchs);
+
+            //更新行号
             this.resetLineNum(line + 1);
+            
             for (var i = 0; i < matchs.length; i++) {
                 var match = matchs[i];
                 !match.del && lines.push(match.line);
@@ -813,9 +847,14 @@
         var queLength = this.processor.getLength();
         //待处理队列行重置
         for (var i = 0; i < queLength; i++) {
-            if (this.processor.get(i) > line) {
-                this.processor.get(i) -= length - 1;
-                this.processor.get(i) < 1 && processQue.del(i), i--;
+            var _line = this.processor.get(i);
+            if (_line > line) {
+                if (_line - (length - 1) > 0) {
+                    this.processor.set(i, _line - (length - 1));
+                } else {
+                    this.processor.del(i);
+                    i--;
+                }
             }
         }
         //添加到待处理队列
@@ -850,9 +889,7 @@
                         var match = item[start][regIndex];
                         if (match.preMatch && match.preMatch.line < startLine) {
                             matchs.push(match.preMatch);
-                            if (match.line > startLine) {
-                                match.preMatch.suffixMatch = undefined;
-                            }
+                            match.preMatch.suffixMatch = undefined;
                         }
                         if (match.preMatch) {
                             return true;

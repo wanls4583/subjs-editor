@@ -129,6 +129,10 @@
                 return w;
             }
             return this.scrBarWidth;
+        },
+        //<,>转义
+        htmlTrans: function(cont) {
+            return cont.replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }
     }
     window.Util = Util;
@@ -230,7 +234,7 @@
             if ($dom && $dom[0].isConnected) {
                 var wholeLineDec = _lineWholeDecs[line - 1];
                 if (wholeLineDec) {
-                    $dom.find('.code').html(_content[line - 1]);
+                    $dom.find('.code').html(Util.htmlTrans(_content[line - 1]));
                     $dom.find('.code').addClass(wholeLineDec);
                 } else {
                     $dom.find('.code').attr('class', 'code');
