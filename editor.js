@@ -802,6 +802,10 @@
         if (!firstLine) {
             firstLine = this.firstLine;
         }
+        //设置优先处理行
+        if(this.mode){
+            this.mode.setPriorLine(firstLine + this.maxVisualLine);
+        }
         var self = this,
             allDom = this.$context.find('.pre_code_line');
         //删除可视区域之前的元素

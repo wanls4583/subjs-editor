@@ -267,7 +267,8 @@
         this.push = function(line) {
             if (!_processQue.hashMap[line]) {
                 _processQue.push(line);
-                _processQue.hashMap[line] = true;
+                //存储值对应的索引
+                _processQue.hashMap[line] = _processQue.length - 1;
             }
         }
         this.pop = function() {
@@ -288,6 +289,19 @@
         }
         this.getLength = function() {
             return _processQue.length;
+        }
+        //设置优先处理行
+        this.setPriorLine = function(endLine) {
+            var index = _processQue.hashMap[endLine];
+            if (typeof index != 'undefined') {
+                var lines = _processQue.splice(0, index + 1),
+                    hashMap = {};
+                _processQue = _processQue.concat(lines);
+                for (var i = 0, length = _processQue.length; i < length; i++) {
+                    hashMap[_processQue[i]] = i;
+                }
+                _processQue.hashMap = hashMap;
+            }
         }
     }
     /**
@@ -718,7 +732,7 @@
         }, startLine, this.linesContext.getLength(), false, this.suffixKeys);
     }
     /**
-     * 当更新一行时触发
+     * 当更新一行时触发[外部接口]
      * @param  {行号} line 行号
      */
     _proto.onUpdateLine = function(line) {
@@ -726,7 +740,7 @@
         this.pairHighlight(line);
     }
     /**
-     * 当插入内容时触发
+     * 当插入内容时触发[外部接口]
      * @param  {Number} line   首行
      * @param  {Number} length 插入的行数
      */
@@ -759,7 +773,7 @@
         this.processor.process();
     }
     /**
-     * 当删除内容时触发多行匹配
+     * 当删除内容时触发多行匹配[外部接口]
      * @param  {Number} line   首行
      * @param  {Number} length 删除的行数
      */
@@ -848,6 +862,13 @@
             }, startLine, endLine, false, self.suffixKeys);
             return matchs;
         }
+    }
+    /**
+     * 设置优先处理行[外部接口]
+     * @param {Nunber} endLine 优先处理的末行
+     */
+    _proto.setPriorLine = function(endLine) {
+        this.processor.setPriorLine(endLine);
     }
     /**
      * 修饰引擎，用来处理修饰，生成HTML字符串
