@@ -13,7 +13,7 @@
         //兼容Object.keys
         keys: function(obj) {
             if (Object.keys) {
-                return Object.keys(obj);
+                return obj && Object.keys(obj) || [];
             } else {
                 var arr = [];
                 for (var key in obj) {
@@ -45,9 +45,10 @@
          * @param  {Number}   starKey  开始位置
          * @param  {Number}   endKey   结束位置
          * @param  {Boolean}  reverse  是否从大到小处理
+         * @param  {Array}  keys  关键字数组
          */
-        eachByKeyOrder: function(obj, callback, starKey, endKey, reverse) {
-            var keys = this.keys(obj);
+        eachByKeyOrder: function(obj, callback, starKey, endKey, reverse, keys) {
+            keys = keys || this.keys(obj);
             // this.sortNum(keys);
             if (!reverse) { //顺序
                 for (var i = 0; i < keys.length; i++) {
@@ -295,7 +296,9 @@
      */
     function JsMode(linesContext) {
         this.linesContext = linesContext;
+        this.preKeys = []; //存储preMatchs关键字列表，提升for in操作速度
         this.preMatchs = {}; //多行匹配开始记录
+        this.suffixKeys = []; //存储suffixMatchs关键字列表
         this.suffixMatchs = {}; //多行匹配结束记录
         this.processor = new Processor(this, linesContext); //待处理队列
         linesContext.setDecEngine(decEngine); //设置修饰对象的处理引擎
@@ -395,6 +398,11 @@
                         }
                     }
                 }
+                if (ifPre && self.preMatchs[startLine]) {
+                    self.preKeys = Util.keys(self.preMatchs);
+                } else if (!ifPre && self.suffixMatchs[startLine]) {
+                    self.suffixKeys = Util.keys(self.suffixMatchs);
+                }
             }
         }
         //检查suffixMatchs并渲染修饰
@@ -492,7 +500,7 @@
                         return true;
                     }
                 }
-            }, startLine, suffixMatch.line);
+            }, startLine, suffixMatch.line, false, self.preKeys);
             return result;
         }
         /*
@@ -525,7 +533,7 @@
                         }
                     }
                 }
-            }, nowMatch.line, endLine);
+            }, nowMatch.line, endLine, false, self.preKeys);
             return result;
         }
         /**
@@ -555,7 +563,7 @@
                     }
                 }
                 preMatch.hasAfterSuffix = false;
-            }, preMatch.line, self.linesContext.getLength());
+            }, preMatch.line, self.linesContext.getLength(), false, self.suffixKeys);
             return result;
         }
         /*
@@ -577,7 +585,7 @@
                         return _suffixMatch;
                     }
                 }
-            }, suffixMatch.line, 1, true);
+            }, suffixMatch.line, 1, true, self.suffixKeys);
         }
         /**
          * 检查行是否在多行匹配范围内
@@ -601,7 +609,7 @@
                     }
                     //最近的一个多行匹配头不匹配后可确定前面也没有匹配头与之匹配了
                     return true;
-                }, line - 1, 1, true);
+                }, line - 1, 1, true, self.preKeys);
             }
         }
     }
@@ -699,7 +707,7 @@
                     item[start][regIndex].line = line;
                 }
             }
-        }, startLine, this.linesContext.getLength());
+        }, startLine, this.linesContext.getLength(), false, this.preKeys);
         //重置行号
         Util.eachByKeyOrder(this.suffixMatchs, function(item, line) {
             for (var start in item) {
@@ -707,7 +715,7 @@
                     item[start][regIndex].line = line;
                 }
             }
-        }, startLine, this.linesContext.getLength());
+        }, startLine, this.linesContext.getLength(), false, this.suffixKeys);
     }
     /**
      * 当更新一行时触发
@@ -729,11 +737,11 @@
             Util.eachByKeyOrder(this.preMatchs, function(item, line) {
                 delete self.preMatchs[line];
                 self.preMatchs[line + length - 1] = item;
-            }, this.linesContext.getLength(), line + 1, true);
+            }, this.linesContext.getLength(), line + 1, true, self.preKeys);
             Util.eachByKeyOrder(this.suffixMatchs, function(item, line) {
                 delete self.suffixMatchs[line];
                 self.suffixMatchs[line + length - 1] = item;
-            }, this.linesContext.getLength(), line + 1, true);
+            }, this.linesContext.getLength(), line + 1, true, self.suffixKeys);
             //重置行号
             this.resetLineNum(line + 1);
         }
@@ -769,11 +777,11 @@
             Util.eachByKeyOrder(this.preMatchs, function(item, line) {
                 delete self.preMatchs[line];
                 self.preMatchs[line - (length - 1)] = item;
-            }, line + length, this.linesContext.getLength());
+            }, line + length, this.linesContext.getLength(), false, self.preKeys);
             Util.eachByKeyOrder(this.suffixMatchs, function(item, line) {
                 delete self.suffixMatchs[line];
                 self.suffixMatchs[line - (length - 1)] = item;
-            }, line + length, this.linesContext.getLength());
+            }, line + length, this.linesContext.getLength(), false, self.suffixKeys);
             //重置行号
             this.resetLineNum(line + 1);
             for (var i = 0; i < matchs.length; i++) {
@@ -821,7 +829,7 @@
                         }
                     }
                 }
-            }, endLine, startLine, true);
+            }, endLine, startLine, true, self.preKeys);
             Util.eachByKeyOrder(self.suffixMatchs, function(item) {
                 for (var start in item) {
                     for (var regIndex in item[start]) {
@@ -837,7 +845,7 @@
                         }
                     }
                 }
-            }, startLine, endLine);
+            }, startLine, endLine, false, self.suffixKeys);
             return matchs;
         }
     }
