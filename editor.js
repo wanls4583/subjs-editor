@@ -878,16 +878,18 @@
             originStartPos = self.pxToPos(top, left);
             select = false;
             autoDirect = '';
+            //去除选中区域
             if (e.button != 2) {
                 self.selection.selectText = '';
                 self.selection.startPos = null;
                 self.selection.endPos = null;
                 self.$selectBg.html('');
                 select = true;
-                self.$textWrap.css({
-                    'z-index': -1
-                });
             }
+            //输入框置底
+            self.$textWrap.css({
+                'z-index': -1
+            });
         });
         this.$wrapper.on('mousemove', function(e) {
             e.stopPropagation();
@@ -1064,8 +1066,9 @@
                 });
                 self.$textarea[0].focus();
                 if (self.selection.selectText) {
-                    self.$textarea.val(self.selection.selectText);
+                    self.$textarea.val(' ');
                     self.$textarea[0].select();
+                    console.log('select')
                 }
                 Util.nextFrame(function() {
                     self.selectAllText = Math.random();
