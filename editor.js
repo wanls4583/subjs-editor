@@ -1076,10 +1076,13 @@
     //copy,cut,paste事件
     _proto.bindEditorEvent = function() {
         var self = this;
-        this.$textarea.on('copy', function() {
+        var mime = window.clipboardData ? "Text" : "text/plain";
+        this.$textarea.on('copy', function(e) {
+            var clipboardData = e.originalEvent.clipboardData || window.clipboardData;
             self.copyText = self.selection.selectText;
-            self.$textarea.val(self.copyText);
-            self.$textarea.select();
+            clipboardData.setData(mime,self.copyText);
+            //返回false阻止默认复制，否则setData无效
+            return false;
         })
         this.$textarea.on('paste', function(e) {
             var copyText = '';
@@ -1087,23 +1090,18 @@
                 self.deleteContent(self.selection.startPos, self.selection.endPos);
             }
             if (e.originalEvent.clipboardData) {
-                copyText = e.originalEvent.clipboardData.getData('text');
+                copyText = e.originalEvent.clipboardData.getData(mime);
             }
             if (!copyText) {
                 copyText = self.copyText;
             } else {
                 self.copyText = copyText;
             }
-            //textarea含有大量数据时，布局将花费大量时间
-            self.$textWrap.hide();
-            self.$textarea.val('');
             if (copyText) {
                 self.insertContent(self.copyText);
             }
-            setTimeout(function(){
-                self.$textWrap.show();
-                self.$textarea.focus();
-            },0);
+            //如果不返回false，textarea会接受大量数据，网页会很卡
+            return false;
         })
         this.$textarea.on('cut', function() {
             self.copyText = self.selection.selectText;
