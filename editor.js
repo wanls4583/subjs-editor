@@ -706,6 +706,7 @@
             this.mode.onDeleteContent(startPos.line, endPos.line - startPos.line + 1);
         }
         this.updateScroll();
+        this.updateCursorPos();
         this.$selectBg.html('');
         this.selection = {};
     }
@@ -1085,12 +1086,13 @@
             return false;
         })
         this.$textarea.on('paste', function(e) {
-            var copyText = '';
+            var copyText = '',
+                clipboardData = e.originalEvent.clipboardData || window.clipboardData;
             if (self.selection.startPos) {
                 self.deleteContent(self.selection.startPos, self.selection.endPos);
             }
             if (e.originalEvent.clipboardData) {
-                copyText = e.originalEvent.clipboardData.getData(mime);
+                copyText = clipboardData.getData(mime);
             }
             if (!copyText) {
                 copyText = self.copyText;
@@ -1103,13 +1105,15 @@
             //如果不返回false，textarea会接受大量数据，网页会很卡
             return false;
         })
-        this.$textarea.on('cut', function() {
+        this.$textarea.on('cut', function(e) {
+            var clipboardData = e.originalEvent.clipboardData || window.clipboardData;
             self.copyText = self.selection.selectText;
-            self.$textarea.val(self.copyText);
-            self.$textarea.select();
+            clipboardData.setData(mime,self.copyText);
             if (self.selection.startPos) {
                 self.deleteContent(self.selection.startPos, self.selection.endPos);
             }
+            //返回false阻止默认复制，否则setData无效
+            return false;
         })
         this.$textarea.on('select', function() {
             //全选
