@@ -271,6 +271,15 @@
             _priorLineDecs[line - 1] = decoration;
         }
         /**
+         * 删除优先级行内修饰
+         * @param  {[type]} line       [description]
+         * @param  {[type]} decoration [description]
+         * @return {[type]}            [description]
+         */
+        this.delPriorLineDecs = function(line, decoration) {
+
+        }
+        /**
          * 获取高优先级行内的修饰
          * @param  {Number} line 行号
          * @return {Object}      该行对应的修饰对象
@@ -691,7 +700,7 @@
         } else {
             var str = this.linesContext.getText(startPos.line).substring(0, startPos.column) + this.linesContext.getText(endPos.line).substring(endPos.column);
             this.linesContext.setText(startPos.line, str);
-             for (var i = this.firstLine; i < this.firstLine + this.maxVisualLine; i++) {
+            for (var i = this.firstLine; i < this.firstLine + this.maxVisualLine; i++) {
                 if (i >= startPos.line && i <= endPos.line) {
                     this.linesContext.getDom(i).remove();
                 }
@@ -808,7 +817,7 @@
             firstLine = this.firstLine;
         }
         //设置优先处理行
-        if(this.mode){
+        if (this.mode) {
             this.mode.setPriorLine(firstLine + this.maxVisualLine);
         }
         var self = this,
@@ -1084,7 +1093,7 @@
         this.$textarea.on('copy', function(e) {
             var clipboardData = e.originalEvent.clipboardData || window.clipboardData;
             self.copyText = self.selection.selectText;
-            clipboardData.setData(mime,self.copyText);
+            clipboardData.setData(mime, self.copyText);
             //返回false阻止默认复制，否则setData无效
             return false;
         })
@@ -1111,7 +1120,7 @@
         this.$textarea.on('cut', function(e) {
             var clipboardData = e.originalEvent.clipboardData || window.clipboardData;
             self.copyText = self.selection.selectText;
-            clipboardData.setData(mime,self.copyText);
+            clipboardData.setData(mime, self.copyText);
             if (self.selection.startPos) {
                 self.deleteContent(self.selection.startPos, self.selection.endPos);
             }

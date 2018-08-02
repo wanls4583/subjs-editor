@@ -245,12 +245,13 @@
     /**
      * 多行匹配节点
      */
-    function Node(line, start, end, token, type) {
+    function Node(line, start, end, token, type, regIndex) {
         this.line = line;
         this.start = start;
         this.end = end;
         this.token = token;
         this.type = type; //1.开始，2.结束
+        this.regIndex = regIndex;
         this.next = null;
         this.prev = null;
         this.preSign = null;
@@ -377,7 +378,7 @@
         this.processor = new Processor(this, linesContext); //待处理队列
         this.tokenLists = [];
         linesContext.setDecEngine(decEngine); //设置修饰对象的处理引擎
-        for(var i=0; i<pairRegs.length; i++){
+        for (var i = 0; i < pairRegs.length; i++) {
             this.tokenLists.push(new TokenList());
         }
     }
@@ -423,7 +424,8 @@
     }
     //多行代码高亮
     _proto.pairHighlight = function(startLine) {
-        var self = this;
+        var self = this,
+            nodes = [];
 
         //查找多行匹配标识
         function _doMatch(startLine) {
@@ -444,6 +446,7 @@
                         var node = new Node(startLine, obj.start, obj.end, token, ifPre ? 1 : 2, regIndex);
                         //插入顺序链表
                         tokenList[regIndex].insert(node);
+                        nodes.push(node);
                         if (ifPre) {
                             self.preSigns[startLine] = self.preSigns[startLine] || {};
                             self.preSigns[startLine][result[j].start] = self.preSigns[startLine][result[j].start] || {};
@@ -459,8 +462,29 @@
         }
 
         //符号配对
-        function _matchSign(startLine){
-            
+        function _matchSign() {
+            for (var i = 0; i < nodes.length; i++) {
+                var node = nodes[i];
+                var tokenList = tokenLists[node.regIndex];
+                if (node.type == 1) { //开始符
+                    var next = node.next;
+                    while (next) {
+                        if (next.type == 2) {
+                            if (!next.preSign || next.preSign.line > node.line ||
+                                next.preSign.line == node.line && next.preSign.start > node.start) {
+                                if (next.preSign && next.preSign.line > node.line) {
+                                    self.undoToken(next.preSign);
+                                }
+                                self.renderToken(node);
+                            }
+                            break;
+                        }
+                        next = next.next;
+                    }
+                }else{
+                    
+                }
+            }
         }
     }
     /**
@@ -473,12 +497,12 @@
         if (preSign.suffixSign) {
             endLine = preSign.suffixSign.line - 1;
             if (preSign.line == preSign.suffixSign.line) {
-                self.linesContext.setPriorLineDecs({ line: preSign.line, start: preSign.start, end: preSign.suffixSign.end, className: preSign.className });
+                self.linesContext.setPriorLineDecs(preSign.line, { start: preSign.start, end: preSign.suffixSign.end, token: preSign.token });
                 self.linesContext.updateDom(preSign.line);
             } else {
-                self.linesContext.setPriorLineDecs({ line: preSign.line, start: preSign.start, end: self.linesContext.getText(preSign.line).length - 1, className: preSign.className });
+                self.linesContext.setPriorLineDecs(preSign.line, { start: preSign.start, end: self.linesContext.getText(preSign.line).length - 1, token: preSign.token });
                 self.linesContext.updateDom(preSign.line);
-                self.linesContext.setPriorLineDecs({ line: preSign.suffixSign.line, start: 0, end: preSign.suffixSign.end, className: preSign.className });
+                self.linesContext.setPriorLineDecs(preSign.suffixSign.line, { start: 0, end: preSign.suffixSign.end, token: preSign.token });
                 self.linesContext.updateDom(preSign.suffixSign.line);
             }
             __addWholeLineDec();
@@ -486,7 +510,7 @@
             (!self.endMatch ||
                 preSign.line < self.endMatch.line ||
                 preSign.line == self.endMatch.line && preSign.start < self.endMatch.start)) {
-            self.linesContext.setPriorLineDecs({ line: preSign.line, start: preSign.start, end: self.linesContext.getText(preSign.line).length - 1, className: preSign.className });
+            self.linesContext.setPriorLineDecs(preSign.line, { start: preSign.start, end: self.linesContext.getText(preSign.line).length - 1, token: preSign.token });
             self.linesContext.updateDom(preSign.line);
             self.endMatch = preSign;
             __addWholeLineDec();
@@ -494,7 +518,7 @@
         //添加整行修饰
         function __addWholeLineDec() {
             for (var i = preSign.line + 1; i <= endLine; i++) {
-                self.linesContext.setWhoeLineDec(i, preSign.className);
+                self.linesContext.setWhoeLineDec(i, preSign.token);
                 self.linesContext.updateDom(i);
             }
         }
@@ -509,17 +533,17 @@
         if (preSign.suffixSign) {
             endLine = preSign.suffixSign.line - 1;
             if (preSign.line == preSign.suffixSign.line) {
-                self.linesContext.setPriorLineDecs({ line: preSign.line, start: preSign.start, end: preSign.suffixSign.end });
+                self.linesContext.delPriorLineDecs(preSign.line, { start: preSign.start, end: preSign.suffixSign.end });
                 self.linesContext.updateDom(preSign.line);
             } else {
-                self.linesContext.setPriorLineDecs({ line: preSign.line, start: preSign.start, end: self.linesContext.getText(preSign.line).length - 1 });
+                self.linesContext.delPriorLineDecs(preSign.line, { start: preSign.start, end: self.linesContext.getText(preSign.line).length - 1 });
                 self.linesContext.updateDom(preSign.line);
-                self.linesContext.setPriorLineDecs({ line: preSign.suffixSign.line, start: 0, end: preSign.suffixSign.end });
+                self.linesContext.delPriorLineDecs(preSign.suffixSign.line, { start: 0, end: preSign.suffixSign.end });
                 self.linesContext.updateDom(preSign.suffixSign.line);
             }
             __delWholeLineDec();
         } else if (self.endMatch == preSign) {
-            self.linesContext.setPriorLineDecs({ line: preSign.line, start: preSign.start, end: self.linesContext.getText(preSign.line).length - 1 });
+            self.linesContext.delPriorLineDecs(preSign.line, { start: preSign.start, end: self.linesContext.getText(preSign.line).length - 1 });
             self.linesContext.updateDom(preSign.line);
             self.endMatch = undefined;
             __delWholeLineDec();
