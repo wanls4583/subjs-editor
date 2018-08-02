@@ -6,14 +6,23 @@ function resolve(dir) {
 }
 
 module.exports = {
+    devtool: '#cheap-module-eval-source-map',
     entry: './src/test.js',
     output: {
         // 编译输出的根路径
-        path:  resolve('dist'),
+        path: resolve('dist'),
         // 编译输出的文件名
         filename: 'bundle.js',
         // 正式发布环境下编译输出的发布路径
         // publicPath: './'
+    },
+    devServer: {
+        contentBase: resolve('dist'),
+        historyApiFallback: true,
+        hot: true,
+        inline: true,
+        progress: true,
+        port: 9090 //端口你可以自定义
     },
     resolve: {
         // 自动补全的扩展名

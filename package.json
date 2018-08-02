@@ -1,6 +1,11 @@
 {
   "devDependencies": {
     "babel-core": "^6.26.3",
-    "babel-loader": "^7.1.5"
+    "babel-loader": "^7.1.5",
+    "webpack-dev-server": "^2.11.1",
+    "webpack": "^3.10.0"
+  },
+  "scripts": {
+    "start": "webpack-dev-server --hot --inline"
   }
 }
