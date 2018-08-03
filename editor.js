@@ -268,7 +268,13 @@
          * @param {Object} decoration 修饰对象
          */
         this.setPriorLineDecs = function(line, decoration) {
-            _priorLineDecs[line - 1] = decoration;
+            _priorLineDecs[line - 1] = _priorLineDecs[line - 1]||[];
+            for(var i=0,length = _priorLineDecs[line - 1].length; i<length ; i++){
+                if(_priorLineDecs[line - 1][i].start == decoration.start || _priorLineDecs[line - 1][i].end == decoration.end){
+                    _priorLineDecs[line - 1].splice(i,1);
+                }
+            }
+            _priorLineDecs[line - 1].push(decoration);
         }
         /**
          * 删除优先级行内修饰
@@ -277,7 +283,12 @@
          * @return {[type]}            [description]
          */
         this.delPriorLineDecs = function(line, decoration) {
-
+            _priorLineDecs[line - 1] = _priorLineDecs[line - 1]||[];
+            for(var i=0,length = _priorLineDecs[line - 1].length; i<length ; i++){
+                if(_priorLineDecs[line - 1][i].start == decoration.start && _priorLineDecs[line - 1][i].end == decoration.end){
+                    _priorLineDecs[line - 1].splice(i,1);
+                }
+            }
         }
         /**
          * 获取高优先级行内的修饰
@@ -645,6 +656,9 @@
         var str = this.linesContext.getText(this.cursorPos.line) || '',
             strs = null,
             firstLine;
+        if (this.mode && this.cursorPos.line >= 1) {
+            this.mode.onInsertBefore(1);
+        }
         str = str.substring(0, this.cursorPos.column) + newContent + str.substr(this.cursorPos.column);
         strs = str.split(/\r\n|\r|\n/);
         if (strs[0]) { //'\n'.split(/\r\n|\r|\n/)->['','']
@@ -669,9 +683,9 @@
         this.renderLine(firstLine);
         if (this.mode) {
             if (this.cursorPos.line < 1) { //初始化坐标为(0,0)
-                this.mode.onInsertContent(1, 1, 1);
+                this.mode.onInsertAfter(1, 1);
             } else {
-                this.mode.onInsertContent(this.cursorPos.line, strs.length);
+                this.mode.onInsertAfter(this.cursorPos.line, strs.length);
             }
         }
         this.cursorPos.line = this.cursorPos.line + strs.length - 1;

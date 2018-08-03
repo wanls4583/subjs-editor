@@ -253,33 +253,51 @@
         this.type = type; //1.开始，2.结束
         this.regIndex = regIndex;
         this.next = null;
-        this.prev = null;
-        this.preSign = null;
-        this.suffixSign = null;
+        this.pre = null;
+        this.preToken = null;
+        this.suffixToken = null;
     }
     /**
      * 多行匹配链
      */
-    function TokenList {
+    function TokenList() {
         //链表头
-        this.head = new Node(0);
+        this.head = null;
+        this.last = null;
         //插入一个节点
         this.insert = function(node) {
             var head = this.head;
-            while (head.line < node.line || head.start < node.start) {
-                if (head.next) {
-                    head = head.next;
-                } else {
-                    break;
+            var last = this.last;
+            if (!head) {
+                this.head = node;
+                this.last = node;
+                return;
+            }
+            while (last.line > node.line || last.line == node.line && last.start > node.start) {
+                last = last.pre;
+                if (!last) {
+                    break
                 }
             }
-            head.next = node;
-            node.prev = head;
+            if(last){
+                if(last.next){
+                    last.next.pre = node;
+                    node.next = last.next;
+                    last.next = node;
+                }else{
+                    last.next = node;
+                    this.last = node;
+                }
+            }else{
+                this.head = node;
+                node.next = head;
+                head.pre = node;
+            }
         }
         //删除节点
         this.del = function(startNode, endNode) {
-            if (startNode.prev) {
-                startNode.prev.next = endNode.next;
+            if (startNode.pre) {
+                startNode.pre.next = endNode.next;
             } else {
                 this.head = endNode.next;
             }
@@ -300,7 +318,7 @@
                 self = this;
             clearTimeout(timer);
             while (_processQue.length && endTime - startTime <= 17) {
-                mode.onUpdateLine(this.pop());
+                mode.updateLine(this.pop());
                 endTime = new Date().getTime();
             }
             if (_processQue.length) {
@@ -371,10 +389,8 @@
      */
     function JsMode(linesContext) {
         this.linesContext = linesContext;
-        this.preKeys = []; //存储preSigns关键字列表，提升for in操作速度
-        this.preSigns = {}; //多行匹配开始记录
-        this.suffixKeys = []; //存储suffixSigns关键字列表
-        this.suffixSigns = {}; //多行匹配结束记录
+        this.preTokens = {}; //多行匹配开始记录
+        this.suffixTokens = {}; //多行匹配结束记录
         this.processor = new Processor(this, linesContext); //待处理队列
         this.tokenLists = [];
         linesContext.setDecEngine(decEngine); //设置修饰对象的处理引擎
@@ -427,10 +443,13 @@
         var self = this,
             nodes = [];
 
+        _doMatch();
+        _matchToken();
+
         //查找多行匹配标识
-        function _doMatch(startLine) {
-            delete self.preSigns[startLine]
-            delete self.suffixSigns[startLine];
+        function _doMatch() {
+            delete self.preTokens[startLine]
+            delete self.suffixTokens[startLine];
             __exec(true);
             __exec(false);
             //正则匹配
@@ -445,16 +464,22 @@
                         var obj = result[j];
                         var node = new Node(startLine, obj.start, obj.end, token, ifPre ? 1 : 2, regIndex);
                         //插入顺序链表
-                        tokenList[regIndex].insert(node);
+                        self.tokenLists[regIndex].insert(node);
                         nodes.push(node);
                         if (ifPre) {
-                            self.preSigns[startLine] = self.preSigns[startLine] || {};
-                            self.preSigns[startLine][result[j].start] = self.preSigns[startLine][result[j].start] || {};
-                            self.preSigns[startLine][result[j].start][regIndex] = node;
+                            self.preTokens[startLine] = self.preTokens[startLine] || {};
+                            self.preTokens[startLine][result[j].start] = self.preTokens[startLine][result[j].start] || {};
+                            self.preTokens[startLine][result[j].start][regIndex] = node;
+                            if (!self.preTokens[startLine].firstPreToken) {
+                                self.preTokens[startLine].firstPreToken = node; //记录一行最开始的preToken
+                            }
                         } else {
-                            self.suffixSigns[startLine] = self.suffixSigns[startLine] || {};
-                            self.suffixSigns[startLine][result[j].start] = self.suffixSigns[startLine][result[j].start] || {};
-                            self.suffixSigns[startLine][result[j].start][regIndex] = node;
+                            self.suffixTokens[startLine] = self.suffixTokens[startLine] || {};
+                            self.suffixTokens[startLine][result[j].start] = self.suffixTokens[startLine][result[j].start] || {};
+                            self.suffixTokens[startLine][result[j].start][regIndex] = node;
+                            if (!self.suffixTokens[startLine].firstSuffixToken) {
+                                self.suffixTokens[startLine].firstSuffixToken = node; //记录一行最开始的suffixToken
+                            }
                         }
                     }
                 }
@@ -462,112 +487,184 @@
         }
 
         //符号配对
-        function _matchSign() {
+        function _matchToken() {
             for (var i = 0; i < nodes.length; i++) {
                 var node = nodes[i];
-                var tokenList = tokenLists[node.regIndex];
+                var tokenList = self.tokenLists[node.regIndex];
                 if (node.type == 1) { //开始符
                     var next = node.next;
                     while (next) {
                         if (next.type == 2) {
-                            if (!next.preSign || next.preSign.line > node.line ||
-                                next.preSign.line == node.line && next.preSign.start > node.start) {
-                                if (next.preSign && next.preSign.line > node.line) {
-                                    self.undoToken(next.preSign);
+                            if (!next.preToken || next.preToken.line > node.line ||
+                                next.preToken.line == node.line && next.preToken.start > node.start) {
+                                if (next.preToken && next.preToken.line > node.line) {
+                                    self.undoToken(next.preToken);
                                 }
+                                node.suffixToken = next;
+                                next.preToken = node;
                                 self.renderToken(node);
                             }
                             break;
                         }
                         next = next.next;
                     }
-                }else{
-                    
+                } else {
+                    var pre = node.pre;
+                    while (pre) {
+                        if (pre.type == 2) {
+                            if (pre.next != node) {
+                                self.undoToken(pre.next);
+                                pre.next.suffixToken = node;
+                                node.preToken = pre.next;
+                                self.renderToken(pre.next);
+                            }
+                            break;
+                        } else if (!pre.pre) {
+                            self.undoToken(pre);
+                            pre.suffixToken = node;
+                            node.preToken = pre;
+                            self.renderToken(pre);
+                            break;
+                        }
+                        pre = pre.pre;
+                    }
                 }
             }
         }
     }
     /**
-     * 根据preSign挂载带修饰的HTML
-     * @param  {Object} preSign 匹配头
+     * 撤销某一行的多行匹配修饰
+     * @param  {Number} line 行号
      */
-    _proto.renderToken = function(preSign) {
+    _proto.undoTokenLine = function(line) {
+        var obj = this.suffixTokens[line];
+        for (var start in obj) {
+            for (var regIndex in obj[start]) {
+                var suffixToken = obj[start][regIndex];
+                if (suffixToken.preToken) {
+                    this.undoToken(suffixToken.preToken);
+                    this.processor.push(suffixToken.preToken.line);
+                }
+            }
+        }
+        var obj = this.preTokens[line];
+        for (var start in obj) {
+            for (var regIndex in obj[start]) {
+                var preToken = obj[start][regIndex];
+                this.undoToken(preToken);
+                this.processor.push(preToken.line);
+            }
+        }
+    }
+    /**
+     * 根据preToken挂载带修饰的HTML
+     * @param  {Object} preToken 匹配头
+     */
+    _proto.renderToken = function(preToken) {
         var self = this;
         var endLine = self.linesContext.getLength();
-        if (preSign.suffixSign) {
-            endLine = preSign.suffixSign.line - 1;
-            if (preSign.line == preSign.suffixSign.line) {
-                self.linesContext.setPriorLineDecs(preSign.line, { start: preSign.start, end: preSign.suffixSign.end, token: preSign.token });
-                self.linesContext.updateDom(preSign.line);
+        if (preToken.suffixToken) {
+            endLine = preToken.suffixToken.line - 1;
+            if (preToken.line == preToken.suffixToken.line) {
+                self.linesContext.setPriorLineDecs(preToken.line, { start: preToken.start, end: preToken.suffixToken.end, token: preToken.token });
+                self.linesContext.updateDom(preToken.line);
             } else {
-                self.linesContext.setPriorLineDecs(preSign.line, { start: preSign.start, end: self.linesContext.getText(preSign.line).length - 1, token: preSign.token });
-                self.linesContext.updateDom(preSign.line);
-                self.linesContext.setPriorLineDecs(preSign.suffixSign.line, { start: 0, end: preSign.suffixSign.end, token: preSign.token });
-                self.linesContext.updateDom(preSign.suffixSign.line);
+                self.linesContext.setPriorLineDecs(preToken.line, { start: preToken.start, end: self.linesContext.getText(preToken.line).length - 1, token: preToken.token });
+                self.linesContext.updateDom(preToken.line);
+                self.linesContext.setPriorLineDecs(preToken.suffixToken.line, { start: 0, end: preToken.suffixToken.end, token: preToken.token });
+                self.linesContext.updateDom(preToken.suffixToken.line);
             }
             __addWholeLineDec();
-        } else if (!preSign.hasAfterSuffix &&
+        } else if (!preToken.hasAfterSuffix &&
             (!self.endMatch ||
-                preSign.line < self.endMatch.line ||
-                preSign.line == self.endMatch.line && preSign.start < self.endMatch.start)) {
-            self.linesContext.setPriorLineDecs(preSign.line, { start: preSign.start, end: self.linesContext.getText(preSign.line).length - 1, token: preSign.token });
-            self.linesContext.updateDom(preSign.line);
-            self.endMatch = preSign;
+                preToken.line < self.endMatch.line ||
+                preToken.line == self.endMatch.line && preToken.start < self.endMatch.start)) {
+            self.linesContext.setPriorLineDecs(preToken.line, { start: preToken.start, end: self.linesContext.getText(preToken.line).length - 1, token: preToken.token });
+            self.linesContext.updateDom(preToken.line);
+            self.endMatch = preToken;
             __addWholeLineDec();
         }
         //添加整行修饰
         function __addWholeLineDec() {
-            for (var i = preSign.line + 1; i <= endLine; i++) {
-                self.linesContext.setWhoeLineDec(i, preSign.token);
+            for (var i = preToken.line + 1; i <= endLine; i++) {
+                self.linesContext.setWhoeLineDec(i, preToken.token);
                 self.linesContext.updateDom(i);
             }
         }
     }
     /**
-     * 撤销preSign挂载的修饰
-     * @param  {Object} preSign 匹配头
+     * 撤销preToken挂载的修饰
+     * @param  {Object} preToken 匹配头
      */
-    _proto.undoToken = function(preSign) {
+    _proto.undoToken = function(preToken) {
         var self = this;
-        var endLine = (self.endMatch == preSign && self.linesContext.getLength()) || -1;
-        if (preSign.suffixSign) {
-            endLine = preSign.suffixSign.line - 1;
-            if (preSign.line == preSign.suffixSign.line) {
-                self.linesContext.delPriorLineDecs(preSign.line, { start: preSign.start, end: preSign.suffixSign.end });
-                self.linesContext.updateDom(preSign.line);
+        var endLine = (self.endMatch == preToken && self.linesContext.getLength()) || -1;
+        if (preToken.suffixToken) {
+            endLine = preToken.suffixToken.line - 1;
+            if (preToken.line == preToken.suffixToken.line) {
+                self.linesContext.delPriorLineDecs(preToken.line, { start: preToken.start, end: preToken.suffixToken.end });
+                self.linesContext.updateDom(preToken.line);
             } else {
-                self.linesContext.delPriorLineDecs(preSign.line, { start: preSign.start, end: self.linesContext.getText(preSign.line).length - 1 });
-                self.linesContext.updateDom(preSign.line);
-                self.linesContext.delPriorLineDecs(preSign.suffixSign.line, { start: 0, end: preSign.suffixSign.end });
-                self.linesContext.updateDom(preSign.suffixSign.line);
+                self.linesContext.delPriorLineDecs(preToken.line, { start: preToken.start, end: self.linesContext.getText(preToken.line).length - 1 });
+                self.linesContext.updateDom(preToken.line);
+                self.linesContext.delPriorLineDecs(preToken.suffixToken.line, { start: 0, end: preToken.suffixToken.end });
+                self.linesContext.updateDom(preToken.suffixToken.line);
             }
             __delWholeLineDec();
-        } else if (self.endMatch == preSign) {
-            self.linesContext.delPriorLineDecs(preSign.line, { start: preSign.start, end: self.linesContext.getText(preSign.line).length - 1 });
-            self.linesContext.updateDom(preSign.line);
+        } else if (self.endMatch == preToken) {
+            self.linesContext.delPriorLineDecs(preToken.line, { start: preToken.start, end: self.linesContext.getText(preToken.line).length - 1 });
+            self.linesContext.updateDom(preToken.line);
             self.endMatch = undefined;
             __delWholeLineDec();
         }
-        if (preSign.suffixSign) {
-            preSign.suffixSign.preSign = undefined;
-            preSign.suffixSign = undefined;
-            preSign.hasAfterSuffix = false;
+        if (preToken.suffixToken) {
+            preToken.suffixToken.preToken = undefined;
+            preToken.suffixToken = undefined;
+            preToken.hasAfterSuffix = false;
         }
         //删除整行修饰
         function __delWholeLineDec() {
-            for (var i = preSign.line + 1; i <= endLine; i++) {
+            for (var i = preToken.line + 1; i <= endLine; i++) {
                 self.linesContext.setWhoeLineDec(i, '');
                 self.linesContext.updateDom(i);
             }
         }
     }
     /**
-     * 当更新一行时触发[外部接口]
-     * @param  {行号} line 行号
+     * 当更新一行时触发
+     * @param  {Number} line 行号
      */
-    _proto.onUpdateLine = function(line) {
+    _proto.updateLine = function(line) {
         this.highlight(line);
         this.pairHighlight(line);
+    }
+    /**
+     * 插入新行之前触发[外部接口]
+     * @param  {Number} startLine 行号
+     */
+    _proto.onInsertBefore = function(startLine) {
+        this.undoTokenLine(startLine);
+    }
+    /**
+     * 插入新行之后触发[外部接口]
+     * @param  {Number} startLine 开始行号
+     * @param  {Number} endLine   结束行号
+     */
+    _proto.onInsertAfter = function(startLine, endLine) {
+        for (var i = 0; i < pairRegs.length; i++) {
+            var tokenList = this.tokenLists[i];
+            var head = tokenList.head;
+            while (head) {
+                if (head.line > startLine) {
+                    head.line += endLine - startLine + 1;
+                }
+                head = head.next;
+            }
+        }
+        for (var i = startLine; i < endLine; i++) {
+            this.processor.push(i);
+        }
+        this.processor.process();
     }
     /**
      * 设置优先处理行[外部接口]
@@ -579,46 +676,49 @@
     /**
      * 修饰引擎，用来处理修饰，生成HTML字符串
      * @param  {String} content 一行内容
-     * @param  {Object} lineDec 修饰对象
+     * @param  {Object} lineToken 修饰对象
      * @return {String}         HTML字符串
      */
-    function decEngine(content, lineDec, priorLineDec) {
+    function decEngine(content, lineToken, priorLineToken) {
         //处理HTML转义'>,<'--'&gt;,&lt;'
         var reg = />|</g,
             match = null,
             indexs = [],
-            copyDec = Util.copyObj(lineDec); //避免原始修饰start被修改
+            copyToken = Util.copyObj(lineToken); //避免原始修饰start被修改
         while (match = reg.exec(content)) {
             indexs.push(match.index);
         }
         //高优先级修饰覆盖(多行匹配的头尾修饰)
-        if (priorLineDec && priorLineDec.token) {
-            for (var i = 0; i < copyDec.length; i++) {
-                var obj = copyDec[i];
-                //有交叉则删除
-                if (!(obj.end < priorLineDec.start || obj.start > priorLineDec.end)) {
-                    copyDec.splice(i, 1);
-                    i--;
+        if (priorLineToken && priorLineToken.length) {
+            for (var i = 0; i < priorLineToken.length; i++) {
+                var token = priorLineToken[i];
+                for (var j = 0; j < copyToken.length; j++) {
+                    var obj = copyToken[j];
+                    //有交叉则删除
+                    if (!(obj.end < token.start || obj.start > token.end)) {
+                        copyToken.splice(j, 1);
+                        j--;
+                    }
                 }
+                copyToken.push(token);
+                copyToken.sort(function(arg1, arg2) {
+                    if (arg1.start < arg2.start) {
+                        return -1
+                    } else if (arg1.start == arg2.start) {
+                        return 0;
+                    } else {
+                        return 1;
+                    }
+                });
             }
-            copyDec.push(priorLineDec);
-            copyDec.sort(function(arg1, arg2) {
-                if (arg1.start < arg2.start) {
-                    return -1
-                } else if (arg1.start == arg2.start) {
-                    return 0;
-                } else {
-                    return 1;
-                }
-            });
         }
         //避免原始修饰start被修改
-        copyDec = Util.copyObj(copyDec);
+        copyToken = Util.copyObj(copyToken);
         //倒序移动位置
         for (var i = indexs.length - 1; i >= 0; i--) {
             var index = indexs[i];
-            for (var j = copyDec.length - 1; j >= 0; j--) {
-                var obj = copyDec[j];
+            for (var j = copyToken.length - 1; j >= 0; j--) {
+                var obj = copyToken[j];
                 if (obj.start > index) {
                     obj.start += 3;
                 }
@@ -629,8 +729,8 @@
         }
         content = Util.htmlTrans(content);
         //生成HTML
-        for (var i = copyDec.length - 1; i >= 0; i--) {
-            var obj = copyDec[i];
+        for (var i = copyToken.length - 1; i >= 0; i--) {
+            var obj = copyToken[i];
             content = Util.insertStr(content, obj.end + 1, '</span>');
             content = Util.insertStr(content, obj.start, '<span class="' + obj.token + '">');
         }
