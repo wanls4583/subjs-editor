@@ -279,16 +279,16 @@
                     break
                 }
             }
-            if(last){
-                if(last.next){
+            if (last) {
+                if (last.next) {
                     last.next.pre = node;
                     node.next = last.next;
                     last.next = node;
-                }else{
+                } else {
                     last.next = node;
                     this.last = node;
                 }
-            }else{
+            } else {
                 this.head = node;
                 node.next = head;
                 head.pre = node;
@@ -492,42 +492,54 @@
                 var node = nodes[i];
                 var tokenList = self.tokenLists[node.regIndex];
                 if (node.type == 1) { //开始符
-                    var next = node.next;
-                    while (next) {
-                        if (next.type == 2) {
-                            if (!next.preToken || next.preToken.line > node.line ||
-                                next.preToken.line == node.line && next.preToken.start > node.start) {
-                                if (next.preToken && next.preToken.line > node.line) {
-                                    self.undoToken(next.preToken);
-                                }
-                                node.suffixToken = next;
-                                next.preToken = node;
-                                self.renderToken(node);
-                            }
-                            break;
-                        }
-                        next = next.next;
-                    }
+                    _findSuffixToken(node);
                 } else {
-                    var pre = node.pre;
-                    while (pre) {
-                        if (pre.type == 2) {
-                            if (pre.next != node) {
-                                self.undoToken(pre.next);
-                                pre.next.suffixToken = node;
-                                node.preToken = pre.next;
-                                self.renderToken(pre.next);
+                    _findPreToken(node);
+                }
+            }
+
+            function _findSuffixToken(node) {
+                var next = node.next;
+                while (next) {
+                    if (next.type == 2) {
+                        if (!next.preToken || next.preToken.line > node.line ||
+                            next.preToken.line == node.line && next.preToken.start > node.start) {
+                            if (next.preToken && next.preToken.line > node.line) {
+                                self.undoToken(next.preToken);
                             }
-                            break;
-                        } else if (!pre.pre) {
-                            self.undoToken(pre);
-                            pre.suffixToken = node;
-                            node.preToken = pre;
-                            self.renderToken(pre);
-                            break;
+                            node.suffixToken = next;
+                            next.preToken = node;
+                            self.renderToken(node);
                         }
-                        pre = pre.pre;
+                        break;
                     }
+                    next = next.next;
+                }
+            }
+
+            function _findPreToken(node) {
+                var pre = node.pre;
+                while (pre) {
+                    if (pre.type == 2) {
+                        if (pre.next != node) {
+                            self.undoToken(pre.next);
+                            pre.next.suffixToken = node;
+                            node.preToken = pre.next;
+                            self.renderToken(pre.next);
+                        }
+                        break;
+                    } else if (!pre.pre) {
+                        self.undoToken(pre);
+                        pre.suffixToken = node;
+                        node.preToken = pre;
+                        self.renderToken(pre);
+                        break;
+                    }
+                    pre = pre.pre;
+                }
+                //如果suffxiToken后面是preToken，需要为preToken重新匹配
+                if (node.next && node.next.type == 1) {
+                    _findSuffixToken(node.next);
                 }
             }
         }
