@@ -286,6 +286,7 @@
                     last.next = node;
                 } else {
                     last.next = node;
+                    node.pre = last;
                     this.last = node;
                 }
             } else {
@@ -389,8 +390,6 @@
      */
     function JsMode(linesContext) {
         this.linesContext = linesContext;
-        this.preTokens = {}; //多行匹配开始记录
-        this.suffixTokens = {}; //多行匹配结束记录
         this.processor = new Processor(this, linesContext); //待处理队列
         this.tokenLists = [];
         linesContext.setDecEngine(decEngine); //设置修饰对象的处理引擎
@@ -448,8 +447,6 @@
 
         //查找多行匹配标识
         function _doMatch() {
-            delete self.preTokens[startLine]
-            delete self.suffixTokens[startLine];
             __exec(true);
             __exec(false);
             //正则匹配
@@ -466,21 +463,6 @@
                         //插入顺序链表
                         self.tokenLists[regIndex].insert(node);
                         nodes.push(node);
-                        if (ifPre) {
-                            self.preTokens[startLine] = self.preTokens[startLine] || {};
-                            self.preTokens[startLine][result[j].start] = self.preTokens[startLine][result[j].start] || {};
-                            self.preTokens[startLine][result[j].start][regIndex] = node;
-                            if (!self.preTokens[startLine].firstPreToken) {
-                                self.preTokens[startLine].firstPreToken = node; //记录一行最开始的preToken
-                            }
-                        } else {
-                            self.suffixTokens[startLine] = self.suffixTokens[startLine] || {};
-                            self.suffixTokens[startLine][result[j].start] = self.suffixTokens[startLine][result[j].start] || {};
-                            self.suffixTokens[startLine][result[j].start][regIndex] = node;
-                            if (!self.suffixTokens[startLine].firstSuffixToken) {
-                                self.suffixTokens[startLine].firstSuffixToken = node; //记录一行最开始的suffixToken
-                            }
-                        }
                     }
                 }
             }
@@ -549,24 +531,7 @@
      * @param  {Number} line 行号
      */
     _proto.undoTokenLine = function(line) {
-        var obj = this.suffixTokens[line];
-        for (var start in obj) {
-            for (var regIndex in obj[start]) {
-                var suffixToken = obj[start][regIndex];
-                if (suffixToken.preToken) {
-                    this.undoToken(suffixToken.preToken);
-                    this.processor.push(suffixToken.preToken.line);
-                }
-            }
-        }
-        var obj = this.preTokens[line];
-        for (var start in obj) {
-            for (var regIndex in obj[start]) {
-                var preToken = obj[start][regIndex];
-                this.undoToken(preToken);
-                this.processor.push(preToken.line);
-            }
-        }
+
     }
     /**
      * 根据preToken挂载带修饰的HTML
@@ -663,17 +628,33 @@
      * @param  {Number} endLine   结束行号
      */
     _proto.onInsertAfter = function(startLine, endLine) {
-        for (var i = 0; i < pairRegs.length; i++) {
-            var tokenList = this.tokenLists[i];
-            var head = tokenList.head;
-            while (head) {
-                if (head.line > startLine) {
-                    head.line += endLine - startLine + 1;
+        if (endLine > startLine) {
+            var flag = false;
+            for (var i = 0; i < pairRegs.length; i++) {
+                var tokenList = this.tokenLists[i];
+                var head = tokenList.head;
+                while (head) {
+                    if (head.line > startLine) {
+                        head.line += endLine - startLine;
+                        if (!flag && head.type == 2) {
+                            if (head.preToken && head.preToken.line < startLine) {
+                                this.undoTokenLine(head.line);
+                            }
+                            flag = true;
+                        }
+                    }
+                    head = head.next;
                 }
-                head = head.next;
             }
         }
-        for (var i = startLine; i < endLine; i++) {
+        var length = this.processor.getLength();
+        for (var i = 0; i < length; i++) {
+            var line = this.processor.get(i);
+            if (line > startLine) {
+                this.processor.set(i, line + endLine - startLine);
+            }
+        }
+        for (var i = startLine; i <= endLine; i++) {
             this.processor.push(i);
         }
         this.processor.process();
