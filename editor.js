@@ -269,9 +269,10 @@
          */
         this.setPriorLineDecs = function(line, decoration) {
             _priorLineDecs[line - 1] = _priorLineDecs[line - 1] || [];
-            for (var i = 0, length = _priorLineDecs[line - 1].length; i < length; i++) {
+            for (var i = 0; i < _priorLineDecs[line - 1].length; i++) {
                 if (_priorLineDecs[line - 1][i].start == decoration.start || _priorLineDecs[line - 1][i].end == decoration.end) {
                     _priorLineDecs[line - 1].splice(i, 1);
+                    i--;
                 }
             }
             _priorLineDecs[line - 1].push(decoration);
@@ -284,9 +285,13 @@
          */
         this.delPriorLineDecs = function(line, decoration) {
             _priorLineDecs[line - 1] = _priorLineDecs[line - 1] || [];
-            for (var i = 0, length = _priorLineDecs[line - 1].length; i < length; i++) {
+            for (var i = 0; i < _priorLineDecs[line - 1].length; i++) {
+                if (!_priorLineDecs[line - 1][i]) {
+                    debugger;
+                }
                 if (_priorLineDecs[line - 1][i].start == decoration.start && _priorLineDecs[line - 1][i].end == decoration.end) {
                     _priorLineDecs[line - 1].splice(i, 1);
+                    i--;
                 }
             }
         }
