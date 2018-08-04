@@ -535,10 +535,12 @@
                             next.preToken = node;
                             self.renderToken(node);
                         }
-                        break;
+                        return;
                     }
                     next = next.next;
                 }
+                //其后没有suffixToken，检查是否可形成整行修饰
+                self.renderToken(node);
             }
 
             function _findPreToken(node) {
@@ -607,13 +609,12 @@
                 self.linesContext.updateDom(preToken.suffixToken.line);
             }
             __addWholeLineDec();
-        } else if (!preToken.hasAfterSuffix &&
-            (!self.endMatch ||
-                preToken.line < self.endMatch.line ||
-                preToken.line == self.endMatch.line && preToken.start < self.endMatch.start)) {
+        } else if (!self.endToken ||
+            preToken.line < self.endToken.line ||
+            preToken.line == self.endToken.line && preToken.start < self.endToken.start) {
             self.linesContext.setPriorLineDecs(preToken.line, { start: preToken.start, end: self.linesContext.getText(preToken.line).length - 1, token: preToken.token });
             self.linesContext.updateDom(preToken.line);
-            self.endMatch = preToken;
+            self.endToken = preToken;
             __addWholeLineDec();
         }
         //添加整行修饰
@@ -630,7 +631,7 @@
      */
     _proto.undoToken = function(preToken) {
         var self = this;
-        var endLine = (self.endMatch == preToken && self.linesContext.getLength()) || -1;
+        var endLine = (self.endToken == preToken && self.linesContext.getLength()) || -1;
         if (preToken.suffixToken) {
             endLine = preToken.suffixToken.line - 1;
             if (preToken.line == preToken.suffixToken.line) {
@@ -643,16 +644,15 @@
                 self.linesContext.updateDom(preToken.suffixToken.line);
             }
             __delWholeLineDec();
-        } else if (self.endMatch == preToken) {
+        } else if (self.endToken == preToken) {
             self.linesContext.delPriorLineDecs(preToken.line, { start: preToken.start, end: self.linesContext.getText(preToken.line).length - 1 });
             self.linesContext.updateDom(preToken.line);
-            self.endMatch = undefined;
+            self.endToken = null;
             __delWholeLineDec();
         }
         if (preToken.suffixToken) {
-            preToken.suffixToken.preToken = undefined;
-            preToken.suffixToken = undefined;
-            preToken.hasAfterSuffix = false;
+            preToken.suffixToken.preToken = null;
+            preToken.suffixToken = null;
         }
         //删除整行修饰
         function __delWholeLineDec() {
