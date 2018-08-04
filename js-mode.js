@@ -578,8 +578,10 @@
             var token = tokenList.find(line);
             while (token && token.line == line) {
                 if (token.type == 1) {
+                    this.processor.push(token.line);
                     this.undoToken(token);
                 } else if (token.preToken) {
+                    this.processor.push(token.preToken.line);
                     this.undoToken(token.preToken);
                 }
                 token = token.next;
