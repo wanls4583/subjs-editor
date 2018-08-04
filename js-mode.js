@@ -253,48 +253,71 @@
         this.type = type; //1.开始，2.结束
         this.regIndex = regIndex;
         this.next = null;
+        this.skipNext = null;
         this.pre = null;
+        this.skipPre = null;
         this.preToken = null;
         this.suffixToken = null;
     }
     /**
      * 多行匹配链
+     * @param {Number} skipGap 跳表最小间隔
      */
-    function TokenList() {
+    function TokenList(skipGap) {
         //链表头
-        this.head = null;
-        this.last = null;
+        this.head = new Node(0); //链表头
+        this.last = this.head; //链表头
+        this.skipHead = this.head; //跳表头
+        this.skipLast = this.head; //跳表尾
+
         //插入一个节点
         this.insert = function(node) {
-            var head = this.head;
             var last = this.last;
-            if (!head) {
-                this.head = node;
-                this.last = node;
-                return;
+            var skipHead = this.skipHead;
+            var skipLast = this.skipLast;
+
+            if (node.line <= 0) {
+                throw new Error('node.line can not less than 1');
             }
-            while (last.line > node.line || last.line == node.line && last.start > node.start) {
-                last = last.pre;
-                if (!last) {
-                    break
-                }
+
+            //寻找跳表头
+            while (skipLast && skipLast.line > node.line) {
+                skipLast = skipLast.skipPre;
             }
-            if (last) {
-                if (last.next) {
-                    last.next.pre = node;
-                    node.next = last.next;
-                    last.next = node;
+
+            //插入跳表
+            if (node.line - skipLast.line >= skipGap) {
+                if (skipLast.skipNext) {
+                    if (skipLast.skipNext.line - node.lien >= skipGap) {
+                        node.skipNext = skipLast.skipNext;
+                        skipLast.skipNext.skipPre = node;
+                        skipLast.skipNext = node;
+                        node.skipPre = skipLast;
+                    }
                 } else {
-                    last.next = node;
-                    node.pre = last;
-                    this.last = node;
+                    this.skipLast.skipNext = node;
+                    node.skipPre = this.skipLast;
+                    this.skipLast = node;
                 }
+            }
+
+            //寻找链表插入位置
+            while (skipLast && (skipLast.line < node.line || skipLast.line == node.line && skipLast.start < node.start)) {
+                skipLast = skipLast.next;
+            }
+
+            if (skipLast) {
+                skipLast.pre.next = node;
+                node.pre = skipLast.pre;
+                node.next = skipLast;
+                skipLast.pre = node;
             } else {
-                this.head = node;
-                node.next = head;
-                head.pre = node;
+                node.pre = this.last;
+                this.last.next = node;
+                this.last = node;
             }
         }
+
         //删除节点
         this.del = function(startNode, endNode) {
             if (startNode.pre) {
@@ -302,6 +325,26 @@
             } else {
                 this.head = endNode.next;
             }
+        }
+
+        //根据查找节点
+        this.find = function(line) {
+            var skipHead = this.skipHead;
+            //寻找跳表头
+            while (skipHead && skipHead.line < line) {
+                skipHead = skipHead.skipNext;
+            }
+
+            skipHead = skipHead && skipHead.skipPre || this.skipLast;
+
+            while (skipHead && skipHead.line <= line) {
+                if (skipHead.line == line) {
+                    return skipHead;
+                }
+                skipHead = skipHead.next;
+            }
+
+            return null;
         }
     }
     /**
@@ -389,12 +432,12 @@
      * @param {LinesContext} linesContext [行对应的内容]
      */
     function JsMode(linesContext) {
+        linesContext.setDecEngine(decEngine); //设置修饰对象的处理引擎
         this.linesContext = linesContext;
         this.processor = new Processor(this, linesContext); //待处理队列
         this.tokenLists = [];
-        linesContext.setDecEngine(decEngine); //设置修饰对象的处理引擎
         for (var i = 0; i < pairRegs.length; i++) {
-            this.tokenLists.push(new TokenList());
+            this.tokenLists.push(new TokenList(1000));
         }
     }
     var _proto = JsMode.prototype;
@@ -438,7 +481,7 @@
         this.linesContext.updateDom(currentLine);
     }
     //多行代码高亮
-    _proto.pairHighlight = function(startLine) {
+    _proto.tokenHighlight = function(startLine) {
         var self = this,
             nodes = [];
 
@@ -472,7 +515,6 @@
         function _matchToken() {
             for (var i = 0; i < nodes.length; i++) {
                 var node = nodes[i];
-                var tokenList = self.tokenLists[node.regIndex];
                 if (node.type == 1) { //开始符
                     _findSuffixToken(node);
                 } else {
@@ -501,7 +543,7 @@
 
             function _findPreToken(node) {
                 var pre = node.pre;
-                while (pre) {
+                while (pre && pre.line > 0) {
                     if (pre.type == 2) {
                         if (pre.next != node) {
                             self.undoToken(pre.next);
@@ -531,7 +573,18 @@
      * @param  {Number} line 行号
      */
     _proto.undoTokenLine = function(line) {
-
+        for (var i = 0; i < pairRegs.length; i++) {
+            var tokenList = this.tokenLists[i];
+            var token = tokenList.find(line);
+            while (token && token.line == line) {
+                if (token.type == 1) {
+                    this.undoToken(token);
+                } else if (token.preToken) {
+                    this.undoToken(token.preToken);
+                }
+                token = token.next;
+            }
+        }
     }
     /**
      * 根据preToken挂载带修饰的HTML
@@ -613,7 +666,7 @@
      */
     _proto.updateLine = function(line) {
         this.highlight(line);
-        this.pairHighlight(line);
+        this.tokenHighlight(line);
     }
     /**
      * 插入新行之前触发[外部接口]
@@ -632,7 +685,7 @@
             var flag = false;
             for (var i = 0; i < pairRegs.length; i++) {
                 var tokenList = this.tokenLists[i];
-                var head = tokenList.head;
+                var head = tokenList.head.next;
                 while (head) {
                     if (head.line > startLine) {
                         head.line += endLine - startLine;
