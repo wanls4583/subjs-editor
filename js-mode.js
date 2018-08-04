@@ -272,8 +272,6 @@
 
         //插入一个节点
         this.insert = function(node) {
-            var last = this.last;
-            var skipHead = this.skipHead;
             var skipLast = this.skipLast;
 
             if (node.line <= 0) {
@@ -684,19 +682,25 @@
      */
     _proto.onInsertAfter = function(startLine, endLine) {
         if (endLine > startLine) {
-            var flag = false;
+            var preFlag = false,
+                suffixFlag = false;
             for (var i = 0; i < pairRegs.length; i++) {
                 var tokenList = this.tokenLists[i];
                 var head = tokenList.head.next;
                 while (head) {
                     if (head.line > startLine) {
                         head.line += endLine - startLine;
-                        if (!flag && head.type == 2) {
+                        if (!suffixFlag && head.type == 2) {
+                            //最近的下一个 suffixToken
                             if (head.preToken && head.preToken.line < startLine) {
                                 this.undoTokenLine(head.line);
                             }
-                            flag = true;
+                            suffixFlag = true;
                         }
+                    //最近的可能影响到 starLine 的 preToken
+                    }else if(!preFlag && (!head.suffixToken || head.suffixToken.line > startLine)){
+                        this.undoTokenLine(head.line);
+                        preFlag = true;
                     }
                     head = head.next;
                 }
