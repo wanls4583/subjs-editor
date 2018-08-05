@@ -328,6 +328,14 @@
                     if (token == this.last) {
                         this.last = token.pre;
                     }
+                    //删除跳表项
+                    if(token.skipNext){
+                        token.skipNext.skipPre = token.skipPre;
+                        token.skipPre.skipNext = token.skipNext;
+                    }else if(token == this.skipLast){
+                        this.skipLast = token.skipPre;
+                        this.skipLast.skipNext = null;
+                    }
                     token = token.next;
                 }
             } else if (typeof line === 'object') {
@@ -337,6 +345,14 @@
                 line.pre.next = line.next;
                 if (line == this.last) {
                     this.last = line.pre;
+                }
+                //删除跳表项
+                if(line.skipNext){
+                    line.skipNext.skipPre = line.skipPre;
+                    line.skipPre.skipNext = line.skipNext;
+                }else if(line == this.skipLast){
+                    this.skipLast = line.skipPre;
+                    this.skipLast.skipNext = null;
                 }
             }
         }
