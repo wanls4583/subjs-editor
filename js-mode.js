@@ -316,16 +316,29 @@
             }
         }
 
-        //删除节点
-        this.del = function(startNode, endNode) {
-            if (startNode.pre) {
-                startNode.pre.next = endNode.next;
-            } else {
-                this.head = endNode.next;
+        //根据行号删除节点
+        this.del = function(line) {
+            if(typeof line === 'number'){
+                var token = this.find(line);
+                while(token && token.line <= line){
+                    if(token.next){
+                        token.next.pre = token.pre;
+                    }
+                    token.pre.next = token.next;
+                    if(token == this.last){
+                        this.last = token.pre;
+                    }
+                    token = token.next;
+                }
+            }else if(typeof line === 'object'){
+                line.pre.next = line.next;
+                if(line == this.last){
+                    this.last = line.pre;
+                }
             }
         }
 
-        //根据查找节点
+        //根据行号查找节点
         this.find = function(line) {
             var skipHead = this.skipHead;
             //寻找跳表头
@@ -371,7 +384,7 @@
         }
         //添加待处理行
         this.push = function(line) {
-            if (!_processQue.hashMap[line]) {
+            if (_processQue.hashMap[line] == undefined) {
                 _processQue.push(line);
                 //存储值对应的索引
                 _processQue.hashMap[line] = _processQue.length - 1;
@@ -488,6 +501,10 @@
 
         //查找多行匹配标识
         function _doMatch() {
+            //先删除
+            for(var i=0; i<pairRegs.length; i++){
+                self.tokenLists[i].del(startLine);
+            }
             __exec(true);
             __exec(false);
             //正则匹配
@@ -525,7 +542,7 @@
                 while (next) {
                     if (next.type == 2) {
                         if (!next.preToken || next.preToken.line > node.line ||
-                            next.preToken.line == node.line && next.preToken.start > node.start) {
+                            next.preToken.line == node.line && next.preToken.start >= node.start) {
                             if (next.preToken && next.preToken.line > node.line) {
                                 self.undoToken(next.preToken);
                             }
@@ -545,14 +562,12 @@
                 var pre = node.pre;
                 while (pre && pre.line > 0) {
                     if (pre.type == 2) {
-                        if (pre.next != node) {
-                            self.undoToken(pre.next);
-                            pre.next.suffixToken = node;
-                            node.preToken = pre.next;
-                            self.renderToken(pre.next);
-                        }
+                        self.undoToken(pre.next);
+                        pre.next.suffixToken = node;
+                        node.preToken = pre.next;
+                        self.renderToken(pre.next);
                         break;
-                    } else if (!pre.pre) {
+                    } else if (pre.pre.line == 0) {
                         self.undoToken(pre);
                         pre.suffixToken = node;
                         node.preToken = pre;
@@ -698,7 +713,7 @@
                             suffixFlag = true;
                         }
                     //最近的可能影响到 starLine 的 preToken
-                    }else if(!preFlag && (!head.suffixToken || head.suffixToken.line > startLine)){
+                    }else if(!preFlag && head.type == 1 && (!head.suffixToken || head.suffixToken.line > startLine)){
                         this.undoTokenLine(head.line);
                         preFlag = true;
                     }
