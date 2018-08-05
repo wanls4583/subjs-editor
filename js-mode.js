@@ -562,12 +562,14 @@
                 var pre = node.pre;
                 while (pre && pre.line > 0) {
                     if (pre.type == 2) {
-                        self.undoToken(pre.next);
-                        pre.next.suffixToken = node;
-                        node.preToken = pre.next;
-                        self.renderToken(pre.next);
+                        if(pre.next.type == 1){
+                            self.undoToken(pre.next);
+                            pre.next.suffixToken = node;
+                            node.preToken = pre.next;
+                            self.renderToken(pre.next);
+                        }
                         break;
-                    } else if (pre.pre.line == 0) {
+                    } else if (pre.pre.line == 0 && pre.type == 1) {
                         self.undoToken(pre);
                         pre.suffixToken = node;
                         node.preToken = pre;
