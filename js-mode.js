@@ -331,6 +331,9 @@
                     token = token.next;
                 }
             } else if (typeof line === 'object') {
+                if (line.next) {
+                    line.next.pre = line.pre;
+                }
                 line.pre.next = line.next;
                 if (line == this.last) {
                     this.last = line.pre;
@@ -388,6 +391,9 @@
                 _processQue.push(line);
                 //存储值对应的索引
                 _processQue.hashMap[line] = _processQue.length - 1;
+            }else{ //放到最后
+                this.del(_processQue.hashMap[line]);
+                this.push(line);
             }
         }
         //退出最后一个待处理行
@@ -611,13 +617,16 @@
             var tokenList = this.tokenLists[i];
             var token = tokenList.find(line);
             while (token && token.line == line) {
-                this.processor.push(token.line);
                 if (token.type == 1) {
+                    if(token.suffixToken){
+                        this.processor.push(token.suffixToken.line);
+                    }
                     this.undoToken(token);
                 } else if (token.preToken) {
                     this.processor.push(token.preToken.line);
                     this.undoToken(token.preToken);
                 }
+                this.processor.push(token.line);
                 token = token.next;
             }
         }
