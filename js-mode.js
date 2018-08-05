@@ -543,12 +543,18 @@
                     if (next.type == 2) {
                         if (!next.preToken || next.preToken.line > node.line ||
                             next.preToken.line == node.line && next.preToken.start >= node.start) {
-                            if (next.preToken && next.preToken.line > node.line) {
-                                self.undoToken(next.preToken);
+                            //suffixToken 所在行已经渲染过一次，避免重复渲染
+                            if(next.preToken && next.preToken.line == node.line && next.preToken.start == node.start){
+                                node.suffixToken = next;
+                                next.preToken = node;
+                            }else{
+                                if (next.preToken && next.preToken.line > node.line) {
+                                    self.undoToken(next.preToken);
+                                }
+                                node.suffixToken = next;
+                                next.preToken = node;
+                                self.renderToken(node);
                             }
-                            node.suffixToken = next;
-                            next.preToken = node;
-                            self.renderToken(node);
                         }
                         return;
                     }
@@ -563,17 +569,29 @@
                 while (pre && pre.line > 0) {
                     if (pre.type == 2) {
                         if(pre.next.type == 1){
-                            self.undoToken(pre.next);
-                            pre.next.suffixToken = node;
-                            node.preToken = pre.next;
-                            self.renderToken(pre.next);
+                            //preToken 所在行已经渲染过一次，避免重复渲染
+                            if(pre.next.suffixToken && pre.next.suffixToken.line == node.line && pre.next.suffixToken.start == node.start){
+                                pre.next.suffixToken = node;
+                                node.preToken = pre.next;
+                            }else{
+                                self.undoToken(pre.next);
+                                pre.next.suffixToken = node;
+                                node.preToken = pre.next;
+                                self.renderToken(pre.next);
+                            }
                         }
                         break;
                     } else if (pre.pre.line == 0 && pre.type == 1) {
-                        self.undoToken(pre);
-                        pre.suffixToken = node;
-                        node.preToken = pre;
-                        self.renderToken(pre);
+                        //preToken 所在行已经渲染过一次，避免重复渲染
+                        if(pre.suffixToken && pre.suffixToken.line == node.line && pre.suffixToken.start == node.start){
+                            pre.suffixToken = node;
+                            node.preToken = pre;
+                        }else{
+                            self.undoToken(pre);
+                            pre.suffixToken = node;
+                            node.preToken = pre;
+                            self.renderToken(pre);
+                        }
                         break;
                     }
                     pre = pre.pre;
