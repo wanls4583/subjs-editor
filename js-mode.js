@@ -318,21 +318,21 @@
 
         //根据行号删除节点
         this.del = function(line) {
-            if(typeof line === 'number'){
+            if (typeof line === 'number') {
                 var token = this.find(line);
-                while(token && token.line <= line){
-                    if(token.next){
+                while (token && token.line <= line) {
+                    if (token.next) {
                         token.next.pre = token.pre;
                     }
                     token.pre.next = token.next;
-                    if(token == this.last){
+                    if (token == this.last) {
                         this.last = token.pre;
                     }
                     token = token.next;
                 }
-            }else if(typeof line === 'object'){
+            } else if (typeof line === 'object') {
                 line.pre.next = line.next;
-                if(line == this.last){
+                if (line == this.last) {
                     this.last = line.pre;
                 }
             }
@@ -501,8 +501,7 @@
 
         //查找多行匹配标识
         function _doMatch() {
-            //先删除
-            for(var i=0; i<pairRegs.length; i++){
+            for (var i = 0; i < pairRegs.length; i++) {
                 self.tokenLists[i].del(startLine);
             }
             __exec(true);
@@ -544,10 +543,10 @@
                         if (!next.preToken || next.preToken.line > node.line ||
                             next.preToken.line == node.line && next.preToken.start >= node.start) {
                             //suffixToken 所在行已经渲染过一次，避免重复渲染
-                            if(next.preToken && next.preToken.line == node.line && next.preToken.start == node.start){
+                            if (next.preToken && next.preToken.line == node.line && next.preToken.start == node.start) {
                                 node.suffixToken = next;
                                 next.preToken = node;
-                            }else{
+                            } else {
                                 if (next.preToken && next.preToken.line > node.line) {
                                     self.undoToken(next.preToken);
                                 }
@@ -568,12 +567,12 @@
                 var pre = node.pre;
                 while (pre && pre.line > 0) {
                     if (pre.type == 2) {
-                        if(pre.next.type == 1){
+                        if (pre.next.type == 1) {
                             //preToken 所在行已经渲染过一次，避免重复渲染
-                            if(pre.next.suffixToken && pre.next.suffixToken.line == node.line && pre.next.suffixToken.start == node.start){
+                            if (pre.next.suffixToken && pre.next.suffixToken.line == node.line && pre.next.suffixToken.start == node.start) {
                                 pre.next.suffixToken = node;
                                 node.preToken = pre.next;
-                            }else{
+                            } else {
                                 self.undoToken(pre.next);
                                 pre.next.suffixToken = node;
                                 node.preToken = pre.next;
@@ -583,10 +582,10 @@
                         break;
                     } else if (pre.pre.line == 0 && pre.type == 1) {
                         //preToken 所在行已经渲染过一次，避免重复渲染
-                        if(pre.suffixToken && pre.suffixToken.line == node.line && pre.suffixToken.start == node.start){
+                        if (pre.suffixToken && pre.suffixToken.line == node.line && pre.suffixToken.start == node.start) {
                             pre.suffixToken = node;
                             node.preToken = pre;
-                        }else{
+                        } else {
                             self.undoToken(pre);
                             pre.suffixToken = node;
                             node.preToken = pre;
@@ -612,8 +611,8 @@
             var tokenList = this.tokenLists[i];
             var token = tokenList.find(line);
             while (token && token.line == line) {
+                this.processor.push(token.line);
                 if (token.type == 1) {
-                    this.processor.push(token.line);
                     this.undoToken(token);
                 } else if (token.preToken) {
                     this.processor.push(token.preToken.line);
@@ -707,15 +706,7 @@
      * 插入新行之前触发[外部接口]
      * @param  {Number} startLine 行号
      */
-    _proto.onInsertBefore = function(startLine) {
-        this.undoTokenLine(startLine);
-    }
-    /**
-     * 插入新行之后触发[外部接口]
-     * @param  {Number} startLine 开始行号
-     * @param  {Number} endLine   结束行号
-     */
-    _proto.onInsertAfter = function(startLine, endLine) {
+    _proto.onInsertBefore = function(startLine, endLine) {
         if (endLine > startLine) {
             var preFlag = false,
                 suffixFlag = false;
@@ -732,8 +723,8 @@
                             }
                             suffixFlag = true;
                         }
-                    //最近的可能影响到 starLine 的 preToken
-                    }else if(!preFlag && head.type == 1 && (!head.suffixToken || head.suffixToken.line > startLine)){
+                        //最近的可能影响到 startLine 的 preToken
+                    } else if (!preFlag && head.type == 1 && (head == this.endToken || head.suffixToken && head.suffixToken.line > startLine)) {
                         this.undoTokenLine(head.line);
                         preFlag = true;
                     }
@@ -748,9 +739,68 @@
                 this.processor.set(i, line + endLine - startLine);
             }
         }
+        this.undoTokenLine(startLine);
+    }
+    /**
+     * 插入新行之后触发[外部接口]
+     * @param  {Number} startLine 开始行号
+     * @param  {Number} endLine   结束行号
+     */
+    _proto.onInsertAfter = function(startLine, endLine) {
         for (var i = startLine; i <= endLine; i++) {
             this.processor.push(i);
         }
+        this.processor.process();
+    }
+    /**
+     * 删除行之前触发[外部接口]
+     * @param  {Number} startLine 行号
+     */
+    _proto.onDeleteBefore = function(startLine, endLine) {
+        if (endLine > startLine) {
+            var preFlag = false,
+                suffixFlag = false;
+            for (var i = 0; i < pairRegs.length; i++) {
+                var tokenList = this.tokenLists[i];
+                var head = tokenList.head.next;
+                while (head) {
+                    //可能影响到区域外的行
+                    if (head.type == 1) {
+                        if (!preFlag && head.line < startLine && (head == this.endToken || head.suffixToken && head.suffixToken.line >= startLine)) {
+                            this.undoTokenLine(head.line);
+                            preFlag = true;
+                        } else if (!suffixFlag && head.line <= endLine && (head == this.endToken || head.suffixToken && head.suffixToken.line > endLine)) {
+                            this.undoTokenLine(head.line);
+                            suffixFlag = true;
+                        }
+                    }
+                    if (head.line > endLine) {
+                        head.line -= endLine - startLine;
+                    } else if (head.line > startLine) {
+                        tokenList.del(head);
+                    }
+                    head = head.next;
+                }
+            }
+        }
+        var length = this.processor.getLength();
+        for (var i = 0; i < length; i++) {
+            var line = this.processor.get(i);
+            if (line > endLine) {
+                this.processor.set(i, line - (endLine - startLine));
+            } else if (line > startLine) {
+                this.processor.del(i);
+            }
+        }
+        this.undoTokenLine(startLine);
+    }
+    /**
+     * 删除行之后触发[外部接口]
+     * @param  {Number} startLine 开始行号
+     * @param  {Number} endLine   结束行号
+     */
+    _proto.onDeleteAfter = function(startLine, endLine) {
+        this.processor.push(startLine);
         this.processor.process();
     }
     /**

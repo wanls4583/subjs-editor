@@ -661,9 +661,6 @@
         var str = this.linesContext.getText(this.cursorPos.line) || '',
             strs = null,
             firstLine;
-        if (this.mode && this.cursorPos.line >= 1) {
-            this.mode.onInsertBefore(this.cursorPos.line);
-        }
         str = str.substring(0, this.cursorPos.column) + newContent + str.substr(this.cursorPos.column);
         strs = str.split(/\r\n|\r|\n/);
         if (strs[0]) { //'\n'.split(/\r\n|\r|\n/)->['','']
@@ -675,6 +672,9 @@
             }
         } else {
             this.cursorPos.column = 0;
+        }
+        if (this.mode && this.cursorPos.line >= 1) {
+            this.mode.onInsertBefore(this.cursorPos.line, this.cursorPos.line + strs.length - 1);
         }
         //粘贴操作可能存在换号符,需要添加新行
         for (var tmp = 1; tmp < strs.length; tmp++) {
@@ -712,6 +712,7 @@
             }
             endPos = { line: line, column: this.linesContext.getText(line).length };
         }
+        this.mode && this.mode.onDeleteBefore(startPos.line, endPos.line);
         if (startPos.line == endPos.line) {
             var str = this.linesContext.getText(startPos.line);
             this.linesContext.setText(startPos.line, str.substring(0, startPos.column) + str.substring(endPos.column));
@@ -730,9 +731,7 @@
             this.cursorPos.column = startPos.column;
         }
         this.renderLine();
-        if (this.mode) {
-            this.mode.onDeleteContent(startPos.line, endPos.line - startPos.line + 1);
-        }
+        this.mode && this.mode.onDeleteAfter(startPos.line, endPos.line);
         this.updateScroll();
         this.updateCursorPos();
         this.$selectBg.html('');
