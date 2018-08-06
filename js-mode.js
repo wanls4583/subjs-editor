@@ -286,7 +286,7 @@
             //插入跳表
             if (node.line - skipLast.line >= skipGap) {
                 if (skipLast.skipNext) {
-                    if (skipLast.skipNext.line - node.lien >= skipGap) {
+                    if (skipLast.skipNext.line - node.line >= skipGap) {
                         node.skipNext = skipLast.skipNext;
                         skipLast.skipNext.skipPre = node;
                         skipLast.skipNext = node;
@@ -329,10 +329,10 @@
                         this.last = token.pre;
                     }
                     //删除跳表项
-                    if(token.skipNext){
+                    if (token.skipNext) {
                         token.skipNext.skipPre = token.skipPre;
                         token.skipPre.skipNext = token.skipNext;
-                    }else if(token == this.skipLast){
+                    } else if (token == this.skipLast) {
                         this.skipLast = token.skipPre;
                         this.skipLast.skipNext = null;
                     }
@@ -347,10 +347,10 @@
                     this.last = line.pre;
                 }
                 //删除跳表项
-                if(line.skipNext){
+                if (line.skipNext) {
                     line.skipNext.skipPre = line.skipPre;
                     line.skipPre.skipNext = line.skipNext;
-                }else if(line == this.skipLast){
+                } else if (line == this.skipLast) {
                     this.skipLast = line.skipPre;
                     this.skipLast.skipNext = null;
                 }
@@ -378,86 +378,179 @@
         }
     }
     /**
-     * 处理器
+     * 任务处理器
+     * @param {Number} skipGap      跳表最小间隔
      * @param {Object} mode         语法高亮对象
      * @param {Object} linesContext 文本容器对象
      */
-    function Processor(mode, linesContext) {
-        var _processQue = [], //带处理行队列
-            timer = null;
-        _processQue.hashMap = {}; //纪录待处理行，避免indexOf操作
+    function TaskList(skipGap, mode, linesContext) {
+        var timer = null;
+
+        this.head = new Task(0);
+        this.last = this.head;
+        this.skipHead = this.head;
+        this.skipLast = this.head;
+        this.nowTask = this.head;
+
         //执行
         this.process = function() {
             var startTime = endTime = new Date().getTime(),
                 self = this;
             clearTimeout(timer);
-            while (_processQue.length && endTime - startTime <= 17) {
-                mode.updateLine(this.pop());
+            while (endTime - startTime <= 17) {
+                if (!this.nowTask || this.nowTask.line < 1) {
+                    this.nowTask = this.last;
+                }
+                if (this.nowTask && this.nowTask.line > 0) {
+                    mode.updateLine(this.nowTask.line);
+                    this.nowTask = this.nowTask.pre;
+                    this.del(this.nowTask.next);
+                }
                 endTime = new Date().getTime();
             }
-            if (_processQue.length) {
+            if (this.head.next) {
                 timer = setTimeout(function() {
                     self.process();
                 }, 0);
             }
         }
+
         //添加待处理行
-        this.push = function(line) {
-            if (_processQue.hashMap[line] == undefined) {
-                _processQue.push(line);
-                //存储值对应的索引
-                _processQue.hashMap[line] = _processQue.length - 1;
-            }else{ //放到最后
-                this.del(_processQue.hashMap[line]);
-                this.push(line);
+        this.insert = function(line) {
+            var task = this.find(line);
+            if (!task) {
+                var skipLast = this.skipLast;
+                task = new Task(line);
+
+                //寻找跳表头
+                while (skipLast && skipLast.line > task.line) {
+                    skipLast = skipLast.skipPre;
+                }
+
+                //插入跳表
+                if (task.line - skipLast.line >= skipGap) {
+                    if (skipLast.skipNext) {
+                        if (skipLast.skipNext.line - task.line >= skipGap) {
+                            task.skipNext = skipLast.skipNext;
+                            skipLast.skipNext.skipPre = task;
+                            skipLast.skipNext = task;
+                            task.skipPre = skipLast;
+                        }
+                    } else {
+                        this.skipLast.skipNext = task;
+                        task.skipPre = this.skipLast;
+                        this.skipLast = task;
+                    }
+                }
+
+                //寻找链表插入位置
+                while (skipLast && skipLast.line < task.line) {
+                    skipLast = skipLast.next;
+                }
+                if (skipLast) {
+                    skipLast.pre.next = task;
+                    task.pre = skipLast.pre;
+                    task.next = skipLast;
+                    skipLast.pre = task;
+                } else {
+                    task.pre = this.last;
+                    this.last.next = task;
+                    this.last = task;
+                }
             }
         }
-        //退出最后一个待处理行
-        this.pop = function() {
-            if (_processQue.length) {
-                var line = _processQue.pop();
-                delete _processQue.hashMap[line];
-                return line;
-            }
-        }
+
         //删出一个待处理行
-        this.del = function(index) {
-            if (_processQue[index]) {
-                delete _processQue.hashMap[_processQue[index]];
-                _processQue.splice(index, 1);
+        this.del = function(line) {
+            if (typeof line === 'number') {
+                var task = this.find(line);
+                while (task && task.line <= line) {
+                    if (task.next) {
+                        task.next.pre = task.pre;
+                    }
+                    task.pre.next = task.next;
+                    if (task == this.last) {
+                        this.last = task.pre;
+                    }
+
+                    //删除跳表项
+                    if (task.skipNext) {
+                        task.skipNext.skipPre = task.skipPre;
+                        task.skipPre.skipNext = task.skipNext;
+                    } else if (task == this.skipLast) {
+                        this.skipLast = task.skipPre;
+                        this.skipLast.skipNext = null;
+                    }
+                    task = task.next;
+                }
+            } else if (typeof line === 'object') {
+                if (line.next) {
+                    line.next.pre = line.pre;
+                }
+                line.pre.next = line.next;
+                if (line == this.last) {
+                    this.last = line.pre;
+                }
+                //删除跳表项
+                if (line.skipNext) {
+                    line.skipNext.skipPre = line.skipPre;
+                    line.skipPre.skipNext = line.skipNext;
+                } else if (line == this.skipLast) {
+                    this.skipLast = line.skipPre;
+                    this.skipLast.skipNext = null;
+                }
             }
         }
-        //获取待处理行
-        this.get = function(index) {
-            return _processQue[index];
+
+        //根据行号查找节点
+        this.find = function(line) {
+            var skipHead = this.skipHead;
+            //寻找跳表头
+            while (skipHead && skipHead.line < line) {
+                skipHead = skipHead.skipNext;
+            }
+
+            skipHead = skipHead && skipHead.skipPre || this.skipLast;
+
+            while (skipHead && skipHead.line <= line) {
+                if (skipHead.line == line) {
+                    return skipHead;
+                }
+                skipHead = skipHead.next;
+            }
+
+            return null;
         }
-        //重设待处理行
-        this.set = function(index, line) {
-            delete _processQue.hashMap[_processQue[index]];
-            _processQue.hashMap[line] = index;
-            _processQue[index] = line;
-        }
-        //获取待处理行的数量
-        this.getLength = function() {
-            return _processQue.length;
-        }
+
         //设置优先处理行
         this.setPriorLine = function(endLine) {
-            var index = _processQue.hashMap[endLine];
-            if (typeof index != 'undefined') {
-                var lines = _processQue.splice(0, index + 1),
-                    hashMap = {};
-                _processQue = _processQue.concat(lines);
-                this.updateHashMap();
+            var skipHead = this.skipHead;
+            //寻找跳表头
+            while (skipHead && skipHead.line < endLine) {
+                skipHead = skipHead.skipNext;
+            }
+
+            skipHead = skipHead && skipHead.skipPre || this.skipLast;
+
+            while (skipHead && skipHead.line < endLine) {
+                skipHead = skipHead.next;
+            }
+
+            if (skipHead) {
+                this.nowTask = skipHead;
             }
         }
-        //更新hash
-        this.updateHashMap = function() {
-            var hashMap = {};
-            for (var i = 0, length = _processQue.length; i < length; i++) {
-                hashMap[_processQue[i]] = i;
-            }
-            _processQue.hashMap = hashMap;
+
+        /**
+         * 当行匹配检测任务
+         * @param {Number} line 需要检测的行
+         */
+        function Task(line) {
+            this.line = line;
+            this.pre = null;
+            this.next = null;
+            this.skipPre = null;
+            this.skipNext = null;
         }
     }
     /**
@@ -467,7 +560,7 @@
     function JsMode(linesContext) {
         linesContext.setDecEngine(decEngine); //设置修饰对象的处理引擎
         this.linesContext = linesContext;
-        this.processor = new Processor(this, linesContext); //待处理队列
+        this.taskList = new TaskList(1000, this, linesContext); //待处理队列
         this.tokenLists = [];
         for (var i = 0; i < pairRegs.length; i++) {
             this.tokenLists.push(new TokenList(1000));
@@ -627,25 +720,28 @@
     /**
      * 撤销某一行的多行匹配修饰
      * @param  {Number} line 行号
+     * @return {Array}       需要重新检测的行
      */
     _proto.undoTokenLine = function(line) {
+        var recheckLines = [];
         for (var i = 0; i < pairRegs.length; i++) {
             var tokenList = this.tokenLists[i];
             var token = tokenList.find(line);
             while (token && token.line == line) {
                 if (token.type == 1) {
-                    if(token.suffixToken){
-                        this.processor.push(token.suffixToken.line);
+                    if (token.suffixToken) {
+                        recheckLines.push(token.suffixToken.line);
                     }
                     this.undoToken(token);
                 } else if (token.preToken) {
-                    this.processor.push(token.preToken.line);
+                    recheckLines.push(token.preToken.line);
                     this.undoToken(token.preToken);
                 }
-                this.processor.push(token.line);
+                recheckLines.push(token.line);
                 token = token.next;
             }
         }
+        return recheckLines;
     }
     /**
      * 根据preToken挂载带修饰的HTML
@@ -732,6 +828,8 @@
      * @param  {Number} startLine 行号
      */
     _proto.onInsertBefore = function(startLine, endLine) {
+        var recheckLines = [startLine],
+            self = this;
         if (endLine > startLine) {
             var preFlag = false,
                 suffixFlag = false;
@@ -744,27 +842,35 @@
                         if (!suffixFlag && head.type == 2) {
                             //最近的下一个 suffixToken
                             if (head.preToken && head.preToken.line < startLine) {
-                                this.undoTokenLine(head.line);
+                                recheckLines = recheckLines.concat(this.undoTokenLine(head.line));
                             }
                             suffixFlag = true;
                         }
                         //最近的可能影响到 startLine 的 preToken
                     } else if (!preFlag && head.type == 1 && (head == this.endToken || head.suffixToken && head.suffixToken.line > startLine)) {
-                        this.undoTokenLine(head.line);
+                        recheckLines = recheckLines.concat(this.undoTokenLine(head.line));
                         preFlag = true;
                     }
                     head = head.next;
                 }
             }
         }
-        var length = this.processor.getLength();
-        for (var i = 0; i < length; i++) {
-            var line = this.processor.get(i);
-            if (line > startLine) {
-                this.processor.set(i, line + endLine - startLine);
-            }
+        var task = this.taskList.find(startLine);
+        while (task && (task = task.next)) {
+            task.line += endLine - startLine;
         }
-        this.undoTokenLine(startLine);
+        recheckLines = recheckLines.concat(this.undoTokenLine(startLine));
+        for (var i = startLine + 1; i <= endLine; i++) {
+            recheckLines.push(i);
+        }
+        Util.sortNum(recheckLines);
+        for (var i = 0; i < recheckLines.length; i++) {
+            this.taskList.insert(recheckLines[i]);
+        }
+        this.setPriorLine(startLine);
+        setTimeout(function(){
+            self.setPriorLine(recheckLines[recheckLines.length - 1]);
+        });
     }
     /**
      * 插入新行之后触发[外部接口]
@@ -772,16 +878,15 @@
      * @param  {Number} endLine   结束行号
      */
     _proto.onInsertAfter = function(startLine, endLine) {
-        for (var i = startLine; i <= endLine; i++) {
-            this.processor.push(i);
-        }
-        this.processor.process();
+        this.taskList.process();
     }
     /**
      * 删除行之前触发[外部接口]
      * @param  {Number} startLine 行号
      */
     _proto.onDeleteBefore = function(startLine, endLine) {
+        var recheckLines = [startLine],
+            self = this;
         if (endLine > startLine) {
             var preFlag = false,
                 suffixFlag = false;
@@ -792,10 +897,10 @@
                     //可能影响到区域外的行
                     if (head.type == 1) {
                         if (!preFlag && head.line < startLine && (head == this.endToken || head.suffixToken && head.suffixToken.line >= startLine)) {
-                            this.undoTokenLine(head.line);
+                            recheckLines = recheckLines.concat(this.undoTokenLine(head.line));
                             preFlag = true;
                         } else if (!suffixFlag && head.line <= endLine && (head == this.endToken || head.suffixToken && head.suffixToken.line > endLine)) {
-                            this.undoTokenLine(head.line);
+                            recheckLines = recheckLines.concat(this.undoTokenLine(head.line));
                             suffixFlag = true;
                         }
                     }
@@ -808,16 +913,23 @@
                 }
             }
         }
-        var length = this.processor.getLength();
-        for (var i = 0; i < length; i++) {
-            var line = this.processor.get(i);
-            if (line > endLine) {
-                this.processor.set(i, line - (endLine - startLine));
-            } else if (line > startLine) {
-                this.processor.del(i);
+        var task = this.taskList.find(startLine);
+        while (task && (task = taskList.next)) {
+            if (task.line > endLine) {
+                task.line -= endLine - startLine;
+            } else if (task.line > startLine) {
+                this.taskList.del(task);
             }
         }
-        this.undoTokenLine(startLine);
+        recheckLines = recheckLines.concat(this.undoTokenLine(startLine));
+        Util.sortNum(recheckLines);
+        for (var i = 0; i < recheckLines.length; i++) {
+            this.taskList.insert(recheckLines[i]);
+        }
+        this.setPriorLine(startLine);
+        setTimeout(function() {
+            self.setPriorLine(recheckLines[recheckLines.length - 1]);
+        });
     }
     /**
      * 删除行之后触发[外部接口]
@@ -825,15 +937,14 @@
      * @param  {Number} endLine   结束行号
      */
     _proto.onDeleteAfter = function(startLine, endLine) {
-        this.processor.push(startLine);
-        this.processor.process();
+        this.taskList.process();
     }
     /**
      * 设置优先处理行[外部接口]
      * @param {Nunber} endLine 优先处理的末行
      */
     _proto.setPriorLine = function(endLine) {
-        this.processor.setPriorLine(endLine);
+        this.taskList.setPriorLine(endLine);
     }
     /**
      * 修饰引擎，用来处理修饰，生成HTML字符串
