@@ -629,6 +629,11 @@ class Mode {
             taskNode.line += endLine - startLine;
         }
         recheckLines = recheckLines.concat(this.undoTokenLine(startLine));
+        for (var i = 0,length = recheckLines.length; i < length; i++) {
+            if (recheckLines[i] > startLine) {
+                recheckLines[i] += endLine - startLine;
+            }
+        }
         for (var i = startLine + 1; i <= endLine; i++) {
             recheckLines.push(i);
         }
@@ -691,6 +696,11 @@ class Mode {
             }
         }
         recheckLines = recheckLines.concat(this.undoTokenLine(startLine));
+        for (var i = 0,length = recheckLines.length; i < length; i++) {
+            if (recheckLines[i] > endLine) {
+                recheckLines[i] -= endLine - startLine;
+            }
+        }
         Util.sortNum(recheckLines);
         for (var i = 0; i < recheckLines.length; i++) {
             this.taskList.insert(recheckLines[i]);
