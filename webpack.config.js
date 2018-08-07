@@ -1,4 +1,6 @@
 var path = require('path');
+var HtmlWebpackPlugin = require('html-webpack-plugin');
+var webpack = require('webpack');
 
 // 拼接我们的工作区路径为一个绝对路径
 function resolve(dir) {
@@ -7,7 +9,7 @@ function resolve(dir) {
 
 module.exports = {
     devtool: '#cheap-module-eval-source-map',
-    entry: './src/main.js',
+    entry: './src/example/main.js',
     output: {
         // 编译输出的根路径
         path: resolve('dist'),
@@ -30,11 +32,14 @@ module.exports = {
         modules: [
             resolve('src'),
             resolve('node_modules')
-        ]
+        ],
+        alias: {
+            'jquery': '../lib/jquery.min.js'
+        }
     },
-    externals: {
-        'jquery': 'window.jQuery'
-    },
+    // externals: {
+    //     'jquery': 'window.jQuery'
+    // },
     module: {
         rules: [{
             test: /\.js$/,
@@ -44,5 +49,11 @@ module.exports = {
             test:/\.css$/,
             use:['style-loader','css-loader']
         }]
-    }
+    },
+    plugins: [
+        new HtmlWebpackPlugin({
+            filename: 'index.html',
+            template: resolve('src/example/index.html')
+        })
+    ]
 }
