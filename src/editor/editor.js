@@ -1,360 +1,365 @@
-! function($) {
-    var Util = {
-        //全角符号和中文字符
-        fullAngleReg: /[\x00-\x1f\x80-\xa0\xad\u1680\u180E\u2000-\u200f\u2028\u2029\u202F\u205F\u3000\uFEFF\uFFF9-\uFFFC]|[\u1100-\u115F\u11A3-\u11A7\u11FA-\u11FF\u2329-\u232A\u2E80-\u2E99\u2E9B-\u2EF3\u2F00-\u2FD5\u2FF0-\u2FFB\u3000-\u303E\u3041-\u3096\u3099-\u30FF\u3105-\u312D\u3131-\u318E\u3190-\u31BA\u31C0-\u31E3\u31F0-\u321E\u3220-\u3247\u3250-\u32FE\u3300-\u4DBF\u4E00-\uA48C\uA490-\uA4C6\uA960-\uA97C\uAC00-\uD7A3\uD7B0-\uD7C6\uD7CB-\uD7FB\uF900-\uFAFF\uFE10-\uFE19\uFE30-\uFE52\uFE54-\uFE66\uFE68-\uFE6B\uFF01-\uFF60\uFFE0-\uFFE6]|[\uD800-\uDBFF][\uDC00-\uDFFF]/g,
-        //获取选中的文本
-        getSelectedText: function() {
-            if (document.selection) {
-                return document.selection.createRange().text;
-            } else if (window.getSelection) {
-                return window.getSelection().toString();
-            }
-        },
-        /**
-         * 获取样式属性计算值
-         * @param  {DOM} dom
-         * @param  {string} prop 样式属性
-         * @return {string}      属性值
-         */
-        getStyleVal: function(dom, prop) {
-            if (window.getComputedStyle) {
-                return window.getComputedStyle(dom, null)[prop];
-            } else {
-                return dom.currentStyle[prop]
-            }
-        },
-        //px属性值转为整数
-        pxToNum: function(px) {
-            return parseInt(px.substring(0, px.length - 2))
-        },
-        //请求下一帧
-        nextFrame: function(callback) {
-            if (window.requestAnimationFrame) {
-                return window.requestAnimationFrame(callback);
-            } else {
-                return setTimeout(function() {
-                    callback();
-                }, 0);
-            }
-        },
-        //取消下一帧
-        cancelNextFrame: function(id) {
-            if (window.requestAnimationFrame) {
-                window.cancelAnimationFrame(id);
-            } else {
-                clearTimeout(id);
-            }
-        },
-        //获取margin,padding,offset(相对页面边缘)
-        getRect: function(dom) {
-            var _r = dom.getBoundingClientRect();
-            var _pt = this.getStyleVal(dom, 'paddingTop');
-            _pt = this.pxToNum(_pt);
-            var _pb = Util.getStyleVal(dom, 'paddingBottom');
-            _pb = this.pxToNum(_pb);
-            var _pl = this.getStyleVal(dom, 'paddingLeft');
-            _pl = this.pxToNum(_pl);
-            var _pr = this.getStyleVal(dom, 'paddingRight');
-            _pr = this.pxToNum(_pr);
-            var _mt = this.getStyleVal(dom, 'marginTop');
-            _mt = this.pxToNum(_mt);
-            var _mb = Util.getStyleVal(dom, 'marginBottom');
-            _mb = this.pxToNum(_mb);
-            var _ml = this.getStyleVal(dom, 'marginLeft');
-            _ml = this.pxToNum(_ml);
-            var _mr = this.getStyleVal(dom, 'marginRight');
-            _mr = this.pxToNum(_mr);
-            return {
-                top: _r.top,
-                bottom: _r.bottom,
-                left: _r.left,
-                right: _r.right,
-                paddingTop: _pt,
-                paddingBottom: _pb,
-                paddingLeft: _pl,
-                paddingRight: _pr,
-                marginTop: _mt,
-                marginBottom: _mb,
-                marginLeft: _ml,
-                marginRight: _mr,
-                offsetTop: dom.offsetTop,
-                offsetBottom: dom.offsetBottom,
-                offsetLeft: dom.offsetLeft,
-                offsetRight: dom.offsetRight,
-            }
-        },
-        /**
-         * 获取文本在浏览器中的真实宽度
-         * @param  {string} str       文本
-         * @param  {number} charW     半角符号/文字宽度
-         * @param  {number} fullCharW 全角符号/文字宽度
-         * @param  {number} start     文本开始索引
-         * @param  {number} end       文本结束索引
-         * @return {number}           文本真实宽度
-         */
-        getStrWidth: function(str, charW, fullCharW, start, end) {
-            if (typeof start != 'undefined') {
-                str = str.substr(start);
-            }
-            if (typeof end != 'undefined') {
-                str = str.substring(0, end - start);
-            }
-            var match = str.match(this.fullAngleReg);
-            var width = str.length * charW;
-            if (match) {
-                width += match.length * (fullCharW - charW);
-            }
-            return width;
-        },
-        //生成指定个数的空白符
-        space: function(tabsize) {
-            var val = '';
-            for (var tmp = 0; tmp < tabsize; tmp++) { val += ' ' };
-            return val;
-        },
-        //数组数字排序
-        sortNum: function(arr) {
-            arr.sort(function(arg1, arg2) {
-                return Number(arg1) - Number(arg2);
-            })
-        },
-        //获取滚动条宽度
-        getScrBarWidth: function() {
-            if (!this.scrBarWidth) {
-                var wrap = $('<div style="height:30px;width:30px;overflow:auto"><div style="height:100px"></div></div>')
-                document.body.append(wrap[0]);
-                var w = wrap[0].offsetWidth - wrap[0].clientWidth;;
-                wrap.remove();
-                this.scrBarWidth = w;
-                return w;
-            }
-            return this.scrBarWidth;
-        },
-        //<,>转义
-        htmlTrans: function(cont) {
-            return cont.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+/////////
+// 工具类 //
+/////////
+class Util {
+    //获取选中的文本
+    static getSelectedText() {
+        if (document.selection) {
+            return document.selection.createRange().text;
+        } else if (window.getSelection) {
+            return window.getSelection().toString();
         }
     }
-    window.Util = Util;
     /**
-     * 文本容器类
+     * 获取样式属性计算值
+     * @param  {DOM} dom
+     * @param  {string} prop 样式属性
+     * @return {string}      属性值
      */
-    function LinesContext() {
-        var _content = [], //存储每行文本
-            _htmlDom = [], //存储每行文本对应的dom元素
-            _width = [], //记录每行文本的宽度
-            _maxObj = { line: 1, width: 0 }, //文本当前最大宽度
-            _findMax = false, //是否要重新计算最大宽度
-            _maxVisualLine = 0, //最大可视行数
-            _lineDecs = [], //存储行内修饰
-            _priorLineDecs = [], //存储高优先级行内修饰
-            _lineWholeDecs = [], //存储整行修饰
-            _engine = function(content) { return content }; //默认处理引擎直接返回传入的内容
-        //获取一行文本
-        this.getText = function(line) {
-            return _content[line - 1];
+    static getStyleVal(dom, prop) {
+        if (window.getComputedStyle) {
+            return window.getComputedStyle(dom, null)[prop];
+        } else {
+            return dom.currentStyle[prop]
         }
-        //更新一行文本
-        this.setText = function(line, txt) {
-            _content[line - 1] = txt;
-            _width[line - 1] = Util.getStrWidth(txt, SubJs.charWidth, SubJs.fullAngleCharWidth);
-            if (_width[line - 1] > _maxObj.width) {
-                _maxObj.width = _width[line - 1];
-                _maxObj.line = line;
-            } else if (line == _maxObj.line) {
-                _findMax = true;
-            }
+    }
+    //px属性值转为整数
+    static pxToNum(px) {
+        return parseInt(px.substring(0, px.length - 2))
+    }
+    //请求下一帧
+    static nextFrame(callback) {
+        if (window.requestAnimationFrame) {
+            return window.requestAnimationFrame(callback);
+        } else {
+            return setTimeout(function() {
+                callback();
+            }, 0);
         }
-        //在指定行添加一行文本
-        this.add = function(line, txt) {
-            _content.splice(line - 1, 0, txt);
-            _htmlDom.splice(line - 1, 0, undefined);
-            _width.splice(line - 1, 0, 0);
-            _lineDecs.splice(line - 1, 0, []);
-            _priorLineDecs.splice(line - 1, 0, undefined);
-            _lineWholeDecs.splice(line - 1, 0, '');
-            _width[line - 1] = Util.getStrWidth(txt, SubJs.charWidth, SubJs.fullAngleCharWidth);
-            if (_width[line - 1] > _maxObj.width) {
-                _maxObj.width = _width[line - 1];
-                _maxObj.line = line;
-            } else if (line == _maxObj.line) {
-                _maxObj.line = line + 1;
-            }
+    }
+    //取消下一帧
+    static cancelNextFrame(id) {
+        if (window.requestAnimationFrame) {
+            window.cancelAnimationFrame(id);
+        } else {
+            clearTimeout(id);
         }
-        /**
-         * 删除多行（大数据处理时提高效率）
-         * @param  {Number} startLine       开始行
-         * @param  {Number} endLine         结束行
-         */
-        this.delete = function(startLine, endLine) {
-            _content.splice(startLine - 1, endLine - startLine + 1);
-            _htmlDom.splice(startLine - 1, endLine - startLine + 1);
-            _width.splice(startLine - 1, endLine - startLine + 1);
-            _lineDecs.splice(startLine - 1, endLine - startLine + 1);
-            _priorLineDecs.splice(startLine - 1, endLine - startLine + 1);
-            _lineWholeDecs.splice(startLine - 1, endLine - startLine + 1);
-            _findMax = true;
+    }
+    //获取margin,padding,offset(相对页面边缘)
+    static getRect(dom) {
+        var _r = dom.getBoundingClientRect();
+        var _pt = this.getStyleVal(dom, 'paddingTop');
+        _pt = this.pxToNum(_pt);
+        var _pb = Util.getStyleVal(dom, 'paddingBottom');
+        _pb = this.pxToNum(_pb);
+        var _pl = this.getStyleVal(dom, 'paddingLeft');
+        _pl = this.pxToNum(_pl);
+        var _pr = this.getStyleVal(dom, 'paddingRight');
+        _pr = this.pxToNum(_pr);
+        var _mt = this.getStyleVal(dom, 'marginTop');
+        _mt = this.pxToNum(_mt);
+        var _mb = Util.getStyleVal(dom, 'marginBottom');
+        _mb = this.pxToNum(_mb);
+        var _ml = this.getStyleVal(dom, 'marginLeft');
+        _ml = this.pxToNum(_ml);
+        var _mr = this.getStyleVal(dom, 'marginRight');
+        _mr = this.pxToNum(_mr);
+        return {
+            top: _r.top,
+            bottom: _r.bottom,
+            left: _r.left,
+            right: _r.right,
+            paddingTop: _pt,
+            paddingBottom: _pb,
+            paddingLeft: _pl,
+            paddingRight: _pr,
+            marginTop: _mt,
+            marginBottom: _mb,
+            marginLeft: _ml,
+            marginRight: _mr,
+            offsetTop: dom.offsetTop,
+            offsetBottom: dom.offsetBottom,
+            offsetLeft: dom.offsetLeft,
+            offsetRight: dom.offsetRight,
         }
-        //获取总行数
-        this.getLength = function() {
-            return _content.length;
+    }
+    /**
+     * 获取文本在浏览器中的真实宽度
+     * @param  {string} str       文本
+     * @param  {number} charW     半角符号/文字宽度
+     * @param  {number} fullCharW 全角符号/文字宽度
+     * @param  {number} start     文本开始索引
+     * @param  {number} end       文本结束索引
+     * @return {number}           文本真实宽度
+     */
+    static getStrWidth(str, charW, fullCharW, start, end) {
+        if (typeof start != 'undefined') {
+            str = str.substr(start);
         }
-        //获取文本最大宽度
-        this.getMaxWidth = function() {
-            if (_findMax) {
-                var max = 0;
-                _maxObj = { line: 1, width: 0 };
-                for (var i = 0; i < _width.length; i++) {
-                    if (_width[i] > max) {
-                        _maxObj.line = i + 1;
-                        _maxObj.width = _width[i];
-                        max = _width[i];
-                    }
+        if (typeof end != 'undefined') {
+            str = str.substring(0, end - start);
+        }
+        var match = str.match(this.fullAngleReg);
+        var width = str.length * charW;
+        if (match) {
+            width += match.length * (fullCharW - charW);
+        }
+        return width;
+    }
+    //生成指定个数的空白符
+    static space(tabsize) {
+        var val = '';
+        for (var tmp = 0; tmp < tabsize; tmp++) { val += ' ' };
+        return val;
+    }
+    //数组数字排序
+    static sortNum(arr) {
+        arr.sort(function(arg1, arg2) {
+            return Number(arg1) - Number(arg2);
+        })
+    }
+    //获取滚动条宽度
+    static getScrBarWidth() {
+        if (!this.scrBarWidth) {
+            var wrap = $('<div style="height:30px;width:30px;overflow:auto"><div style="height:100px"></div></div>')
+            document.body.append(wrap[0]);
+            var w = wrap[0].offsetWidth - wrap[0].clientWidth;;
+            wrap.remove();
+            this.scrBarWidth = w;
+            return w;
+        }
+        return this.scrBarWidth;
+    }
+    //<,>转义
+    static htmlTrans(cont) {
+        return cont.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+}
+//全角符号和中文字符
+Util.fullAngleReg = /[\x00-\x1f\x80-\xa0\xad\u1680\u180E\u2000-\u200f\u2028\u2029\u202F\u205F\u3000\uFEFF\uFFF9-\uFFFC]|[\u1100-\u115F\u11A3-\u11A7\u11FA-\u11FF\u2329-\u232A\u2E80-\u2E99\u2E9B-\u2EF3\u2F00-\u2FD5\u2FF0-\u2FFB\u3000-\u303E\u3041-\u3096\u3099-\u30FF\u3105-\u312D\u3131-\u318E\u3190-\u31BA\u31C0-\u31E3\u31F0-\u321E\u3220-\u3247\u3250-\u32FE\u3300-\u4DBF\u4E00-\uA48C\uA490-\uA4C6\uA960-\uA97C\uAC00-\uD7A3\uD7B0-\uD7C6\uD7CB-\uD7FB\uF900-\uFAFF\uFE10-\uFE19\uFE30-\uFE52\uFE54-\uFE66\uFE68-\uFE6B\uFF01-\uFF60\uFFE0-\uFFE6]|[\uD800-\uDBFF][\uDC00-\uDFFF]/g;
+
+///////////
+// 文本容器类 //
+///////////
+class LinesContext {
+    constructor() {
+        this._content = []; //存储每行文本
+        this._htmlDom = []; //存储每行文本对应的dom元素
+        this._width = []; //记录每行文本的宽度
+        this._maxObj = { line: 1, width: 0 }; //文本当前最大宽度
+        this._findMax = false; //是否要重新计算最大宽度
+        this._lineDecs = []; //存储行内修饰
+        this._priorLineDecs = []; //存储高优先级行内修饰
+        this._lineWholeDecs = []; //存储整行修饰
+        this._engine = function(content) { return content }; //默认处理引擎直接返回传入的内容
+    }
+    //获取一行文本
+    getText(line) {
+        return this._content[line - 1];
+    }
+    //更新一行文本
+    setText(line, txt) {
+        this._content[line - 1] = txt;
+        this._width[line - 1] = Util.getStrWidth(txt, Editor.charWidth, Editor.fullAngleCharWidth);
+        if (this._width[line - 1] > this._maxObj.width) {
+            this._maxObj.width = this._width[line - 1];
+            this._maxObj.line = line;
+        } else if (line == this._maxObj.line) {
+            this._findMax = true;
+        }
+    }
+    //在指定行添加一行文本
+    add(line, txt) {
+        this._content.splice(line - 1, 0, txt);
+        this._htmlDom.splice(line - 1, 0, undefined);
+        this._width.splice(line - 1, 0, 0);
+        this._lineDecs.splice(line - 1, 0, []);
+        this._priorLineDecs.splice(line - 1, 0, undefined);
+        this._lineWholeDecs.splice(line - 1, 0, '');
+        this._width[line - 1] = Util.getStrWidth(txt, Editor.charWidth, Editor.fullAngleCharWidth);
+        if (this._width[line - 1] > this._maxObj.width) {
+            this._maxObj.width = this._width[line - 1];
+            this._maxObj.line = line;
+        } else if (line == this._maxObj.line) {
+            this._maxObj.line = line + 1;
+        }
+    }
+    /**
+     * 删除多行（大数据处理时提高效率）
+     * @param  {Number} startLine       开始行
+     * @param  {Number} endLine         结束行
+     */
+    delete(startLine, endLine) {
+        this._content.splice(startLine - 1, endLine - startLine + 1);
+        this._htmlDom.splice(startLine - 1, endLine - startLine + 1);
+        this._width.splice(startLine - 1, endLine - startLine + 1);
+        this._lineDecs.splice(startLine - 1, endLine - startLine + 1);
+        this._priorLineDecs.splice(startLine - 1, endLine - startLine + 1);
+        this._lineWholeDecs.splice(startLine - 1, endLine - startLine + 1);
+        this._findMax = true;
+    }
+    //获取总行数
+    getLength() {
+        return this._content.length;
+    }
+    //获取文本最大宽度
+    getMaxWidth() {
+        if (this._findMax) {
+            var max = 0;
+            this._maxObj = { line: 1, width: 0 };
+            for (var i = 0; i < this._width.length; i++) {
+                if (this._width[i] > max) {
+                    this._maxObj.line = i + 1;
+                    this._maxObj.width = this._width[i];
+                    max = this._width[i];
                 }
-                _findMax = false;
             }
-            return _maxObj.width;
+            this._findMax = false;
         }
-        //获取dom
-        this.getDom = function(line) {
-            if (!_htmlDom[line - 1]) {
-                var $dom = $('\
-                <div style="position:relative;margin:0;height:' + SubJs.charHight + 'px;" class="pre_code_line">\
+        return this._maxObj.width;
+    }
+    //获取dom
+    getDom(line) {
+        if (!this._htmlDom[line - 1]) {
+            var $dom = $('\
+                <div style="position:relative;margin:0;height:' + Editor.charHight + 'px;" class="pre_code_line">\
                     <div class="code" style="display:inline-block;position:relative;height:100%;min-width:100%;white-space:pre"></div>\
                 </div>');
-                _htmlDom[line - 1] = $dom;
+            this._htmlDom[line - 1] = $dom;
+        }
+        return this._htmlDom[line - 1];
+    }
+    //更新dom
+    updateDom(line) {
+        var $dom = this._htmlDom[line - 1];
+        $dom && ($dom.hasUpdate = false);
+        //只有挂载到页面的元素才真正更新
+        if ($dom && $dom[0].isConnected) {
+            var wholeLineDec = this._lineWholeDecs[line - 1];
+            if (wholeLineDec) {
+                $dom.find('.code').html(Util.htmlTrans(this._content[line - 1]));
+                $dom.find('.code').addClass(wholeLineDec);
+            } else {
+                $dom.find('.code').attr('class', 'code');
+                $dom.find('.code').html(this._engine(this._content[line - 1], this._lineDecs[line - 1], this._priorLineDecs[line - 1]));
             }
-            return _htmlDom[line - 1];
-        }
-        //更新dom
-        this.updateDom = function(line) {
-            var $dom = _htmlDom[line - 1];
-            $dom && ($dom.hasUpdate = false);
-            //只有挂载到页面的元素才真正更新
-            if ($dom && $dom[0].isConnected) {
-                var wholeLineDec = _lineWholeDecs[line - 1];
-                if (wholeLineDec) {
-                    $dom.find('.code').html(Util.htmlTrans(_content[line - 1]));
-                    $dom.find('.code').addClass(wholeLineDec);
-                } else {
-                    $dom.find('.code').attr('class', 'code');
-                    $dom.find('.code').html(_engine(_content[line - 1], _lineDecs[line - 1], _priorLineDecs[line - 1]));
-                }
-                //设置更新标识
-                if (!$dom.hasUpdate) {
-                    $dom.hasUpdate = true;
-                }
+            //设置更新标识
+            if (!$dom.hasUpdate) {
+                $dom.hasUpdate = true;
             }
-        }
-        /**
-         * 设置行内修饰
-         * @param {Number} line       行号
-         * @param {Object} decoration 修饰对象
-         */
-        this.setLineDec = function(line, decoration) {
-            _lineDecs[line - 1] = decoration;
-        }
-        /**
-         * 获取行内的修饰
-         * @param  {Number} line 行号
-         * @return {Object}      该行对应的修饰对象
-         */
-        this.getLineDec = function(line) {
-            return _lineDecs[line - 1];
-        }
-        /**
-         * 设置高优先级行内修饰
-         * @param {Number} line       行号
-         * @param {Object} decoration 修饰对象
-         */
-        this.setPriorLineDecs = function(line, decoration) {
-            _priorLineDecs[line - 1] = _priorLineDecs[line - 1] || [];
-            for (var i = 0; i < _priorLineDecs[line - 1].length; i++) {
-                if (_priorLineDecs[line - 1][i].start == decoration.start || _priorLineDecs[line - 1][i].end == decoration.end) {
-                    _priorLineDecs[line - 1].splice(i, 1);
-                    i--;
-                }
-            }
-            _priorLineDecs[line - 1].push(decoration);
-        }
-        /**
-         * 删除优先级行内修饰
-         * @param  {[type]} line       [description]
-         * @param  {[type]} decoration [description]
-         * @return {[type]}            [description]
-         */
-        this.delPriorLineDecs = function(line, decoration) {
-            _priorLineDecs[line - 1] = _priorLineDecs[line - 1] || [];
-            for (var i = 0; i < _priorLineDecs[line - 1].length; i++) {
-                if (!_priorLineDecs[line - 1][i]) {
-                    debugger;
-                }
-                if (_priorLineDecs[line - 1][i].start == decoration.start && _priorLineDecs[line - 1][i].end == decoration.end) {
-                    _priorLineDecs[line - 1].splice(i, 1);
-                    i--;
-                }
-            }
-        }
-        /**
-         * 获取高优先级行内的修饰
-         * @param  {Number} line 行号
-         * @return {Object}      该行对应的修饰对象
-         */
-        this.getPriorLineDecs = function(line) {
-            return _priorLineDecs[line - 1];
-        }
-        /**
-         * 添加整行修饰
-         * @param {Number} line       行号
-         * @param {String} className  class
-         */
-        this.setWhoeLineDec = function(line, className) {
-            _lineWholeDecs[line - 1] = className;
-        }
-        /**
-         * 获取整行修饰
-         * @param  {Number} line 行号
-         * @return {Array}       该行对应的整行修饰数组
-         */
-        this.getWholeLineDec = function(line) {
-            return _lineWholeDecs[line - 1];
-        }
-        /**
-         * 设置修饰对象的处理引擎
-         * @param {Function} engine 修饰对象的处理引擎
-         */
-        this.setDecEngine = function(engine) {
-            _engine = engine;
         }
     }
     /**
-     * 编辑器
-     * @param {Object} options [配置]
-     *  options.$wrapper 容器
-     *  options.tabsize tab键所占空格数
+     * 设置行内修饰
+     * @param {Number} line       行号
+     * @param {Object} decoration 修饰对象
      */
-    function SubJs(options) {
-        options = options || {};
-        this.options = {}; //参数
-        if (typeof options.$wrapper == 'string') {
-            this.options.$wrapper = $(options.$wrapper);
-        } else if (typeof options.$wrapper == 'object') {
-            this.options.$wrapper = options.$wrapper;
+    setLineDec(line, decoration) {
+        this._lineDecs[line - 1] = decoration;
+    }
+    /**
+     * 获取行内的修饰
+     * @param  {Number} line 行号
+     * @return {Object}      该行对应的修饰对象
+     */
+    getLineDec(line) {
+        return this._lineDecs[line - 1];
+    }
+    /**
+     * 设置高优先级行内修饰
+     * @param {Number} line       行号
+     * @param {Object} decoration 修饰对象
+     */
+    setPriorLineDecs(line, decoration) {
+        this._priorLineDecs[line - 1] = this._priorLineDecs[line - 1] || [];
+        for (var i = 0; i < this._priorLineDecs[line - 1].length; i++) {
+            if (this._priorLineDecs[line - 1][i].start == decoration.start || this._priorLineDecs[line - 1][i].end == decoration.end) {
+                this._priorLineDecs[line - 1].splice(i, 1);
+                i--;
+            }
+        }
+        this._priorLineDecs[line - 1].push(decoration);
+    }
+    /**
+     * 删除优先级行内修饰
+     * @param  {[type]} line       [description]
+     * @param  {[type]} decoration [description]
+     * @return {[type]}            [description]
+     */
+    delPriorLineDecs(line, decoration) {
+        this._priorLineDecs[line - 1] = this._priorLineDecs[line - 1] || [];
+        for (var i = 0; i < this._priorLineDecs[line - 1].length; i++) {
+            if (!this._priorLineDecs[line - 1][i]) {
+                debugger;
+            }
+            if (this._priorLineDecs[line - 1][i].start == decoration.start && this._priorLineDecs[line - 1][i].end == decoration.end) {
+                this._priorLineDecs[line - 1].splice(i, 1);
+                i--;
+            }
+        }
+    }
+    /**
+     * 获取高优先级行内的修饰
+     * @param  {Number} line 行号
+     * @return {Object}      该行对应的修饰对象
+     */
+    getPriorLineDecs(line) {
+        return this._priorLineDecs[line - 1];
+    }
+    /**
+     * 添加整行修饰
+     * @param {Number} line       行号
+     * @param {String} className  class
+     */
+    setWhoeLineDec(line, className) {
+        this._lineWholeDecs[line - 1] = className;
+    }
+    /**
+     * 获取整行修饰
+     * @param  {Number} line 行号
+     * @return {Array}       该行对应的整行修饰数组
+     */
+    getWholeLineDec(line) {
+        return this._lineWholeDecs[line - 1];
+    }
+    /**
+     * 设置修饰对象的处理引擎
+     * @param {Function} engine 修饰对象的处理引擎
+     */
+    setDecEngine(engine) {
+        this._engine = engine;
+    }
+}
+
+////////
+//编辑器 //
+////////
+class Editor {
+    /**
+     * @param {Object} option [配置]
+     *  option.$wrapper 容器
+     *  option.tabsize tab键所占空格数
+     */
+    constructor(option) {
+        option = option || {};
+        this.config = {}; //参数
+        if (typeof option.$wrapper == 'string') {
+            this.config.$wrapper = $(option.$wrapper);
+        } else if (typeof option.$wrapper == 'object') {
+            this.config.$wrapper = option.$wrapper;
         } else {
             return new Error('$wrapper must be string or object');
         }
-        this.options.tabsize = options.tabsize || 4;
-        this._init();
-    }
-    var _proto = SubJs.prototype;
-    _proto._init = function() {
-        var self = this;
+        this.config.tabsize = option.tabsize || 4;
         this.linesContext = new LinesContext(); //所有的行
+        this.mode = option.mode && new option.mode(this.linesContext);
         this.leftNumDom = []; //行号dom
         this.cursorPos = { line: 0, column: 0 }; //光标位置
         this.selection = {};
         this.firstLine = 1;
-        this.mode = window.SubJsMode && new SubJsMode(this.linesContext);
+        this._init();
+    }
+    _init() {
         this.creatContext();
         this.getCharWidth();
         this.createLeftNumBg();
@@ -366,29 +371,29 @@
         this.bindEditorEvent();
         this.insertContent('\n');
     }
-    _proto.bindEvent = function() {
+    bindEvent() {
         this.bindInputEvent();
         this.bindScrollEvent();
         this.bindSelectEvent();
         this.bindMenuContextEvent();
     }
     //获取字符宽度
-    _proto.getCharWidth = function() {
+    getCharWidth() {
         var str1 = 'XXXXXXXXXXXXXX';
         var str2 = '啊啊啊啊啊啊啊啊';
         this.$context[0].innerHTML = '<span style="display:inline-block" class="char_width_1">' + str1 + '</span><span style="display:inline-block" class="char_width_2">' + str2 + '</span>';
         var dom = $('.char_width_1')[0];
-        SubJs.charWidth = dom.clientWidth / str1.length;
-        SubJs.charHight = dom.clientHeight;
-        SubJs.fullAngleCharWidth = $('.char_width_2')[0].clientWidth / str2.length;
+        Editor.charWidth = dom.clientWidth / str1.length;
+        Editor.charHight = dom.clientHeight;
+        Editor.fullAngleCharWidth = $('.char_width_2')[0].clientWidth / str2.length;
         this.fontSize = window.getComputedStyle ? window.getComputedStyle(dom, null).fontSize : dom.currentStyle.fontSize;
         this.$context[0].innerHTML = '';
         //可实区域可能显示的行的数量
-        this.maxVisualLine = Math.ceil(this.$context[0].clientHeight / SubJs.charHight) + 1;
-        console.log('charSize', SubJs.charWidth, SubJs.fullAngleCharWidth, SubJs.charHight);
+        this.maxVisualLine = Math.ceil(this.$context[0].clientHeight / Editor.charHight) + 1;
+        console.log('charSize', Editor.charWidth, Editor.fullAngleCharWidth, Editor.charHight);
     }
     //输入框区域
-    _proto.creatContext = function() {
+    creatContext() {
         this.$scroller = $('<div class="editor_scroller" style="position:relative;z-index:3;overflow:hidden;height:100%;padding:5px 0 0 5px;box-sizing:border-box">\
                 <div class="editor_context" style="position:relative;top:0;min-height:100%;cursor:text;"></div>\
                 <div class="editor_bg" style="position:absolute;left:0;top:0;z-index:-1"></div>\
@@ -398,18 +403,18 @@
         this.$context = this.$scroller.find('.editor_context');
         this.$selectBg = this.$scroller.find('.editor_bg');
         this.$wrapper.css({ position: 'relative', overflow: 'hidden', height: '100%' });
-        this.options.$wrapper.append(this.$wrapper);
+        this.config.$wrapper.append(this.$wrapper);
     }
     //左侧行号
-    _proto.createLeftNumBg = function() {
-        this.$leftNumBg = $('<div class="line_num_bg" style="float:left;position:relative;left:0;top:0;z-index:2;min-height:100%;padding:5px 0;padding-bottom:' + SubJs.charHight + 'px;box-sizing:border-box"></div>');
+    createLeftNumBg() {
+        this.$leftNumBg = $('<div class="line_num_bg" style="float:left;position:relative;left:0;top:0;z-index:2;min-height:100%;padding:5px 0;padding-bottom:' + Editor.charHight + 'px;box-sizing:border-box"></div>');
         this.$wrapper.prepend(this.$leftNumBg);
         for (var i = 1; i <= this.maxVisualLine; i++) {
             var $num = $('<span class="line_num"></span>');
             $num.css({
                 'display': 'block',
-                'height': SubJs.charHight + 'px',
-                'line-height': SubJs.charHight + 'px',
+                'height': Editor.charHight + 'px',
+                'line-height': Editor.charHight + 'px',
                 'padding-right': '15px',
                 'padding-left': '15px',
                 'user-select': 'none',
@@ -419,7 +424,7 @@
         }
     }
     //创建输入框
-    _proto.creatTextarea = function() {
+    creatTextarea() {
         var self = this;
         var wrapStyle = 'position:absolute;top:0;left:0;right:0;bottom:0;z-index:-1;overflow:hidden;opacity:0;'
         var areaStyle = 'height:100%;width:100%;padding:0;outline:none;border-style:none;resize:none;overflow:hidden;background-color:transparent;color:transparent'
@@ -437,13 +442,13 @@
         });
     }
     //创建当前行背景
-    _proto.createLineBg = function() {
-        this.$lineBg = $('<div class="current_line_bg" style="display:none;position:absolute;top:5px;left:40px;right:0;z-index:1;height:' + SubJs.charHight + 'px"></div>');
+    createLineBg() {
+        this.$lineBg = $('<div class="current_line_bg" style="display:none;position:absolute;top:5px;left:40px;right:0;z-index:1;height:' + Editor.charHight + 'px"></div>');
         this.$wrapper.append(this.$lineBg);
     }
     //创建光标
-    _proto.createCrusor = function() {
-        this.$cursor = $('<i class="cursor" style="display:none;position:absolute;top:0;width:2px;height:' + SubJs.charHight + 'px;background-color:#333"></i>');
+    createCrusor() {
+        this.$cursor = $('<i class="cursor" style="display:none;position:absolute;top:0;width:2px;height:' + Editor.charHight + 'px;background-color:#333"></i>');
         this.$scroller.append(this.$cursor);
         var show = true;
         var self = this;
@@ -464,7 +469,7 @@
         }
     }
     //创建纵向滚动条
-    _proto.createScrollBar = function() {
+    createScrollBar() {
         this.$vScrollWrap = $('<div class="v_scrollbar_wrap" style="position:absolute;top:0;bottom:0;right:0;z-index:4;overflow:auto;width:22px;"><div class="v_scrollbar"></div></div>');
         this.$hScrollWrap = $('<div class="h_scrollbar_wrap" style="position:absolute;left:0;right:0;bottom:0;z-index:4;overflow:auto;height:22px;"><div class="h_scrollbar" style="height:100%"></div></div>');
         this.$vScrollBar = this.$vScrollWrap.find('.v_scrollbar');
@@ -478,15 +483,15 @@
      * @param  {number} column 列号
      * @return {Object}        top,left
      */
-    _proto.posToPx = function(line, column) {
+    posToPx(line, column) {
         var self = this;
-        var top = (line - this.firstLine) * SubJs.charHight + Util.pxToNum(Util.getStyleVal(this.$context[0], 'top'));
+        var top = (line - this.firstLine) * Editor.charHight + Util.pxToNum(Util.getStyleVal(this.$context[0], 'top'));
         var str = this.linesContext.getText(line).substring(0, column);
         var match = str.match(Util.fullAngleReg);
-        var left = str.length * SubJs.charWidth;
+        var left = str.length * Editor.charWidth;
         var rect = Util.getRect(this.$scroller[0]);
         if (match) {
-            left += match.length * (SubJs.fullAngleCharWidth - SubJs.charWidth);
+            left += match.length * (Editor.fullAngleCharWidth - Editor.charWidth);
         }
         return {
             top: top + rect.paddingTop,
@@ -499,14 +504,14 @@
      * @param  {number} column 相对scroller左边框的距离
      * @return {Object}        {line,column}
      */
-    _proto.pxToPos = function(top, left, ifLine) {
+    pxToPos(top, left, ifLine) {
         var column = this.cursorPos.column;
         var rect = Util.getRect(this.$scroller[0]);
         var line = top;
         left -= rect.paddingLeft;
         if (!ifLine) {
             top = top - rect.paddingTop - Util.pxToNum(Util.getStyleVal(this.$context[0], 'top'));
-            line = Math.ceil(top / SubJs.charHight);
+            line = Math.ceil(top / Editor.charHight);
             line = line + this.firstLine - 1;
         }
         line = line < 1 ? 1 : line;
@@ -515,13 +520,13 @@
             column = this.linesContext.getText(this.linesContext.getLength()).length;
         } else {
             var str = this.linesContext.getText(line);
-            column = Math.ceil(left / SubJs.charWidth);
+            column = Math.ceil(left / Editor.charWidth);
             column = column < 0 ? 0 : column;
             column = column > str.length ? str.length : column;
             var match = str.match(Util.fullAngleReg);
-            var maxWidth = str.length * SubJs.charWidth;
+            var maxWidth = str.length * Editor.charWidth;
             if (match) {
-                maxWidth += match.length * (SubJs.fullAngleCharWidth - SubJs.charWidth);
+                maxWidth += match.length * (Editor.fullAngleCharWidth - Editor.charWidth);
             }
             if (left > maxWidth) {
                 left = maxWidth;
@@ -529,11 +534,11 @@
                 while (column > 0) {
                     var str = this.linesContext.getText(line).substring(0, column);
                     var match = str.match(Util.fullAngleReg);
-                    var _left = str.length * SubJs.charWidth;
+                    var _left = str.length * Editor.charWidth;
                     if (match) {
-                        _left += match.length * (SubJs.fullAngleCharWidth - SubJs.charWidth);
+                        _left += match.length * (Editor.fullAngleCharWidth - Editor.charWidth);
                     }
-                    if (Math.abs(_left - left) < SubJs.charWidth) {
+                    if (Math.abs(_left - left) < Editor.charWidth) {
                         break;
                     }
                     column--;
@@ -549,12 +554,12 @@
      * 更新光标行列坐标
      * @param {Object} pos {line,column}
      */
-    _proto.setCursorPos = function(pos) {
+    setCursorPos(pos) {
         this.cursorPos.line = pos.line;
         this.cursorPos.column = pos.column;
     }
     //更新光标坐标
-    _proto.updateCursorPos = function() {
+    updateCursorPos() {
         var pos = this.posToPx(this.cursorPos.line, this.cursorPos.column);
         var scrollTop = this.$vScrollWrap[0].scrollTop;
         this.$cursor.css({
@@ -580,7 +585,7 @@
      * 更新可视区域
      * @param  {boolean} ifScrollToCursor 是否滚动到光标位置
      */
-    _proto.updateScroll = function(ifScrollToCursor) {
+    updateScroll(ifScrollToCursor) {
         var scroller = this.$scroller[0],
             context = this.$context[0],
             top = this.posToPx(this.cursorPos.line, 0).top,
@@ -604,7 +609,7 @@
         })
         //设置纵向滚动条高度
         this.$vScrollBar.css({
-            height: this.linesContext.getLength() * SubJs.charHight + Util.pxToNum(Util.getStyleVal(scroller, 'paddingTop')) + 'px'
+            height: this.linesContext.getLength() * Editor.charHight + Util.pxToNum(Util.getStyleVal(scroller, 'paddingTop')) + 'px'
         })
         //设置横向滚动条宽度度
         this.$hScrollBar.css({
@@ -640,16 +645,16 @@
             var height = hasHBar ? this.$scroller[0].clientHeight - realBarWidth : this.$scroller[0].clientHeight;
             //处理纵向
             if (point.top < 0) {
-                this.$vScrollWrap[0].scrollTop = (this.cursorPos.line - 1) * SubJs.charHight;
-            } else if (point.top > height - SubJs.charHight) {
-                var line = this.cursorPos.line - Math.ceil(height / SubJs.charHight);
-                this.$vScrollWrap[0].scrollTop = line * SubJs.charHight + (SubJs.charHight - height % SubJs.charHight) + Util.pxToNum(Util.getStyleVal(scroller, 'paddingTop'));
+                this.$vScrollWrap[0].scrollTop = (this.cursorPos.line - 1) * Editor.charHight;
+            } else if (point.top > height - Editor.charHight) {
+                var line = this.cursorPos.line - Math.ceil(height / Editor.charHight);
+                this.$vScrollWrap[0].scrollTop = line * Editor.charHight + (Editor.charHight - height % Editor.charHight) + Util.pxToNum(Util.getStyleVal(scroller, 'paddingTop'));
             }
             //处理横向
-            if (point.left < this.$hScrollWrap[0].scrollLeft + SubJs.charWidth) {
-                this.$hScrollWrap[0].scrollLeft = point.left - SubJs.charWidth;
-            } else if (point.left > this.$hScrollWrap[0].scrollLeft + this.$scroller[0].clientWidth - SubJs.charWidth - realBarWidth) {
-                this.$hScrollWrap[0].scrollLeft = point.left - this.$scroller[0].clientWidth + SubJs.charWidth + realBarWidth;
+            if (point.left < this.$hScrollWrap[0].scrollLeft + Editor.charWidth) {
+                this.$hScrollWrap[0].scrollLeft = point.left - Editor.charWidth;
+            } else if (point.left > this.$hScrollWrap[0].scrollLeft + this.$scroller[0].clientWidth - Editor.charWidth - realBarWidth) {
+                this.$hScrollWrap[0].scrollLeft = point.left - this.$scroller[0].clientWidth + Editor.charWidth + realBarWidth;
             }
         }
     }
@@ -657,7 +662,7 @@
      * 在当前光标位置处插入内容
      * @param  {string} val 插入的内容
      */
-    _proto.insertContent = function(newContent) {
+    insertContent(newContent) {
         var str = this.linesContext.getText(this.cursorPos.line) || '',
             strs = null,
             firstLine;
@@ -702,7 +707,7 @@
      * @param  {object/number} startPos 开始行列坐标{line,column}/行号
      * @param  {Object} endPos   结束行列坐标{line,column}
      */
-    _proto.deleteContent = function(startPos, endPos) {
+    deleteContent(startPos, endPos) {
         if (typeof startPos == 'number') {
             var line = startPos;
             if (line > 1) {
@@ -741,7 +746,7 @@
      * 更新行号
      * @param  {number} firstLine 首行
      */
-    _proto.updateNum = function(firstLine) {
+    updateNum(firstLine) {
         var allDom = this.$context.find('.pre_code_line');
         for (var i = 0; i < allDom.length; i++) {
             this.leftNumDom[i].html(firstLine + i);
@@ -758,7 +763,7 @@
      * @param  {Object} startPos 开始行列坐标{line,column}
      * @param  {Object} endPos   结束行列坐标{line,column}
      */
-    _proto.renderSelectBg = function(startPos, endPos) {
+    renderSelectBg(startPos, endPos) {
         var self = this,
             rect = Util.getRect(self.$scroller[0]);
         self.$selectBg.html('');
@@ -766,7 +771,7 @@
         self.selection.endPos = endPos;
         if (startPos.line == endPos.line) {
             var str = self.linesContext.getText(startPos.line);
-            var width = Util.getStrWidth(str, SubJs.charWidth, SubJs.fullAngleCharWidth, startPos.column, endPos.column);
+            var width = Util.getStrWidth(str, Editor.charWidth, Editor.fullAngleCharWidth, startPos.column, endPos.column);
             var px = self.posToPx(startPos.line, startPos.column);
             _renderRange(px.top, px.left, width);
             self.selection.selectText = str.substring(startPos.column, endPos.column);
@@ -774,7 +779,7 @@
         } else {
             var str = self.linesContext.getText(startPos.line);
             var maxWidth = self.$context[0].scrollWidth - 1; //防止$context真实宽度有小数（scrollWidth将被四舍五入）
-            var width = Util.getStrWidth(str, SubJs.charWidth, SubJs.fullAngleCharWidth, 0, startPos.column);
+            var width = Util.getStrWidth(str, Editor.charWidth, Editor.fullAngleCharWidth, 0, startPos.column);
             var px = self.posToPx(startPos.line, startPos.column);
             _renderRange(px.top, px.left, maxWidth - width);
             self.selection.selectText = str;
@@ -783,7 +788,7 @@
             }
             _renderBlock(startPos, endPos, rect.paddingLeft, maxWidth);
             str = self.linesContext.getText(endPos.line);
-            width = Util.getStrWidth(str, SubJs.charWidth, SubJs.fullAngleCharWidth, 0, endPos.column);
+            width = Util.getStrWidth(str, Editor.charWidth, Editor.fullAngleCharWidth, 0, endPos.column);
             px = self.posToPx(endPos.line, 0);
             _renderRange(px.top, px.left, width);
             self.selection.selectText += '\n' + str.substring(0, endPos.column);
@@ -809,7 +814,7 @@
             if (lastSelectLine > endLine) {
                 lastSelectLine = endLine;
             }
-            var height = (lastSelectLine - firstSelectLine + 1) * SubJs.charHight;
+            var height = (lastSelectLine - firstSelectLine + 1) * Editor.charHight;
             var top = self.posToPx(firstSelectLine, 0).top;
             _renderRange(top, left, maxWidth, height);
         }
@@ -820,8 +825,8 @@
          * @param  {number} width 背景的宽度
          */
         function _renderRange(top, left, width, height) {
-            !height && (height = SubJs.charHight)
-            if (top > -SubJs.charHight && top < self.$scroller[0].clientHeight) {
+            !height && (height = Editor.charHight)
+            if (top > -Editor.charHight && top < self.$scroller[0].clientHeight) {
                 self.$selectBg.append('<div class="selection_line_bg" style="position:absolute;top:' + top + 'px;left:' + left + 'px;width:' + width + 'px;height:' + height + 'px;background-color:rgb(181, 213, 255)"></div>');
             }
         }
@@ -830,7 +835,7 @@
      * 渲染可视区域的行
      * @param  {number} firstLine 首行序号
      */
-    _proto.renderLine = function(firstLine) {
+    renderLine(firstLine) {
         if (!firstLine) {
             firstLine = this.firstLine;
         }
@@ -870,14 +875,14 @@
         this.firstLine = firstLine;
     }
     //全选
-    _proto.selectAll = function() {
+    selectAll() {
         var startPos = { line: 1, column: 0 };
         var endPos = { line: this.linesContext.getLength(), column: this.linesContext.getText(this.linesContext.getLength()).length }
         this.renderSelectBg(startPos, endPos);
         this.setCursorPos(endPos);
     }
     //选中事件
-    _proto.bindSelectEvent = function() {
+    bindSelectEvent() {
         var self = this,
             startPx = null,
             originStartPos = null,
@@ -900,7 +905,6 @@
             var scrollLeft = self.$scroller[0].scrollLeft;
             var top = e.clientY - rect.top + scrollTop;
             var left = e.clientX - rect.left + scrollLeft;
-            preTop = top;
             startPx = { top: top, left: left };
             originStartPos = self.pxToPos(top, left);
             select = false;
@@ -944,7 +948,7 @@
                         startPos.column = endPos.column;
                         endPos.column = tmp;
                     }
-                    if (startPos.line < endPos.line || startPos.line == endPos.line && Math.abs(endPx.left - startPx.left) > SubJs.charWidth) {
+                    if (startPos.line < endPos.line || startPos.line == endPos.line && Math.abs(endPx.left - startPx.left) > Editor.charWidth) {
                         self.renderSelectBg(startPos, endPos);
                     }
                     if (top + hBarHeight + 5 > self.$scroller[0].clientHeight) {
@@ -1073,7 +1077,7 @@
         }
     }
     //menuContext事件
-    _proto.bindMenuContextEvent = function() {
+    bindMenuContextEvent() {
         var self = this;
         this.$context.on('mouseup', function(e) {
             var rect = Util.getRect(self.$scroller[0]);
@@ -1105,7 +1109,7 @@
         });
     }
     //copy,cut,paste事件
-    _proto.bindEditorEvent = function() {
+    bindEditorEvent() {
         var self = this;
         var mime = window.clipboardData ? "Text" : "text/plain";
         this.$textarea.on('copy', function(e) {
@@ -1155,7 +1159,7 @@
         this.$textarea.on('mouseup', function(e) {})
     }
     //滚动条事件
-    _proto.bindScrollEvent = function() {
+    bindScrollEvent() {
         var self = this;
         $(window).on('resize', function(e) {
             self.updateScroll();
@@ -1164,13 +1168,13 @@
             self.$vScrollWrap[0].scrollTop += e.originalEvent.deltaY;
         })
         this.$vScrollWrap.on('scroll', function(e) {
-            var firstLine = Math.floor(this.scrollTop / SubJs.charHight) + 1;
+            var firstLine = Math.floor(this.scrollTop / Editor.charHight) + 1;
             firstLine = firstLine < 1 ? 1 : firstLine;
             self.$context.css({
-                top: -this.scrollTop % SubJs.charHight + 'px'
+                top: -this.scrollTop % Editor.charHight + 'px'
             })
             self.$leftNumBg.css({
-                top: -this.scrollTop % SubJs.charHight + 'px'
+                top: -this.scrollTop % Editor.charHight + 'px'
             })
             self.renderLine(firstLine);
             //更新选中区域的背景
@@ -1185,7 +1189,7 @@
         })
     }
     //输入事件
-    _proto.bindInputEvent = function() {
+    bindInputEvent() {
         var self = this;
         var preCode = 0;
         this.$textarea.on('keydown', function(e) {
@@ -1278,7 +1282,7 @@
                         if (self.selection.startPos) {
                             var startPos = self.selection.startPos,
                                 endPos = self.selection.endPos,
-                                space = Util.space(self.options.tabsize);
+                                space = Util.space(self.config.tabsize);
                             for (var i = startPos.line; i <= endPos.line; i++) {
                                 if (!e.shiftKey) { //想后移动
                                     self.linesContext.getDom(i).find('.code').prepend(space);
@@ -1298,7 +1302,7 @@
                             }
                         } else {
                             if (!e.shiftKey) {
-                                var val = Util.space(self.options.tabsize);
+                                var val = Util.space(self.config.tabsize);
                                 self.insertContent(val);
                             } else {
                                 _shiftTab(self.cursorPos.line)
@@ -1361,5 +1365,6 @@
             self.updateScroll(true);
         })
     }
-    window.SubJs = SubJs;
-}($, window)
+}
+
+export default Editor;

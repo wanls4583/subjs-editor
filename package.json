@@ -2,8 +2,10 @@
   "devDependencies": {
     "babel-core": "^6.26.3",
     "babel-loader": "^7.1.5",
-    "webpack-dev-server": "^2.11.1",
-    "webpack": "^3.10.0"
+    "css-loader": "^1.0.0",
+    "style-loader": "^0.22.0",
+    "webpack": "^3.10.0",
+    "webpack-dev-server": "^2.11.1"
   },
   "scripts": {
     "start": "webpack-dev-server --hot --inline"

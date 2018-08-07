@@ -7,7 +7,7 @@ function resolve(dir) {
 
 module.exports = {
     devtool: '#cheap-module-eval-source-map',
-    entry: './src/test.js',
+    entry: './src/main.js',
     output: {
         // 编译输出的根路径
         path: resolve('dist'),
@@ -40,6 +40,9 @@ module.exports = {
             test: /\.js$/,
             loader: 'babel-loader',
             include: [resolve('src'), resolve('test')]
+        },{
+            test:/\.css$/,
+            use:['style-loader','css-loader']
         }]
     }
 }
