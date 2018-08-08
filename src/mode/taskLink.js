@@ -199,14 +199,20 @@ class TaskLink {
                 callback(this.insertCache, i);
             }
         }
-        var taskNode = null;
-        if(baseLine){
-            taskNode = this.find(baseLine);
-        }else{
-            taskNode = this.head.next;
+        
+        var skipHead = this.skipHead;
+        //寻找跳表头
+        while (skipHead && skipHead.line < baseLine) {
+            skipHead = skipHead.skipNext;
         }
-        while (taskNode && (taskNode = taskNode.next)) {
-            callback(taskNode);
+
+        skipHead = skipHead && skipHead.skipPre || this.skipLast;
+
+        while (skipHead && skipHead.line <= baseLine) {
+            skipHead = skipHead.next;
+        }
+        while (skipHead && (skipHead = skipHead.next)) {
+            callback(skipHead);
         }
     }
 }
