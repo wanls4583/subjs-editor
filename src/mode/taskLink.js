@@ -30,6 +30,7 @@ class TaskLink {
         this.skipHead = this.head;
         this.skipLast = this.head;
         this.nowTask = this.head;
+        this.insertCache = [];
     }
     //执行
     process() {
@@ -38,6 +39,11 @@ class TaskLink {
             self = this;
         clearTimeout(this.timer);
         while (endTime - startTime <= 17) {
+            if (this.insertCache.length) {
+                for (var i = 0, length = this.insertCache.length; i < 100 && i < length; i++) {
+                    this._insert(this.insertCache.pop())
+                }
+            }
             if (!this.nowTask || this.nowTask.line < 1) {
                 this.nowTask = this.last;
             }
@@ -48,14 +54,26 @@ class TaskLink {
             }
             endTime = new Date().getTime();
         }
-        if (this.head.next) {
+        if (this.head.next || this.insertCache.length) {
             this.timer = setTimeout(function() {
                 self.process();
             }, 0);
         }
     }
+    /**
+     * 添加待处理行
+     * @param  {Number} line   待处理行
+     * @param  {Boolean} force 强制同步
+     */
+    insert(line, force) {
+        if (force) {
+            this._insert(line);
+        } else {
+            this.insertCache.push(line);
+        }
+    }
     //添加待处理行
-    insert(line) {
+    _insert(line) {
         var taskNode = this.find(line);
         if (!taskNode) {
             var skipLast = this.skipLast;
@@ -100,42 +118,35 @@ class TaskLink {
     }
     //删出一个待处理行
     del(line) {
+        var self = this;
         if (typeof line === 'number') {
             var taskNode = this.find(line);
             while (taskNode && taskNode.line <= line) {
-                if (taskNode.next) {
-                    taskNode.next.pre = taskNode.pre;
-                }
-                taskNode.pre.next = taskNode.next;
-                if (taskNode == this.last) {
-                    this.last = taskNode.pre;
-                }
-
-                //删除跳表项
-                if (taskNode.skipNext) {
-                    taskNode.skipNext.skipPre = taskNode.skipPre;
-                    taskNode.skipPre.skipNext = taskNode.skipNext;
-                } else if (taskNode == this.skipLast) {
-                    this.skipLast = taskNode.skipPre;
-                    this.skipLast.skipNext = null;
-                }
+                _del(taskNode);
                 taskNode = taskNode.next;
             }
         } else if (typeof line === 'object') {
-            if (line.next) {
-                line.next.pre = line.pre;
+            _del(line);
+        }
+
+        function _del(taskNode) {
+            if (taskNode.next) {
+                taskNode.next.pre = taskNode.pre;
             }
-            line.pre.next = line.next;
-            if (line == this.last) {
-                this.last = line.pre;
+            taskNode.pre.next = taskNode.next;
+            if (taskNode == self.last) {
+                self.last = taskNode.pre;
+            }
+            if (taskNode == self.nowTask) {
+                self.nowTask = self.nowTask.pre;
             }
             //删除跳表项
-            if (line.skipNext) {
-                line.skipNext.skipPre = line.skipPre;
-                line.skipPre.skipNext = line.skipNext;
-            } else if (line == this.skipLast) {
-                this.skipLast = line.skipPre;
-                this.skipLast.skipNext = null;
+            if (taskNode.skipNext) {
+                taskNode.skipNext.skipPre = taskNode.skipPre;
+                taskNode.skipPre.skipNext = taskNode.skipNext;
+            } else if (taskNode == self.skipLast) {
+                self.skipLast = taskNode.skipPre;
+                self.skipLast.skipNext = null;
             }
         }
     }
@@ -174,6 +185,28 @@ class TaskLink {
 
         if (skipHead) {
             this.nowTask = skipHead;
+        }
+    }
+    /**
+     * 对所有任务行操作
+     * @param  {Function} callback 回调函数
+     * @param  {Function} callback 回调函数
+     */
+    eachTask(callback,baseLine) {
+        baseLine = baseLine || 0;
+        for (var i = this.insertCache.length; i >= 0; i--) {
+            if(this.insertCache[i] > baseLine){
+                callback(this.insertCache, i);
+            }
+        }
+        var taskNode = null;
+        if(baseLine){
+            taskNode = this.find(baseLine);
+        }else{
+            taskNode = this.head.next;
+        }
+        while (taskNode && (taskNode = taskNode.next)) {
+            callback(taskNode);
         }
     }
 }

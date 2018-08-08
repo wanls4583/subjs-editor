@@ -1,5 +1,5 @@
 import Util from './util.js';
-import {TokenLink,TokenNode} from './tokenLink.js';
+import { TokenLink, TokenNode } from './tokenLink.js';
 import TaskLink from './taskLink.js';
 
 ////////////
@@ -279,7 +279,7 @@ class Mode {
      * @param  {Number} startLine 行号
      */
     onInsertBefore(startLine, endLine) {
-        var recheckLines = [startLine],
+        var recheckLines = [],
             self = this;
         if (endLine > startLine) {
             var preFlag = false,
@@ -306,12 +306,15 @@ class Mode {
                 }
             }
         }
-        var taskNode = this.taskList.find(startLine);
-        while (taskNode && (taskNode = taskNode.next)) {
-            taskNode.line += endLine - startLine;
-        }
+        this.taskList.eachTask(function(taskNode, index) {
+            if (taskNode.line) {
+                taskNode.line += endLine - startLine;
+            } else {
+                taskNode[index] += endLine - startLine;
+            }
+        }, startLine);
         recheckLines = recheckLines.concat(this.undoTokenLine(startLine));
-        for (var i = 0,length = recheckLines.length; i < length; i++) {
+        for (var i = 0, length = recheckLines.length; i < length; i++) {
             if (recheckLines[i] > startLine) {
                 recheckLines[i] += endLine - startLine;
             }
@@ -320,13 +323,17 @@ class Mode {
             recheckLines.push(i);
         }
         Util.sortNum(recheckLines);
-        for (var i = 0; i < recheckLines.length; i++) {
+        for (var i = 0; i < recheckLines.length - 1; i++) {
             this.taskList.insert(recheckLines[i]);
         }
+        this.taskList.insert(startLine, true);
         this.setPriorLine(startLine);
-        setTimeout(function() {
-            self.setPriorLine(recheckLines[recheckLines.length - 1]);
-        });
+        if (recheckLines.length) {
+            this.taskList.insert(recheckLines[recheckLines.length - 1], true);
+            setTimeout(function() {
+                self.setPriorLine(recheckLines[recheckLines.length - 1]);
+            });
+        }
     }
     /**
      * 插入新行之后触发[外部接口]
@@ -341,7 +348,7 @@ class Mode {
      * @param  {Number} startLine 行号
      */
     onDeleteBefore(startLine, endLine) {
-        var recheckLines = [startLine],
+        var recheckLines = [],
             self = this;
         if (endLine > startLine) {
             var preFlag = false,
@@ -369,28 +376,39 @@ class Mode {
                 }
             }
         }
-        var taskNode = this.taskList.find(startLine);
-        while (taskNode && (taskNode = taskList.next)) {
-            if (taskNode.line > endLine) {
-                taskNode.line -= endLine - startLine;
-            } else if (taskNode.line > startLine) {
-                this.taskList.del(taskNode);
+        this.taskList.eachTask(function(taskNode, index) {
+            if (taskNode.line) {
+                if (taskNode.line > endLine) {
+                    taskNode.line -= endLine - startLine;
+                } else if (taskNode.line > startLine) {
+                    self.taskList.del(taskNode);
+                }
+            } else {
+                if (taskNode[index] > endLine) {
+                    taskNode[index] -= endLine - startLine;
+                } else if (taskNode[index] > startLine) {
+                    taskNode.splice(index, 1);
+                }
             }
-        }
+        }, startLine);
         recheckLines = recheckLines.concat(this.undoTokenLine(startLine));
-        for (var i = 0,length = recheckLines.length; i < length; i++) {
+        for (var i = 0, length = recheckLines.length; i < length; i++) {
             if (recheckLines[i] > endLine) {
                 recheckLines[i] -= endLine - startLine;
             }
         }
         Util.sortNum(recheckLines);
-        for (var i = 0; i < recheckLines.length; i++) {
+        for (var i = 0; i < recheckLines.length - 1; i++) {
             this.taskList.insert(recheckLines[i]);
         }
+        this.taskList.insert(startLine, true);
         this.setPriorLine(startLine);
-        setTimeout(function() {
-            self.setPriorLine(recheckLines[recheckLines.length - 1]);
-        });
+        if (recheckLines.length) {
+            this.taskList.insert(recheckLines[recheckLines.length - 1], true);
+            setTimeout(function() {
+                self.setPriorLine(recheckLines[recheckLines.length - 1]);
+            });
+        }
     }
     /**
      * 删除行之后触发[外部接口]
