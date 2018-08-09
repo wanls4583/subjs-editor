@@ -132,6 +132,24 @@ class Util {
         }
         return this.scrBarWidth;
     }
+    //获取字符宽度
+    static getCharWidth(wrap) {
+        var str1 = '--------------';
+        var str2 = '——————————————';
+        wrap.innerHTML = `<span style="display:inline-block" class="char_width_1">${str1}</span><span style="display:inline-block" class="char_width_2">${str2}</span>`;
+        var dom = $('.char_width_1')[0];
+        var charWidth = dom.clientWidth / str1.length;
+        var charHight = dom.clientHeight;
+        var fullAngleCharWidth = $('.char_width_2')[0].clientWidth / str2.length;
+        var fontSize = window.getComputedStyle ? window.getComputedStyle(dom, null).fontSize : dom.currentStyle.fontSize;
+        wrap.innerHTML = '';
+        return{
+            charWidth: charWidth,
+            fullAngleCharWidth: fullAngleCharWidth,
+            charHight: charHight,
+            fontSize: fontSize
+        }
+    }
     //<,>转义
     static htmlTrans(cont) {
         return cont.replace(/</g, '&lt;').replace(/>/g, '&gt;');

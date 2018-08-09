@@ -1,6 +1,7 @@
 import Util from './util.js';
 import LinesContext from './linesContext.js';
 import $ from 'jquery';
+import css from '../css/editor.css';
 
 ////////
 //编辑器 //
@@ -25,7 +26,7 @@ class Editor {
         this.linesContext = new LinesContext(Editor); //所有的行
         this.mode = option.mode && new option.mode(this.linesContext);
         this.leftNumDom = []; //行号dom
-        this.cursorPos = { line: 0, column: 0 }; //光标位置
+        this.cursorPos = { line: 1, column: 0 }; //光标位置
         this.selection = {};
         this.firstLine = 1;
         this._init();
@@ -50,25 +51,19 @@ class Editor {
     }
     //获取字符宽度
     getCharWidth() {
-        var str1 = 'XXXXXXXXXXXXXX';
-        var str2 = '啊啊啊啊啊啊啊啊';
-        this.$context[0].innerHTML = '<span style="display:inline-block" class="char_width_1">' + str1 + '</span><span style="display:inline-block" class="char_width_2">' + str2 + '</span>';
-        var dom = $('.char_width_1')[0];
-        Editor.charWidth = dom.clientWidth / str1.length;
-        Editor.charHight = dom.clientHeight;
-        Editor.fullAngleCharWidth = $('.char_width_2')[0].clientWidth / str2.length;
-        this.fontSize = window.getComputedStyle ? window.getComputedStyle(dom, null).fontSize : dom.currentStyle.fontSize;
-        this.$context[0].innerHTML = '';
-        //可实区域可能显示的行的数量
+        var result = Util.getCharWidth(this.$context[0]);
+        Editor.charWidth = result.charWidth;
+        Editor.charHight = result.charHight;
+        Editor.fullAngleCharWidth = result.fullAngleCharWidth;
+        this.fontSize = result.fontSize;
         this.maxVisualLine = Math.ceil(this.$context[0].clientHeight / Editor.charHight) + 1;
-        console.log('charSize', Editor.charWidth, Editor.fullAngleCharWidth, Editor.charHight);
     }
     //输入框区域
     creatContext() {
-        this.$scroller = $('<div class="editor_scroller" style="position:relative;z-index:3;overflow:hidden;height:100%;padding:5px 0 0 5px;box-sizing:border-box">\
-                <div class="editor_context" style="position:relative;top:0;min-height:100%;cursor:text;"></div>\
-                <div class="editor_bg" style="position:absolute;left:0;top:0;z-index:-1"></div>\
-            </div>');
+        this.$scroller = $('<div class="editor_scroller">\
+                                <div class="editor_context"></div>\
+                                <div class="editor_bg"></div>\
+                            </div>');
         this.$wrapper = $('<div class="editor_wrap"></div>');
         this.$wrapper.append(this.$scroller);
         this.$context = this.$scroller.find('.editor_context');
@@ -78,18 +73,13 @@ class Editor {
     }
     //左侧行号
     createLeftNumBg() {
-        this.$leftNumBg = $('<div class="line_num_bg" style="float:left;position:relative;left:0;top:0;z-index:2;min-height:100%;padding:5px 0;padding-bottom:' + Editor.charHight + 'px;box-sizing:border-box"></div>');
+        this.$leftNumBg = $('<div class="line_num_bg" style="padding-bottom:' + Editor.charHight + 'px;"></div>');
         this.$wrapper.prepend(this.$leftNumBg);
         for (var i = 1; i <= this.maxVisualLine; i++) {
             var $num = $('<span class="line_num"></span>');
             $num.css({
-                'display': 'block',
                 'height': Editor.charHight + 'px',
                 'line-height': Editor.charHight + 'px',
-                'padding-right': '15px',
-                'padding-left': '15px',
-                'user-select': 'none',
-                'text-align': 'right'
             })
             this.leftNumDom.push($num);
         }
@@ -97,11 +87,9 @@ class Editor {
     //创建输入框
     creatTextarea() {
         var self = this;
-        var wrapStyle = 'position:absolute;top:0;left:0;right:0;bottom:0;z-index:-1;overflow:hidden;opacity:0;'
-        var areaStyle = 'height:100%;width:100%;padding:0;outline:none;border-style:none;resize:none;overflow:hidden;background-color:transparent;color:transparent'
         this.$textWrap = $('\
-            <div id="subjs_editor_textarea_wrap" style="' + wrapStyle + '">\
-                <textarea id="subjs_editor_textarea" style="' + areaStyle + '"></textarea>\
+            <div id="subjs_editor_textarea_wrap">\
+                <textarea id="subjs_editor_textarea"></textarea>\
             </div>');
         this.$wrapper.append(this.$textWrap);
         this.$textarea = this.$wrapper.find('#subjs_editor_textarea');
@@ -114,12 +102,12 @@ class Editor {
     }
     //创建当前行背景
     createLineBg() {
-        this.$lineBg = $('<div class="current_line_bg" style="display:none;position:absolute;top:5px;left:40px;right:0;z-index:1;height:' + Editor.charHight + 'px"></div>');
+        this.$lineBg = $('<div class="current_line_bg" style="height:' + Editor.charHight + 'px"></div>');
         this.$wrapper.append(this.$lineBg);
     }
     //创建光标
     createCrusor() {
-        this.$cursor = $('<i class="cursor" style="display:none;position:absolute;top:0;width:2px;height:' + Editor.charHight + 'px;background-color:#333"></i>');
+        this.$cursor = $('<i class="cursor" style="height:' + Editor.charHight + 'px;"></i>');
         this.$scroller.append(this.$cursor);
         var show = true;
         var self = this;
@@ -141,8 +129,8 @@ class Editor {
     }
     //创建纵向滚动条
     createScrollBar() {
-        this.$vScrollWrap = $('<div class="v_scrollbar_wrap" style="position:absolute;top:0;bottom:0;right:0;z-index:4;overflow:auto;width:22px;"><div class="v_scrollbar"></div></div>');
-        this.$hScrollWrap = $('<div class="h_scrollbar_wrap" style="position:absolute;left:0;right:0;bottom:0;z-index:4;overflow:auto;height:22px;"><div class="h_scrollbar" style="height:100%"></div></div>');
+        this.$vScrollWrap = $('<div class="v_scrollbar_wrap"><div class="v_scrollbar"></div></div>');
+        this.$hScrollWrap = $('<div class="h_scrollbar_wrap"><div class="h_scrollbar"></div></div>');
         this.$vScrollBar = this.$vScrollWrap.find('.v_scrollbar');
         this.$hScrollBar = this.$hScrollWrap.find('.h_scrollbar');
         this.$wrapper.append(this.$vScrollWrap);
@@ -265,7 +253,7 @@ class Editor {
             realBarWidth = Util.getScrBarWidth();
         //设置编辑区宽度
         this.$context.css({
-            'min-width': this.linesContext.getMaxWidth() + realBarWidth + 15 + 'px'
+            'min-width': this.linesContext.getMaxWidth() + 15 + 'px'
         })
         //横线滚动条会占用一定高度
         if (scroller.scrollWidth > scroller.clientWidth) {
@@ -273,6 +261,9 @@ class Editor {
         }
         if (this.linesContext.getLength() >= this.maxVisualLine - 1) {
             hasVBar = 22;
+            this.$wrapper.css('padding-right', realBarWidth + 'px');
+        } else {
+            this.$wrapper.css('padding-right', '0px');
         }
         //设置横向滚动条左边距离
         this.$hScrollWrap.css({
@@ -284,12 +275,10 @@ class Editor {
         })
         //设置横向滚动条宽度度
         this.$hScrollBar.css({
-            width: context.scrollWidth - (hasVBar ? realBarWidth : 0) + 'px'
+            width: context.scrollWidth + 'px'
         })
         //出现横向滚动条后，纵向滚动条高度缩短22px
         if (Util.pxToNum(Util.getStyleVal(this.$vScrollWrap[0], 'bottom')) == 0 && hasHBar) {
-            //获取真实滚动条宽度
-            realBarWidth = this.$vScrollWrap[0].offsetWidth - this.$vScrollWrap[0].clientWidth;
             this.$vScrollWrap.css({
                 bottom: realBarWidth + 'px'
             })
@@ -300,9 +289,6 @@ class Editor {
         }
         //出现纵向滚动条后，横向滚动条高度缩短22px
         if (Util.pxToNum(Util.getStyleVal(this.$hScrollWrap[0], 'right')) == 0 && hasVBar) {
-            if (!realBarWidth) {
-                realBarWidth = this.$hScrollWrap[0].offsetHeight - this.$hScrollWrap[0].clientHeight;
-            }
             this.$hScrollWrap.css({
                 right: realBarWidth + 'px'
             })
@@ -312,20 +298,21 @@ class Editor {
             })
         }
         if (ifScrollToCursor) {
+            var paddingTop = Util.pxToNum(Util.getStyleVal(scroller, 'paddingTop'));
             var point = this.posToPx(this.cursorPos.line, this.cursorPos.column);
-            var height = hasHBar ? this.$scroller[0].clientHeight - realBarWidth : this.$scroller[0].clientHeight;
+            var height = hasHBar ? scroller.clientHeight - paddingTop - realBarWidth : scroller.clientHeight - paddingTop;
             //处理纵向
             if (point.top < 0) {
                 this.$vScrollWrap[0].scrollTop = (this.cursorPos.line - 1) * Editor.charHight;
             } else if (point.top > height - Editor.charHight) {
                 var line = this.cursorPos.line - Math.ceil(height / Editor.charHight);
-                this.$vScrollWrap[0].scrollTop = line * Editor.charHight + (Editor.charHight - height % Editor.charHight) + Util.pxToNum(Util.getStyleVal(scroller, 'paddingTop'));
+                this.$vScrollWrap[0].scrollTop = line * Editor.charHight + (Editor.charHight - height % Editor.charHight);
             }
             //处理横向
             if (point.left < this.$hScrollWrap[0].scrollLeft + Editor.charWidth) {
                 this.$hScrollWrap[0].scrollLeft = point.left - Editor.charWidth;
-            } else if (point.left > this.$hScrollWrap[0].scrollLeft + this.$scroller[0].clientWidth - Editor.charWidth - realBarWidth) {
-                this.$hScrollWrap[0].scrollLeft = point.left - this.$scroller[0].clientWidth + Editor.charWidth + realBarWidth;
+            } else if (point.left > this.$hScrollWrap[0].scrollLeft + scroller.clientWidth - Editor.charWidth - realBarWidth) {
+                this.$hScrollWrap[0].scrollLeft = point.left - scroller.clientWidth + Editor.charWidth + realBarWidth;
             }
         }
     }
@@ -347,6 +334,7 @@ class Editor {
                 this.cursorPos.column = this.cursorPos.column + newContent.length;
             }
         } else {
+            this.cursorPos.line = 0;
             this.cursorPos.column = 0;
         }
         if (this.mode && this.cursorPos.line >= 1) {
@@ -523,7 +511,7 @@ class Editor {
         //遍历可视区域的元素是否需要挂载或更新
         for (var i = firstLine; i < firstLine + this.maxVisualLine && i <= this.linesContext.getLength(); i++) {
             var $dom = this.linesContext.getDom(i);
-            var $preDom = this.linesContext.getDom(i - 1);
+            var $preDom = i - 1 > 0 && this.linesContext.getDom(i - 1);
             //元素尚未挂载
             if (!$dom[0].isConnected) {
                 if (i == firstLine) {
