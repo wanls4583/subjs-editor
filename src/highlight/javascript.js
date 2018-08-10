@@ -1,4 +1,4 @@
-import Mode from './mode.js';
+import Mode from './highlight.js';
 import Util from './util.js';
 
 //多行匹配 ie. /*....*/

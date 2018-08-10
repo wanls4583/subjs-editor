@@ -1,6 +1,7 @@
 var path = require('path');
 var HtmlWebpackPlugin = require('html-webpack-plugin');
 var webpack = require('webpack');
+var uglify = require('uglifyjs-webpack-plugin');
 
 // 拼接我们的工作区路径为一个绝对路径
 function resolve(dir) {
@@ -12,9 +13,9 @@ module.exports = {
     entry: './src/example/main.js',
     output: {
         // 编译输出的根路径
-        path: resolve('dist'),
+        path: resolve('dist/example'),
         // 编译输出的文件名
-        filename: 'bundle.js',
+        filename: 'main.min.js',
         // 正式发布环境下编译输出的发布路径
         // publicPath: './'
     },
@@ -54,6 +55,7 @@ module.exports = {
         new HtmlWebpackPlugin({
             filename: 'index.html',
             template: resolve('src/example/index.html')
-        })
+        }),
+        // new uglify()
     ]
 }
