@@ -291,13 +291,27 @@ class Mode {
                     if (head.line > startLine) {
                         head.line += endLine - startLine;
                         if (!suffixFlag && head.type == 2) {
-                            //最近的下一个 suffixToken
+                            //最近的下一个 suffixToken，需要重置
+                            /*
+                                //preToken
+                                //...
+                                //startLine
+                                //...
+                                //suffixToken(head)
+                            */
                             if (head.preToken && head.preToken.line < startLine) {
                                 recheckLines = recheckLines.concat(this.undoTokenLine(head.line));
                             }
                             suffixFlag = true;
                         }
-                        //最近的可能影响到 startLine 的 preToken
+                        //最近的前一个 preToken，需要重置
+                        /*
+                            //preToken(head)
+                            //...
+                            //startLine
+                            //...
+                            //suffixToken
+                        */
                     } else if (!preFlag && head.type == 1 && (head == this.endToken || head.suffixToken && head.suffixToken.line > startLine)) {
                         recheckLines = recheckLines.concat(this.undoTokenLine(head.line));
                         preFlag = true;
@@ -309,7 +323,7 @@ class Mode {
         this.taskList.eachTask(function(taskNode, index) {
             if (taskNode.line) {
                 taskNode.line += endLine - startLine;
-            } else {
+            } else { //缓存中的待处理行
                 taskNode[index] += endLine - startLine;
             }
         }, startLine);
@@ -326,11 +340,15 @@ class Mode {
         for (var i = 0; i < recheckLines.length - 1; i++) {
             this.taskList.insert(recheckLines[i]);
         }
+        //同步插入
         this.taskList.insert(startLine, true);
+        //设置优先处理行
         this.setPriorLine(startLine);
         if (recheckLines.length) {
+            //同步插入
             this.taskList.insert(recheckLines[recheckLines.length - 1], true);
             setTimeout(function() {
+                //设置优先处理行，处理顺序从后到前
                 self.setPriorLine(recheckLines[recheckLines.length - 1]);
             });
         }
@@ -357,11 +375,25 @@ class Mode {
                 var tokenList = this.tokenLists[i];
                 var head = tokenList.head.next;
                 while (head) {
-                    //可能影响到区域外的行
+                    //寻找匹配区域和边界交叉的preToken，需要重置
                     if (head.type == 1) {
+                        /*
+                            //preToken(head)
+                            //...
+                            //startLine
+                            //...
+                            //suffixToken
+                        */
                         if (!preFlag && head.line < startLine && (head == this.endToken || head.suffixToken && head.suffixToken.line >= startLine)) {
                             recheckLines = recheckLines.concat(this.undoTokenLine(head.line));
                             preFlag = true;
+                        /*
+                            //preToken(head)
+                            //...
+                            //endLine
+                            //...
+                            //suffixToken
+                        */
                         } else if (!suffixFlag && head.line <= endLine && (head == this.endToken || head.suffixToken && head.suffixToken.line > endLine)) {
                             recheckLines = recheckLines.concat(this.undoTokenLine(head.line));
                             suffixFlag = true;
@@ -383,7 +415,7 @@ class Mode {
                 } else if (taskNode.line > startLine) {
                     self.taskList.del(taskNode);
                 }
-            } else {
+            } else { //缓存中待处理的行
                 if (taskNode[index] > endLine) {
                     taskNode[index] -= endLine - startLine;
                 } else if (taskNode[index] > startLine) {
@@ -401,11 +433,15 @@ class Mode {
         for (var i = 0; i < recheckLines.length - 1; i++) {
             this.taskList.insert(recheckLines[i]);
         }
+        //同步插入
         this.taskList.insert(startLine, true);
+        //设置优先级
         this.setPriorLine(startLine);
         if (recheckLines.length) {
+            //同步插入
             this.taskList.insert(recheckLines[recheckLines.length - 1], true);
             setTimeout(function() {
+                //设置优先级，处理顺序从后往前
                 self.setPriorLine(recheckLines[recheckLines.length - 1]);
             });
         }
