@@ -333,9 +333,8 @@ class Editor {
             } else {
                 this.cursorPos.column = this.cursorPos.column + newContent.length;
             }
-        } else {
+        } else if(this.linesContext.getLength() == 0){
             this.cursorPos.line = 0;
-            this.cursorPos.column = 0;
         }
         if (this.mode && this.cursorPos.line >= 1) {
             this.mode.onInsertBefore(this.cursorPos.line, this.cursorPos.line + strs.length - 1);

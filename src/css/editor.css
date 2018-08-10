@@ -94,15 +94,16 @@
 }
 .h_scrollbar_wrap::-webkit-scrollbar,
 .v_scrollbar_wrap::-webkit-scrollbar{
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
     border-radius: 4px;
-    background: rgb(56,57,52);
+    /*background: rgb(56,57,52);*/
+    background-color: rgb(76,77,72);
     box-shadow: 0 0 20px rgba(0,0,0,0.2);
 }
 .h_scrollbar_wrap::-webkit-scrollbar-thumb,
 .v_scrollbar_wrap::-webkit-scrollbar-thumb {
     border-radius: 4px;
-    background-color: rgb(85,86,82);
-    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+    /*background-color: rgb(85,86,82);*/
+    background-color: rgb(115,116,112);
 }
