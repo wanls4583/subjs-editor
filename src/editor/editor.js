@@ -24,7 +24,7 @@ class Editor {
         }
         this.config.tabsize = option.tabsize || 4;
         this.linesContext = new LinesContext(Editor); //所有的行
-        this.mode = option.mode && new option.mode(this.linesContext);
+        this.mode = option.mode && new option.mode(this);
         this.leftNumDom = []; //行号dom
         this.cursorPos = { line: 1, column: 0 }; //光标位置
         this.selection = {};

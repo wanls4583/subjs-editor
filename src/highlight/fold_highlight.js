@@ -4,10 +4,11 @@ import TaskLink from './tasklink.js';
 import CONST from '../common/const_var.js';
 
 class FoldHightLight {
-    constructor(linesContext, rules) {
+    constructor(editor, rules) {
         var self = this;
         this.rules = rules;
-        this.linesContext = linesContext;
+        this.editor = editor;
+        this.linesContext = editor.linesContext;
         this.tokenLists = []; //折叠符号记录
         this.taskList = new TaskLink(1000, function(line) {
             self.updateLine(line);
@@ -66,20 +67,24 @@ class FoldHightLight {
                 if (next.type == CONST.FOLD_SUFFIX_TYPE) {
                     if (stack[stack.length - 1].type == CONST.FOLD_PRE_TYPE) {
                         var tmp = stack.pop();
+                        if (tmp == tokenNode && next.preToken) {
+                            self.undoFold(next.preToken);
+                        }
+                        tmp.suffixToken = next;
+                        next.preToken = tmp;
+                        if (tmp.line < next.line) {
+                            tmp.foldType = CONST.FOLD_OPEN_TYPE;
+                        }
+                        self.renderFold(tmp);
                         if (tmp == tokenNode) {
-                            tokenNode.suffixToken = next;
-                            next.preToken = tokenNode;
-                            if (tokenNode.line < next.line) {
-                                tokenNode.foldType = CONST.FOLD_OPEN_TYPE;
-                            }
-                            self.renderFold(tokenNode);
                             return;
                         }
                     } else {
                         return;
                     }
+                }else{
+                    stack.push(next);
                 }
-                stack.push(next);
                 next = next.next;
             }
         }
@@ -91,20 +96,24 @@ class FoldHightLight {
                 if (pre.type == CONST.FOLD_PRE_TYPE) {
                     if (stack[stack.length - 1].type == CONST.FOLD_SUFFIX_TYPE) {
                         var tmp = stack.pop();
+                        if (tmp == tokenNode && pre.suffixToken) {
+                            self.undoFold(pre);
+                        }
+                        tmp.preToken = pre;
+                        pre.suffixToken = tmp;
+                        if (pre.line < tmp.line) {
+                            pre.foldType = CONST.FOLD_OPEN_TYPE;
+                        }
+                        self.renderFold(pre);
                         if (tmp == tokenNode) {
-                            tokenNode.preToken = pre;
-                            pre.suffixToken = tokenNode;
-                            if (pre.line < tokenNode.line) {
-                                pre.foldType = CONST.FOLD_OPEN_TYPE;
-                            }
-                            self.renderFold(pre);
                             return;
                         }
                     } else {
                         return;
                     }
+                }else{
+                    stack.push(pre);
                 }
-                stack.push(pre);
                 pre = pre.pre;
             }
         }
@@ -141,6 +150,9 @@ class FoldHightLight {
      */
     renderFold(preToken) {
         this.linesContext.setFoldType(preToken.line, preToken.foldType);
+        if(preToken.line >= this.editor.firstLine && preToken.line < this.editor.firstLine + this.editor.maxVisualLine){
+            this.editor.leftNumDom[preToken.line - this.editor.firstLine].addClass('fold_arrow_open');
+        }
     }
     /**
      * 删除preToken挂载的折叠按钮
@@ -151,8 +163,12 @@ class FoldHightLight {
             if (preToken.suffixToken.line > preToken.line) {
                 this.linesContext.setFoldType(preToken.line, 0);
             }
+            preToken.foldType = 0;
             preToken.suffixToken.preToken = null;
             preToken.suffixToken = null;
+            if(preToken.line >= this.editor.firstLine && preToken.line < this.editor.firstLine + this.editor.maxVisualLine){
+                this.editor.leftNumDom[preToken.line - this.editor.firstLine].removeClass('fold_arrow_open');
+            }
         }
     }
     /**
@@ -223,17 +239,10 @@ class FoldHightLight {
             recheckLines.push(i);
         }
         Util.sortNum(recheckLines);
-        for (var i = 0; i < recheckLines.length - 1; i++) {
+        for (var i = 0; i < recheckLines.length; i++) {
             this.taskList.insert(recheckLines[i]);
         }
-        if (recheckLines.length) {
-            //同步插入
-            this.taskList.insert(recheckLines[recheckLines.length - 1], true);
-            setTimeout(function() {
-                //设置优先处理行，处理顺序从后到前
-                self.setPriorLine(recheckLines[recheckLines.length - 1], 'fold');
-            });
-        }
+        self.setPriorLine(recheckLines[recheckLines.length - 1]);
     }
     /**
      * 插入新行之后触发[外部接口]

@@ -11,12 +11,12 @@ class Mode {
     /**
      * @param {LinesContext} linesContext [行对应的内容]
      */
-    constructor(linesContext) {
+    constructor(editor) {
         var self = this;
-        linesContext.setDecEngine(Mode.decEngine); //设置修饰对象的处理引擎
-        this.linesContext = linesContext;
-        this.pairHighLight = new PairHighLight(linesContext,  Mode.pairRules);
-        this.foldHighLight = new FoldHighLight(linesContext, Mode.foldRules);
+        this.linesContext = editor.linesContext;
+        this.linesContext.setDecEngine(Mode.decEngine); //设置修饰对象的处理引擎
+        this.pairHighLight = new PairHighLight(editor,  Mode.pairRules);
+        this.foldHighLight = new FoldHighLight(editor, Mode.foldRules);
         this.taskList = new TaskLink(1000, function(line) {
             self.updateLine(line);
         });

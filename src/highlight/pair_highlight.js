@@ -4,10 +4,10 @@ import TaskLink from './tasklink.js';
 import CONST from '../common/const_var.js';
 
 class PairHighLight {
-	constructor(linesContext, rules){
+	constructor(editor, rules){
 		var self = this;
 		this.rules = rules;
-		this.linesContext = linesContext;
+		this.linesContext = editor.linesContext;
 		this.taskList = new TaskLink(1000, function(line){
             self.updateLine(line);
         }); //高亮待处理队列
