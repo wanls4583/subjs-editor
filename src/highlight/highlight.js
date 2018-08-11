@@ -67,8 +67,6 @@ class Mode {
      */
     updateLine(line) {
         this.highlight(line);
-        this.pairHighLight.updateLine(line);
-        this.foldHighLight.updateLine(line);
     }
     /**
      * 插入新行之前触发[外部接口]
@@ -106,6 +104,7 @@ class Mode {
      * @param  {Number} endLine   结束行号
      */
     onDeleteAfter(startLine, endLine) {
+        this.updateLine(startLine);
         this.pairHighLight.onDeleteAfter(startLine, endLine);
         this.foldHighLight.onDeleteAfter(startLine, endLine);
     }
