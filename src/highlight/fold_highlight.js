@@ -21,6 +21,8 @@ class FoldHightLight {
     highlight(startLine) {
         var nodes = [],
             self = this;
+        //先撤销
+        this.undoFoldLine(startLine);
         _doMatch();
         _matchToken();
         //查找多行匹配标识
@@ -67,9 +69,6 @@ class FoldHightLight {
                 if (next.type == CONST.FOLD_SUFFIX_TYPE) {
                     if (stack[stack.length - 1].type == CONST.FOLD_PRE_TYPE) {
                         var tmp = stack.pop();
-                        if (tmp == tokenNode && next.preToken) {
-                            self.undoFold(next.preToken);
-                        }
                         tmp.suffixToken = next;
                         next.preToken = tmp;
                         if (tmp.line < next.line) {
@@ -82,7 +81,7 @@ class FoldHightLight {
                     } else {
                         return;
                     }
-                }else{
+                } else {
                     stack.push(next);
                 }
                 next = next.next;
@@ -96,9 +95,6 @@ class FoldHightLight {
                 if (pre.type == CONST.FOLD_PRE_TYPE) {
                     if (stack[stack.length - 1].type == CONST.FOLD_SUFFIX_TYPE) {
                         var tmp = stack.pop();
-                        if (tmp == tokenNode && pre.suffixToken) {
-                            self.undoFold(pre);
-                        }
                         tmp.preToken = pre;
                         pre.suffixToken = tmp;
                         if (pre.line < tmp.line) {
@@ -111,7 +107,7 @@ class FoldHightLight {
                     } else {
                         return;
                     }
-                }else{
+                } else {
                     stack.push(pre);
                 }
                 pre = pre.pre;
@@ -129,12 +125,12 @@ class FoldHightLight {
             var tokenList = this.tokenLists[i];
             var tokenNode = tokenList.find(line);
             while (tokenNode && tokenNode.line == line) {
-                if (tokenNode.type == CONST.FOLD_PRE_TYPE) {
-                    if (tokenNode.suffixToken) {
-                        recheckLines.push(tokenNode.suffixToken.line);
-                    }
+                //有可能已经 highlight 过一次，此时 tokenNode.suffixToken.preToken 有可能不再等于 tokenNode
+                if (tokenNode.type == CONST.FOLD_PRE_TYPE && tokenNode.suffixToken && tokenNode.suffixToken.preToken == tokenNode) {
+                    recheckLines.push(tokenNode.suffixToken.line);
                     this.undoFold(tokenNode);
-                } else if (tokenNode.preToken) {
+                //有可能已经 highlight 过一次，此时 tokenNode.preToken.suffixToken 有可能不再等于 tokenNode
+                } else if (tokenNode.preToken && tokenNode.preToken.suffixToken == tokenNode) {
                     recheckLines.push(tokenNode.preToken.line);
                     this.undoFold(tokenNode.preToken);
                 }
@@ -150,7 +146,7 @@ class FoldHightLight {
      */
     renderFold(preToken) {
         this.linesContext.setFoldType(preToken.line, preToken.foldType);
-        if(preToken.line >= this.editor.firstLine && preToken.line < this.editor.firstLine + this.editor.maxVisualLine){
+        if (preToken.line >= this.editor.firstLine && preToken.line < this.editor.firstLine + this.editor.maxVisualLine) {
             this.editor.leftNumDom[preToken.line - this.editor.firstLine].addClass('fold_arrow_open');
         }
     }
@@ -166,7 +162,7 @@ class FoldHightLight {
             preToken.foldType = 0;
             preToken.suffixToken.preToken = null;
             preToken.suffixToken = null;
-            if(preToken.line >= this.editor.firstLine && preToken.line < this.editor.firstLine + this.editor.maxVisualLine){
+            if (preToken.line >= this.editor.firstLine && preToken.line < this.editor.firstLine + this.editor.maxVisualLine) {
                 this.editor.leftNumDom[preToken.line - this.editor.firstLine].removeClass('fold_arrow_open');
             }
         }
@@ -242,7 +238,9 @@ class FoldHightLight {
         for (var i = 0; i < recheckLines.length; i++) {
             this.taskList.insert(recheckLines[i]);
         }
-        self.setPriorLine(recheckLines[recheckLines.length - 1]);
+        //同步插入
+        this.taskList.insert(recheckLines[recheckLines.length - 1], true);
+        this.setPriorLine(recheckLines[recheckLines.length - 1]);
     }
     /**
      * 插入新行之后触发[外部接口]
@@ -256,13 +254,86 @@ class FoldHightLight {
      * 删除行之前触发[外部接口]
      * @param  {Number} startLine 行号
      */
-    onDeleteBefore(startLine, endLine) {}
+    onDeleteBefore(startLine, endLine) {
+        var recheckLines = [startLine],
+            self = this;
+        if (endLine > startLine) {
+            var preFlag = false,
+                suffixFlag = false;
+            for (var i = 0; i < this.rules.length; i++) {
+                var tokenList = this.tokenLists[i];
+                var head = tokenList.head.next;
+                while (head) {
+                    //寻找匹配区域和边界交叉的preToken，需要重置
+                    if (head.type == CONST.FOLD_PRE_TYPE) {
+                        /*
+                            //preToken(head)
+                            //...
+                            //startLine
+                            //...
+                            //suffixToken
+                        */
+                        if (!preFlag && head.line < startLine && head.suffixToken && head.suffixToken.line >= startLine) {
+                            recheckLines = recheckLines.concat(this.undoFoldLine(head.line));
+                            preFlag = true;
+                            /*
+                                //preToken(head)
+                                //...
+                                //endLine
+                                //...
+                                //suffixToken
+                            */
+                        } else if (!suffixFlag && head.line <= endLine &&  head.suffixToken && head.suffixToken.line > endLine) {
+                            recheckLines = recheckLines.concat(this.undoFoldLine(head.line));
+                            suffixFlag = true;
+                        }
+                    }
+                    if (head.line > endLine) {
+                        head.line -= endLine - startLine;
+                    } else if (head.line > startLine) {
+                        tokenList.del(head);
+                    }
+                    head = head.next;
+                }
+            }
+        }
+        this.taskList.eachTask(function(taskNode, index) {
+            if (taskNode.line) {
+                if (taskNode.line > endLine) {
+                    taskNode.line -= endLine - startLine;
+                } else if (taskNode.line > startLine) {
+                    self.taskList.del(taskNode);
+                }
+            } else { //缓存中待处理的行
+                if (taskNode[index] > endLine) {
+                    taskNode[index] -= endLine - startLine;
+                } else if (taskNode[index] > startLine) {
+                    taskNode.splice(index, 1);
+                }
+            }
+        }, startLine);
+        recheckLines = recheckLines.concat(this.undoFoldLine(startLine));
+        for (var i = 0, length = recheckLines.length; i < length; i++) {
+            if (recheckLines[i] > endLine) {
+                recheckLines[i] -= endLine - startLine;
+            }
+        }
+        Util.sortNum(recheckLines);
+        for (var i = 0; i < recheckLines.length; i++) {
+            this.taskList.insert(recheckLines[i]);
+        }
+        //同步插入
+        this.taskList.insert(recheckLines[recheckLines.length - 1], true);
+        this.setPriorLine(recheckLines[recheckLines.length - 1]);
+    }
     /**
      * 删除行之后触发[外部接口]
      * @param  {Number} startLine 开始行号
      * @param  {Number} endLine   结束行号
      */
-    onDeleteAfter(startLine, endLine) {}
+    onDeleteAfter(startLine, endLine) {
+        this.taskList.process();
+    }
     /**
      * 设置优先处理行[外部接口]
      * @param {Nunber} endLine 优先处理的末行
