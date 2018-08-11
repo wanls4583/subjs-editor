@@ -1,0 +1,9 @@
+const CONST = {
+	PAIR_PRE_TYPE : 1,
+	PAIR_SUFFIX_TYPE : 2,
+	FOLD_PRE_TYPE : 1,
+	FOLD_SUFFIX_TYPE : 2,
+	FOLD_OPEN_TYPE: 1,
+	FOLD_CLOSE_TYPE: 2
+}
+export default CONST

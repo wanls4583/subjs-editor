@@ -1,6 +1,7 @@
 import Util from './util.js';
 import { TokenLink, TokenNode } from './tokenlink.js';
 import TaskLink from './tasklink.js';
+import CONST from '../common/const_var.js';
 
 class FoldHightLight {
     constructor(linesContext, rules) {
@@ -50,7 +51,7 @@ class FoldHightLight {
         function _matchToken() {
             for (var i = 0; i < nodes.length; i++) {
                 var node = nodes[i];
-                if (node.type == 1) {
+                if (node.type == CONST.FOLD_PRE_TYPE) {
                     _findSuffixToken(node);
                 } else {
                     _findPreToken(node);
@@ -62,16 +63,15 @@ class FoldHightLight {
             var next = tokenNode.next;
             var stack = [tokenNode];
             while (next) {
-                if (next.type == 2) {
-                    if (stack[stack.length - 1].type == 1) {
+                if (next.type == CONST.FOLD_SUFFIX_TYPE) {
+                    if (stack[stack.length - 1].type == CONST.FOLD_PRE_TYPE) {
                         var tmp = stack.pop();
                         if (tmp == tokenNode) {
                             tokenNode.suffixToken = next;
                             next.preToken = tokenNode;
                             if (tokenNode.line < next.line) {
-                                tokenNode.foldType = 1;
+                                tokenNode.foldType = CONST.FOLD_OPEN_TYPE;
                             }
-                            tokenNode.foldType = 1;
                             self.renderFold(tokenNode);
                             return;
                         }
@@ -88,14 +88,14 @@ class FoldHightLight {
             var pre = tokenNode.pre;
             var stack = [tokenNode];
             while (pre) {
-                if (pre.type == 1) {
-                    if (stack[stack.length - 1].type == 2) {
+                if (pre.type == CONST.FOLD_PRE_TYPE) {
+                    if (stack[stack.length - 1].type == CONST.FOLD_SUFFIX_TYPE) {
                         var tmp = stack.pop();
                         if (tmp == tokenNode) {
                             tokenNode.preToken = pre;
                             pre.suffixToken = tokenNode;
                             if (pre.line < tokenNode.line) {
-                                pre.foldType = 1;
+                                pre.foldType = CONST.FOLD_OPEN_TYPE;
                             }
                             self.renderFold(pre);
                             return;
@@ -120,7 +120,7 @@ class FoldHightLight {
             var tokenList = this.tokenLists[i];
             var tokenNode = tokenList.find(line);
             while (tokenNode && tokenNode.line == line) {
-                if (tokenNode.type == 1) {
+                if (tokenNode.type == CONST.FOLD_PRE_TYPE) {
                     if (tokenNode.suffixToken) {
                         recheckLines.push(tokenNode.suffixToken.line);
                     }
@@ -176,7 +176,7 @@ class FoldHightLight {
                 while (head) {
                     if (head.line > startLine) {
                         head.line += endLine - startLine;
-                        if (!suffixFlag && head.type == 2) {
+                        if (!suffixFlag && head.type == CONST.FOLD_SUFFIX_TYPE) {
                             //最近的下一个 suffixToken，需要重置
                             /*
                                 //preToken
@@ -198,7 +198,7 @@ class FoldHightLight {
                             //...
                             //suffixToken
                         */
-                    } else if (!preFlag && head.type == 1 && (head == this.endToken || head.suffixToken && head.suffixToken.line > startLine)) {
+                    } else if (!preFlag && head.type == CONST.FOLD_PRE_TYPE && (head == this.endToken || head.suffixToken && head.suffixToken.line > startLine)) {
                         recheckLines = recheckLines.concat(this.undoFoldLine(head.line));
                         preFlag = true;
                     }

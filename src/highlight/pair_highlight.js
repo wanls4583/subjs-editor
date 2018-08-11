@@ -1,6 +1,7 @@
 import Util from './util.js';
 import { TokenLink, TokenNode } from './tokenlink.js';
 import TaskLink from './tasklink.js';
+import CONST from '../common/const_var.js';
 
 class PairHighLight {
 	constructor(linesContext, rules){
@@ -54,7 +55,7 @@ class PairHighLight {
         function _matchToken() {
             for (var i = 0; i < nodes.length; i++) {
                 var tokenNode = nodes[i];
-                if (tokenNode.type == 1) { //开始符
+                if (tokenNode.type == CONST.PAIR_PRE_TYPE) { //开始符
                     _findSuffixToken(tokenNode);
                 } else {
                     _findPreToken(tokenNode);
@@ -64,7 +65,7 @@ class PairHighLight {
             function _findSuffixToken(tokenNode) {
                 var next = tokenNode.next;
                 while (next) {
-                    if (next.type == 2) {
+                    if (next.type == CONST.PAIR_SUFFIX_TYPE) {
                         if (!next.preToken || next.preToken.line > tokenNode.line ||
                             next.preToken.line == tokenNode.line && next.preToken.start >= tokenNode.start) {
                             //suffixToken 所在行已经渲染过一次，避免重复渲染
@@ -91,8 +92,8 @@ class PairHighLight {
             function _findPreToken(tokenNode) {
                 var pre = tokenNode.pre;
                 while (pre && pre.line > 0) {
-                    if (pre.type == 2) {
-                        if (pre.next.type == 1) {
+                    if (pre.type == CONST.PAIR_SUFFIX_TYPE) {
+                        if (pre.next.type == CONST.PAIR_PRE_TYPE) {
                             //preToken 所在行已经渲染过一次，避免重复渲染
                             /*
                                 preToken
@@ -112,7 +113,7 @@ class PairHighLight {
                             }
                         }
                         break;
-                    } else if (pre.pre.line == 0 && pre.type == 1) {
+                    } else if (pre.pre.line == 0 && pre.type == CONST.PAIR_PRE_TYPE) {
                         //preToken 所在行已经渲染过一次，避免重复渲染
                         if (pre.suffixToken && pre.suffixToken.line == tokenNode.line && pre.suffixToken.start == tokenNode.start) {
                             pre.suffixToken = tokenNode;
@@ -128,7 +129,7 @@ class PairHighLight {
                     pre = pre.pre;
                 }
                 //如果suffxiToken后面是preToken，需要为preToken重新匹配
-                if (tokenNode.next && tokenNode.next.type == 1) {
+                if (tokenNode.next && tokenNode.next.type == CONST.PAIR_PRE_TYPE) {
                     _findSuffixToken(tokenNode.next);
                 }
             }
@@ -145,7 +146,7 @@ class PairHighLight {
             var tokenList = this.tokenLists[i];
             var tokenNode = tokenList.find(line);
             while (tokenNode && tokenNode.line == line) {
-                if (tokenNode.type == 1) {
+                if (tokenNode.type == CONST.PAIR_PRE_TYPE) {
                     if (tokenNode.suffixToken) {
                         recheckLines.push(tokenNode.suffixToken.line);
                     }
@@ -245,7 +246,7 @@ class PairHighLight {
                 while (head) {
                     if (head.line > startLine) {
                         head.line += endLine - startLine;
-                        if (!suffixFlag && head.type == 2) {
+                        if (!suffixFlag && head.type == CONST.PAIR_SUFFIX_TYPE) {
                             //最近的下一个 suffixToken，需要重置
                             /*
                                 //preToken
@@ -267,7 +268,7 @@ class PairHighLight {
                             //...
                             //suffixToken
                         */
-                    } else if (!preFlag && head.type == 1 && (head == this.endToken || head.suffixToken && head.suffixToken.line > startLine)) {
+                    } else if (!preFlag && head.type == CONST.PAIR_PRE_TYPE && (head == this.endToken || head.suffixToken && head.suffixToken.line > startLine)) {
                         recheckLines = recheckLines.concat(this.undoTokenLine(head.line));
                         preFlag = true;
                     }
@@ -326,7 +327,7 @@ class PairHighLight {
                 var head = tokenList.head.next;
                 while (head) {
                     //寻找匹配区域和边界交叉的preToken，需要重置
-                    if (head.type == 1) {
+                    if (head.type == CONST.PAIR_PRE_TYPE) {
                         /*
                             //preToken(head)
                             //...
