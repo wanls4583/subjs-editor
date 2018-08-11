@@ -69,6 +69,9 @@ class FoldHightLight {
                 if (next.type == CONST.FOLD_SUFFIX_TYPE) {
                     if (stack[stack.length - 1].type == CONST.FOLD_PRE_TYPE) {
                         var tmp = stack.pop();
+                        if(tmp == tokenNode && tmp.suffixToken){
+                            self.undoFold(tmp);
+                        }
                         tmp.suffixToken = next;
                         next.preToken = tmp;
                         if (tmp.line < next.line) {
@@ -95,6 +98,9 @@ class FoldHightLight {
                 if (pre.type == CONST.FOLD_PRE_TYPE) {
                     if (stack[stack.length - 1].type == CONST.FOLD_SUFFIX_TYPE) {
                         var tmp = stack.pop();
+                        if(tmp == tokenNode && tmp.preToken){
+                            self.undoFold(tmp.preToken);
+                        }
                         tmp.preToken = pre;
                         pre.suffixToken = tmp;
                         if (pre.line < tmp.line) {
