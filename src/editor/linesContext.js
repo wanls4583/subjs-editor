@@ -47,7 +47,8 @@ class LinesContext {
             width: 0,
             lineDecs: [],
             priorLineDecs: [],
-            lineWholeDec: ''
+            lineWholeDec: '',
+            foldType: 0
         })
         this.context[line - 1].width = Util.getStrWidth(txt, this.Editor.charWidth, this.Editor.fullAngleCharWidth);
         if (this.context[line - 1].width > this.maxObj.width) {
@@ -196,6 +197,21 @@ class LinesContext {
      */
     setDecEngine(engine) {
         this._engine = engine;
+    }
+    /**
+     * 设置折叠状态
+     * @param  {Number} line 行号
+     */
+    setFoldType(line, foldType){
+        this.context[line - 1].foldType =  foldType;
+    }
+    /**
+     * 获取折叠状态
+     * @param  {Number} line 行号
+     * @return {Number}      该行对应的折叠状态
+     */
+    getFoldType(line){
+        return this.context.length >= line && this.context[line - 1].foldType;
     }
 }
 

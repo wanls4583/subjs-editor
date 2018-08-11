@@ -53,8 +53,17 @@ var rules = [{
     exclude: Util.excludeStrReg(/\/\//),
     token: 'comment'
 }]
+//折叠规则
+var foldRules = [{
+    pre: /\{/g,
+    pre_exclude: [Util.excludeStrReg(/\{/), /\/\/.*?\{/g, /\/\*.*?\{/g],
+    suffix: /\}/g,
+    suffix_exclude: [Util.excludeStrReg(/\}/), /\/\/.*?\}/g, /\/\*.*?\}/g],
+    token: 'fold'
+}]
 
 Mode.rules = rules;
 Mode.pairRules = pairRules;
+Mode.foldRules = foldRules;
 
 export default Mode;

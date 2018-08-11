@@ -407,7 +407,14 @@ class Editor {
     updateNum(firstLine) {
         var allDom = this.$context.find('.pre_code_line');
         for (var i = 0; i < allDom.length; i++) {
-            this.leftNumDom[i].html(firstLine + i);
+            var foldType = this.linesContext.getFoldType(firstLine + i);
+            if(foldType == 1 && !this.linesContext.getWholeLineDec(firstLine + i)){
+                this.leftNumDom[i].html(firstLine + i).addClass('fold_arrow_open').removeClass('fold_arrow_close');
+            }else if(foldType == 2 && !this.linesContext.getWholeLineDec(firstLine + i)){
+                this.leftNumDom[i].html(firstLine + i).addClass('fold_arrow_close').removeClass('fold_arrow_open');
+            }else{
+                this.leftNumDom[i].html(firstLine + i).removeClass('fold_arrow_close').removeClass('fold_arrow_open');
+            }
             if (!this.leftNumDom[i][0].isConnected) {
                 this.$leftNumBg.append(this.leftNumDom[i]);
             }

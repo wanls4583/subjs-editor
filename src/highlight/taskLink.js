@@ -20,17 +20,17 @@ class TaskNode {
 class TaskLink {
     /**
      * @param {Number} skipGap      跳表最小间隔
-     * @param {Object} mode         语法高亮对象
+     * @param {Object} processCb    回调
      */
-    constructor(skipGap, mode) {
+    constructor(skipGap, processCb) {
         this.skipGap = skipGap;
-        this.mode = mode;
         this.head = new TaskNode(0);
         this.last = this.head;
         this.skipHead = this.head;
         this.skipLast = this.head;
         this.nowTask = this.head;
         this.insertCache = [];
+        this.processCb = processCb;
     }
     //执行
     process() {
@@ -48,7 +48,7 @@ class TaskLink {
                 this.nowTask = this.last;
             }
             if (this.nowTask && this.nowTask.line > 0) {
-                this.mode.updateLine(this.nowTask.line);
+                this.processCb(this.nowTask.line);
                 this.nowTask = this.nowTask.pre;
                 this.del(this.nowTask.next);
             }
