@@ -24,7 +24,7 @@ class Editor {
         }
         this.config.tabsize = option.tabsize || 4;
         this.linesContext = new LinesContext(Editor); //所有的行
-        this.mode = option.mode && new option.mode(this);
+        this.highlighter = option.highlighter && new option.highlighter(this);
         this.leftNumDom = []; //行号dom
         this.cursorPos = { line: 1, column: 0 }; //光标位置
         this.selection = {};
@@ -76,7 +76,7 @@ class Editor {
         this.$leftNumBg = $('<div class="line_num_bg" style="padding-bottom:' + Editor.charHight + 'px;"></div>');
         this.$wrapper.prepend(this.$leftNumBg);
         for (var i = 1; i <= this.maxVisualLine; i++) {
-            var $num = $('<span class="line_num"></span>');
+            var $num = $('<span class="line_num"><span class="num"></span><i></i></span>');
             $num.css({
                 'height': Editor.charHight + 'px',
                 'line-height': Editor.charHight + 'px',
@@ -333,11 +333,11 @@ class Editor {
             } else {
                 this.cursorPos.column = this.cursorPos.column + newContent.length;
             }
-        } else if(this.linesContext.getLength() == 0){
+        } else if (this.linesContext.getLength() == 0) {
             this.cursorPos.line = 0;
         }
-        if (this.mode && this.cursorPos.line >= 1) {
-            this.mode.onInsertBefore(this.cursorPos.line, this.cursorPos.line + strs.length - 1);
+        if (this.highlighter && this.cursorPos.line >= 1) {
+            this.highlighter.onInsertBefore(this.cursorPos.line, this.cursorPos.line + strs.length - 1);
         }
         //粘贴操作可能存在换号符,需要添加新行
         for (var tmp = 1; tmp < strs.length; tmp++) {
@@ -349,11 +349,11 @@ class Editor {
             firstLine = this.cursorPos.line + strs.length - this.maxVisualLine;
         }
         this.renderLine(firstLine);
-        if (this.mode) {
+        if (this.highlighter) {
             if (this.cursorPos.line < 1) { //初始化坐标为(0,0)
-                this.mode.onInsertAfter(1, 1);
+                this.highlighter.onInsertAfter(1, 1);
             } else {
-                this.mode.onInsertAfter(this.cursorPos.line, this.cursorPos.line + strs.length - 1);
+                this.highlighter.onInsertAfter(this.cursorPos.line, this.cursorPos.line + strs.length - 1);
             }
         }
         this.cursorPos.line = this.cursorPos.line + strs.length - 1;
@@ -375,7 +375,7 @@ class Editor {
             }
             endPos = { line: line, column: this.linesContext.getText(line).length };
         }
-        this.mode && this.mode.onDeleteBefore(startPos.line, endPos.line);
+        this.highlighter && this.highlighter.onDeleteBefore(startPos.line, endPos.line);
         if (startPos.line == endPos.line) {
             var str = this.linesContext.getText(startPos.line);
             this.linesContext.setText(startPos.line, str.substring(0, startPos.column) + str.substring(endPos.column));
@@ -394,7 +394,7 @@ class Editor {
             this.cursorPos.column = startPos.column;
         }
         this.renderLine();
-        this.mode && this.mode.onDeleteAfter(startPos.line, endPos.line);
+        this.highlighter && this.highlighter.onDeleteAfter(startPos.line, endPos.line);
         this.updateScroll();
         this.updateCursorPos();
         this.$selectBg.html('');
@@ -402,25 +402,37 @@ class Editor {
     }
     /**
      * 更新行号
-     * @param  {number} firstLine 首行
+     * @param  {Number}  firstLine 首行/行号
+     * @param  {Boolean} ifOne     是否中只更新一行
      */
-    updateNum(firstLine) {
-        var allDom = this.$context.find('.pre_code_line');
-        for (var i = 0; i < allDom.length; i++) {
-            var foldType = this.linesContext.getFoldType(firstLine + i);
-            if(foldType == 1 && !this.linesContext.getWholeLineDec(firstLine + i)){
-                this.leftNumDom[i].html(firstLine + i).addClass('fold_arrow_open').removeClass('fold_arrow_close');
-            }else if(foldType == 2 && !this.linesContext.getWholeLineDec(firstLine + i)){
-                this.leftNumDom[i].html(firstLine + i).addClass('fold_arrow_close').removeClass('fold_arrow_open');
-            }else{
-                this.leftNumDom[i].html(firstLine + i).removeClass('fold_arrow_close').removeClass('fold_arrow_open');
+    updateNum(firstLine, ifOne) {
+        var self = this;
+        if (!ifOne) {
+            var allDom = this.$context.find('.pre_code_line');
+            for (var i = 0; i < allDom.length; i++) {
+                _update(firstLine + i);
+                if (!this.leftNumDom[i][0].isConnected) {
+                    this.$leftNumBg.append(this.leftNumDom[i]);
+                }
             }
-            if (!this.leftNumDom[i][0].isConnected) {
-                this.$leftNumBg.append(this.leftNumDom[i]);
+            for (var i = allDom.length; i < this.leftNumDom.length; i++) {
+                this.leftNumDom[i].remove();
             }
+        } else if (firstLine >= this.firstLine && firstLine < this.firstLine + this.maxVisualLine) {
+            _update(firstLine);
         }
-        for (var i = allDom.length; i < this.leftNumDom.length; i++) {
-            this.leftNumDom[i].remove();
+
+        function _update(line) {
+            var foldType = self.linesContext.getFoldType(line);
+            var hasWDec = self.linesContext.getWholeLineDec(line);
+            var $dom = self.leftNumDom[line - self.firstLine];
+            if (foldType == 1 && !hasWDec) {
+                $dom.addClass('fold_arrow_open').removeClass('fold_arrow_close').find('.num').html(line);
+            } else if (foldType == 2 && !hasWDec) {
+                $dom.addClass('fold_arrow_close').removeClass('fold_arrow_open').find('.num').html(line);
+            } else {
+                $dom.removeClass('fold_arrow_close').removeClass('fold_arrow_open').find('.num').html(line);
+            }
         }
     }
     /**
@@ -505,8 +517,8 @@ class Editor {
             firstLine = this.firstLine;
         }
         //设置优先处理行
-        if (this.mode) {
-            this.mode.setPriorLine(firstLine + this.maxVisualLine);
+        if (this.highlighter) {
+            this.highlighter.setPriorLine(firstLine + this.maxVisualLine);
         }
         var self = this,
             allDom = this.$context.find('.pre_code_line');
@@ -536,8 +548,8 @@ class Editor {
         for (var i = allDom.length; i > this.maxVisualLine; i--) {
             allDom[i - 1].remove();
         }
-        this.updateNum(firstLine);
         this.firstLine = firstLine;
+        this.updateNum(firstLine);
     }
     //全选
     selectAll() {

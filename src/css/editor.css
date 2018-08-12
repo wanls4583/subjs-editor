@@ -36,7 +36,7 @@
     user-select: none;
     text-align: right;
 }
-.line_num.fold_arrow_open:after{
+.line_num.fold_arrow_open i{
     position: absolute;
     top: 50%;
     right: 3px;
@@ -47,7 +47,7 @@
     border-style: solid;
     border-color: rgb(139,139,132) transparent;
 }
-.line_num.fold_arrow_open:hover:after{
+.line_num.fold_arrow_open:hover i{
     position: absolute;
     top: 50%;
     right: 3px;
@@ -58,7 +58,7 @@
     border-style: solid;
     border-color: rgb(169,169,167) transparent;
 }
-.line_num.fold_arrow_close:after{
+.line_num.fold_arrow_close i{
     position: absolute;
     top: 50%;
     right: 3px;
@@ -69,7 +69,7 @@
     border-style: solid;
     border-color: transparent rgb(139,139,132);
 }
-.line_num.fold_arrow_close:hover:after{
+.line_num.fold_arrow_close:hover i{
     position: absolute;
     top: 50%;
     right: 3px;

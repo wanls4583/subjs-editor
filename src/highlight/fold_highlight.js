@@ -8,7 +8,6 @@ class FoldHightLight {
         var self = this;
         this.rules = rules;
         this.editor = editor;
-        this.linesContext = editor.linesContext;
         this.tokenLists = []; //折叠符号记录
         this.taskList = new TaskLink(1000, function(line) {
             self.updateLine(line);
@@ -38,7 +37,7 @@ class FoldHightLight {
                     var reg = ifPre ? self.rules[regIndex].pre : self.rules[regIndex].suffix,
                         token = self.rules[regIndex].token,
                         exclude = ifPre ? self.rules[regIndex].pre_exclude : self.rules[regIndex].suffix_exclude,
-                        str = self.linesContext.getText(startLine);
+                        str = self.editor.linesContext.getText(startLine);
                     var result = Util.execReg(reg, exclude, str);
                     for (var j = 0; j < result.length; j++) {
                         var obj = result[j];
@@ -151,10 +150,8 @@ class FoldHightLight {
      * @param  {Object} preToken 折叠头
      */
     renderFold(preToken) {
-        this.linesContext.setFoldType(preToken.line, preToken.foldType);
-        if (preToken.line >= this.editor.firstLine && preToken.line < this.editor.firstLine + this.editor.maxVisualLine) {
-            this.editor.leftNumDom[preToken.line - this.editor.firstLine].addClass('fold_arrow_open');
-        }
+        this.editor.linesContext.setFoldType(preToken.line, preToken.foldType);
+        this.editor.updateNum(preToken.line, true);
     }
     /**
      * 删除preToken挂载的折叠按钮
@@ -163,14 +160,12 @@ class FoldHightLight {
     undoFold(preToken) {
         if (preToken.suffixToken) {
             if (preToken.suffixToken.line > preToken.line) {
-                this.linesContext.setFoldType(preToken.line, 0);
+                this.editor.linesContext.setFoldType(preToken.line, 0);
             }
             preToken.foldType = 0;
             preToken.suffixToken.preToken = null;
             preToken.suffixToken = null;
-            if (preToken.line >= this.editor.firstLine && preToken.line < this.editor.firstLine + this.editor.maxVisualLine) {
-                this.editor.leftNumDom[preToken.line - this.editor.firstLine].removeClass('fold_arrow_open');
-            }
+            this.editor.updateNum(preToken.line, true);
         }
     }
     /**
@@ -240,13 +235,20 @@ class FoldHightLight {
         for (var i = startLine + 1; i <= endLine; i++) {
             recheckLines.push(i);
         }
-        Util.sortNum(recheckLines);
-        for (var i = 0; i < recheckLines.length; i++) {
-            this.taskList.insert(recheckLines[i]);
+        //过滤多行匹配中的行
+        var filterLines = [];
+        for (var i =  0; i < recheckLines.length; i++) {
+            if(!this.editor.linesContext.getWholeLineDec(recheckLines[i])){
+                filterLines.push(recheckLines[i]);
+            }
+        }
+        Util.sortNum(filterLines);
+        for (var i = 0; i < filterLines.length; i++) {
+            this.taskList.insert(filterLines[i]);
         }
         //同步插入
-        this.taskList.insert(recheckLines[recheckLines.length - 1], true);
-        this.setPriorLine(recheckLines[recheckLines.length - 1]);
+        this.taskList.insert(filterLines[filterLines.length - 1], true);
+        this.setPriorLine(filterLines[filterLines.length - 1]);
     }
     /**
      * 插入新行之后触发[外部接口]
@@ -324,13 +326,20 @@ class FoldHightLight {
                 recheckLines[i] -= endLine - startLine;
             }
         }
-        Util.sortNum(recheckLines);
-        for (var i = 0; i < recheckLines.length; i++) {
-            this.taskList.insert(recheckLines[i]);
+        //过滤多行匹配中的行
+        var filterLines = [];
+        for (var i =  0; i < recheckLines.length; i++) {
+            if(!this.editor.linesContext.getWholeLineDec(recheckLines[i])){
+                filterLines.push(recheckLines[i]);
+            }
+        }
+        Util.sortNum(filterLines);
+        for (var i = 0; i < filterLines.length; i++) {
+            this.taskList.insert(filterLines[i]);
         }
         //同步插入
-        this.taskList.insert(recheckLines[recheckLines.length - 1], true);
-        this.setPriorLine(recheckLines[recheckLines.length - 1]);
+        this.taskList.insert(filterLines[filterLines.length - 1], true);
+        this.setPriorLine(filterLines[filterLines.length - 1]);
     }
     /**
      * 删除行之后触发[外部接口]
@@ -343,10 +352,33 @@ class FoldHightLight {
     /**
      * 设置优先处理行[外部接口]
      * @param {Nunber} endLine 优先处理的末行
-     * @param  {String} type 更新类型
+     * @param {String} type    更新类型
      */
     setPriorLine(endLine, type) {
         this.taskList.setPriorLine(endLine);
+    }
+    /**
+     * 删除折叠行[对外接口]
+     * @param  {[type]} line行号
+     */
+    delFoldLine(line){
+        if(this.editor.linesContext.getFoldType(line)){
+            var recheckLines = this.undoFoldLine(line);
+            this.taskList.del(line);
+            //过滤多行匹配中的行
+            var filterLines = [];
+            for (var i =  0; i < recheckLines.length; i++) {
+                if(!this.editor.linesContext.getWholeLineDec(recheckLines[i])){
+                    filterLines.push(recheckLines[i]);
+                }
+            }
+            Util.sortNum(filterLines);
+            for (var i = 0; i < filterLines.length; i++) {
+                if(filterLines[i]!=line){
+                    this.taskList.insert(filterLines[i]);
+                }
+            }
+        }
     }
 }
 

@@ -7,7 +7,7 @@ class PairHighLight {
 	constructor(editor, rules){
 		var self = this;
 		this.rules = rules;
-		this.linesContext = editor.linesContext;
+		this.editor = editor;
 		this.taskList = new TaskLink(1000, function(line){
             self.updateLine(line);
         }); //高亮待处理队列
@@ -38,7 +38,7 @@ class PairHighLight {
                     var reg = ifPre ? self.rules[regIndex].pre : self.rules[regIndex].suffix,
                         token = self.rules[regIndex].token,
                         exclude = ifPre ? self.rules[regIndex].pre_exclude : self.rules[regIndex].suffix_exclude,
-                        str = self.linesContext.getText(startLine);
+                        str = self.editor.linesContext.getText(startLine);
                     var result = Util.execReg(reg, exclude, str);
                     for (var j = 0; j < result.length; j++) {
                         var obj = result[j];
@@ -167,32 +167,33 @@ class PairHighLight {
      */
     renderToken(preToken) {
         var self = this;
-        var endLine = self.linesContext.getLength();
+        var endLine = self.editor.linesContext.getLength();
         if (preToken.suffixToken) {
             endLine = preToken.suffixToken.line - 1;
             if (preToken.line == preToken.suffixToken.line) {
-                self.linesContext.setPriorLineDecs(preToken.line, { start: preToken.start, end: preToken.suffixToken.end, token: preToken.token });
-                self.linesContext.updateDom(preToken.line);
+                self.editor.linesContext.setPriorLineDecs(preToken.line, { start: preToken.start, end: preToken.suffixToken.end, token: preToken.token });
+                self.editor.linesContext.updateDom(preToken.line);
             } else {
-                self.linesContext.setPriorLineDecs(preToken.line, { start: preToken.start, end: self.linesContext.getText(preToken.line).length - 1, token: preToken.token });
-                self.linesContext.updateDom(preToken.line);
-                self.linesContext.setPriorLineDecs(preToken.suffixToken.line, { start: 0, end: preToken.suffixToken.end, token: preToken.token });
-                self.linesContext.updateDom(preToken.suffixToken.line);
+                self.editor.linesContext.setPriorLineDecs(preToken.line, { start: preToken.start, end: self.editor.linesContext.getText(preToken.line).length - 1, token: preToken.token });
+                self.editor.linesContext.updateDom(preToken.line);
+                self.editor.linesContext.setPriorLineDecs(preToken.suffixToken.line, { start: 0, end: preToken.suffixToken.end, token: preToken.token });
+                self.editor.linesContext.updateDom(preToken.suffixToken.line);
             }
             __addWholeLineDec();
         } else if (!self.endToken ||
             preToken.line < self.endToken.line ||
             preToken.line == self.endToken.line && preToken.start < self.endToken.start) {
-            self.linesContext.setPriorLineDecs(preToken.line, { start: preToken.start, end: self.linesContext.getText(preToken.line).length - 1, token: preToken.token });
-            self.linesContext.updateDom(preToken.line);
+            self.editor.linesContext.setPriorLineDecs(preToken.line, { start: preToken.start, end: self.editor.linesContext.getText(preToken.line).length - 1, token: preToken.token });
+            self.editor.linesContext.updateDom(preToken.line);
             self.endToken = preToken;
             __addWholeLineDec();
         }
         //添加整行修饰
         function __addWholeLineDec() {
             for (var i = preToken.line + 1; i <= endLine; i++) {
-                self.linesContext.setWhoeLineDec(i, preToken.token);
-                self.linesContext.updateDom(i);
+                self.editor.highlighter.foldHighLight.delFoldLine(i);
+                self.editor.linesContext.setWhoeLineDec(i, preToken.token);
+                self.editor.linesContext.updateDom(i);
             }
         }
     }
@@ -202,22 +203,22 @@ class PairHighLight {
      */
     undoToken(preToken) {
         var self = this;
-        var endLine = (self.endToken == preToken && self.linesContext.getLength()) || -1;
+        var endLine = (self.endToken == preToken && self.editor.linesContext.getLength()) || -1;
         if (preToken.suffixToken) {
             endLine = preToken.suffixToken.line - 1;
             if (preToken.line == preToken.suffixToken.line) {
-                self.linesContext.delPriorLineDecs(preToken.line, { start: preToken.start, end: preToken.suffixToken.end });
-                self.linesContext.updateDom(preToken.line);
+                self.editor.linesContext.delPriorLineDecs(preToken.line, { start: preToken.start, end: preToken.suffixToken.end });
+                self.editor.linesContext.updateDom(preToken.line);
             } else {
-                self.linesContext.delPriorLineDecs(preToken.line, { start: preToken.start, end: self.linesContext.getText(preToken.line).length - 1 });
-                self.linesContext.updateDom(preToken.line);
-                self.linesContext.delPriorLineDecs(preToken.suffixToken.line, { start: 0, end: preToken.suffixToken.end });
-                self.linesContext.updateDom(preToken.suffixToken.line);
+                self.editor.linesContext.delPriorLineDecs(preToken.line, { start: preToken.start, end: self.editor.linesContext.getText(preToken.line).length - 1 });
+                self.editor.linesContext.updateDom(preToken.line);
+                self.editor.linesContext.delPriorLineDecs(preToken.suffixToken.line, { start: 0, end: preToken.suffixToken.end });
+                self.editor.linesContext.updateDom(preToken.suffixToken.line);
             }
             __delWholeLineDec();
         } else if (self.endToken == preToken) {
-            self.linesContext.delPriorLineDecs(preToken.line, { start: preToken.start, end: self.linesContext.getText(preToken.line).length - 1 });
-            self.linesContext.updateDom(preToken.line);
+            self.editor.linesContext.delPriorLineDecs(preToken.line, { start: preToken.start, end: self.editor.linesContext.getText(preToken.line).length - 1 });
+            self.editor.linesContext.updateDom(preToken.line);
             self.endToken = null;
             __delWholeLineDec();
         }
@@ -228,8 +229,8 @@ class PairHighLight {
         //删除整行修饰
         function __delWholeLineDec() {
             for (var i = preToken.line + 1; i <= endLine; i++) {
-                self.linesContext.setWhoeLineDec(i, '');
-                self.linesContext.updateDom(i);
+                self.editor.linesContext.setWhoeLineDec(i, '');
+                self.editor.linesContext.updateDom(i);
             }
         }
     }
