@@ -64,20 +64,31 @@ class FoldHightLight {
         function _findSuffixToken(tokenNode) {
             var next = tokenNode.next;
             var stack = [tokenNode];
+             console.log('_findSuffixToken(',tokenNode.line,')');
             while (next) {
                 if (next.type == CONST.FOLD_SUFFIX_TYPE) {
                     if (stack[stack.length - 1].type == CONST.FOLD_PRE_TYPE) {
                         var tmp = stack.pop();
-                        if(tmp == tokenNode && tmp.suffixToken){
-                            self.undoFold(tmp);
+                        var recheckNode = null;
+                        if(tmp == tokenNode){
+                            if(tmp.suffixToken){
+                                self.undoFold(tmp);
+                            }
+                            if(next.preToken){
+                                if(next.preToken.line != tokenNode.line){
+                                    recheckNode = next.preToken;
+                                }
+                                self.undoFold(next.preToken);
+                            }
                         }
                         tmp.suffixToken = next;
                         next.preToken = tmp;
-                        if (tmp.line < next.line) {
+                        if (tmp.line < next.line && !tmp.foldType) {
                             tmp.foldType = CONST.FOLD_OPEN_TYPE;
                         }
                         self.renderFold(tmp);
                         if (tmp == tokenNode) {
+                            recheckNode && _findSuffixToken(recheckNode);
                             return;
                         }
                     } else {
@@ -91,22 +102,33 @@ class FoldHightLight {
         }
 
         function _findPreToken(tokenNode) {
+            console.log('_findPreToken(',tokenNode.line,')');
             var pre = tokenNode.pre;
             var stack = [tokenNode];
             while (pre) {
                 if (pre.type == CONST.FOLD_PRE_TYPE) {
                     if (stack[stack.length - 1].type == CONST.FOLD_SUFFIX_TYPE) {
                         var tmp = stack.pop();
-                        if(tmp == tokenNode && tmp.preToken){
-                            self.undoFold(tmp.preToken);
+                        var recheckNode = null;
+                        if(tmp == tokenNode){
+                            if(tmp.preToken){
+                                self.undoFold(tmp.preToken);
+                            }
+                            if(pre.suffixToken){
+                                if(pre.suffixToken.line != tokenNode.line){
+                                    recheckNode = pre.suffixToken;
+                                }
+                                self.undoFold(pre);
+                            }
                         }
                         tmp.preToken = pre;
                         pre.suffixToken = tmp;
-                        if (pre.line < tmp.line) {
+                        if (pre.line < tmp.line && !pre.foldType) {
                             pre.foldType = CONST.FOLD_OPEN_TYPE;
                         }
                         self.renderFold(pre);
                         if (tmp == tokenNode) {
+                            recheckNode && _findPreToken(recheckNode);
                             return;
                         }
                     } else {
@@ -181,39 +203,20 @@ class FoldHightLight {
         var recheckLines = [startLine],
             self = this;
         if (endLine > startLine) {
-            var preFlag = false,
-                suffixFlag = false;
             for (var i = 0; i < this.rules.length; i++) {
                 var tokenList = this.tokenLists[i];
                 var head = tokenList.head.next;
                 while (head) {
+                    //重置匹配区域和新增区域有交叉的行
                     if (head.line > startLine) {
                         head.line += endLine - startLine;
-                        if (!suffixFlag && head.type == CONST.FOLD_SUFFIX_TYPE) {
-                            //最近的下一个 suffixToken，需要重置
-                            /*
-                                //preToken
-                                //...
-                                //startLine
-                                //...
-                                //suffixToken(head)
-                            */
+                        if (head.type == CONST.FOLD_SUFFIX_TYPE) {
                             if (head.preToken && head.preToken.line < startLine) {
                                 recheckLines = recheckLines.concat(this.undoFoldLine(head.line));
                             }
-                            suffixFlag = true;
                         }
-                        //最近的前一个 preToken，需要重置
-                        /*
-                            //preToken(head)
-                            //...
-                            //startLine
-                            //...
-                            //suffixToken
-                        */
-                    } else if (!preFlag && head.type == CONST.FOLD_PRE_TYPE && (head == this.endToken || head.suffixToken && head.suffixToken.line > startLine)) {
+                    } else if (head.type == CONST.FOLD_PRE_TYPE &&  head.suffixToken && head.suffixToken.line > startLine) {
                         recheckLines = recheckLines.concat(this.undoFoldLine(head.line));
-                        preFlag = true;
                     }
                     head = head.next;
                 }
@@ -268,34 +271,16 @@ class FoldHightLight {
         var recheckLines = [startLine],
             self = this;
         if (endLine > startLine) {
-            var preFlag = false,
-                suffixFlag = false;
             for (var i = 0; i < this.rules.length; i++) {
                 var tokenList = this.tokenLists[i];
                 var head = tokenList.head.next;
                 while (head) {
-                    //寻找匹配区域和边界交叉的preToken，需要重置
+                    //重置匹配区域和删除区域有交叉的行
                     if (head.type == CONST.FOLD_PRE_TYPE) {
-                        /*
-                            //preToken(head)
-                            //...
-                            //startLine
-                            //...
-                            //suffixToken
-                        */
-                        if (!preFlag && head.line < startLine && head.suffixToken && head.suffixToken.line >= startLine) {
+                        if (head.line < startLine && head.suffixToken && head.suffixToken.line >= startLine) {
                             recheckLines = recheckLines.concat(this.undoFoldLine(head.line));
-                            preFlag = true;
-                            /*
-                                //preToken(head)
-                                //...
-                                //endLine
-                                //...
-                                //suffixToken
-                            */
-                        } else if (!suffixFlag && head.line <= endLine &&  head.suffixToken && head.suffixToken.line > endLine) {
+                        } else if (head.line <= endLine &&  head.suffixToken && head.suffixToken.line > endLine) {
                             recheckLines = recheckLines.concat(this.undoFoldLine(head.line));
-                            suffixFlag = true;
                         }
                     }
                     if (head.line > endLine) {
