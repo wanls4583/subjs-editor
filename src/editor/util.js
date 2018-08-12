@@ -135,7 +135,7 @@ class Util {
     //获取字符宽度
     static getCharWidth(wrap) {
         var str1 = '--------------';
-        var str2 = '——————————————';
+        var str2 = '一一一一一一一一';
         wrap.innerHTML = `<span style="display:inline-block" class="char_width_1">${str1}</span><span style="display:inline-block" class="char_width_2">${str2}</span>`;
         var dom = $('.char_width_1')[0];
         var charWidth = dom.clientWidth / str1.length;

@@ -246,9 +246,11 @@ class FoldHightLight {
         for (var i = 0; i < filterLines.length; i++) {
             this.taskList.insert(filterLines[i]);
         }
-        //同步插入
-        this.taskList.insert(filterLines[filterLines.length - 1], true);
-        this.setPriorLine(filterLines[filterLines.length - 1]);
+        if(filterLines.length){
+            //同步插入
+            this.taskList.insert(filterLines[filterLines.length - 1], true);
+            this.setPriorLine(filterLines[filterLines.length - 1]);
+        }
     }
     /**
      * 插入新行之后触发[外部接口]
@@ -337,9 +339,11 @@ class FoldHightLight {
         for (var i = 0; i < filterLines.length; i++) {
             this.taskList.insert(filterLines[i]);
         }
-        //同步插入
-        this.taskList.insert(filterLines[filterLines.length - 1], true);
-        this.setPriorLine(filterLines[filterLines.length - 1]);
+        if(filterLines.length){
+            //同步插入
+            this.taskList.insert(filterLines[filterLines.length - 1], true);
+            this.setPriorLine(filterLines[filterLines.length - 1]);
+        }
     }
     /**
      * 删除行之后触发[外部接口]
