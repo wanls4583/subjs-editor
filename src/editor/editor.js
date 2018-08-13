@@ -426,12 +426,14 @@ class Editor {
             var foldType = self.linesContext.getFoldType(line);
             var hasWDec = self.linesContext.getWholeLineDec(line);
             var $dom = self.leftNumDom[line - self.firstLine];
+            var lineNum = self.linesContext.getLineNum(line);
+            $dom.data('realLine', line);
             if (foldType == 1 && !hasWDec) {
-                $dom.addClass('fold_arrow_open').removeClass('fold_arrow_close').find('.num').html(line);
+                $dom.addClass('fold_arrow_open').removeClass('fold_arrow_close').find('.num').html(lineNum);
             } else if (foldType == 2 && !hasWDec) {
-                $dom.addClass('fold_arrow_close').removeClass('fold_arrow_open').find('.num').html(line);
+                $dom.addClass('fold_arrow_close').removeClass('fold_arrow_open').find('.num').html(lineNum);
             } else {
-                $dom.removeClass('fold_arrow_close').removeClass('fold_arrow_open').find('.num').html(line);
+                $dom.removeClass('fold_arrow_close').removeClass('fold_arrow_open').find('.num').html(lineNum);
             }
         }
     }
@@ -785,7 +787,7 @@ class Editor {
             }
         });
     }
-    //copy,cut,paste事件
+    //copy,cut,paste,fold事件
     bindEditorEvent() {
         var self = this;
         var mime = window.clipboardData ? "Text" : "text/plain";
@@ -833,7 +835,35 @@ class Editor {
                 self.$textarea.val(''); //防止下次触发全选
             }
         })
-        this.$textarea.on('mouseup', function(e) {})
+        this.$textarea.on('mouseup', function(e) {});
+        //点击行号右边的折叠按钮
+        this.$wrapper.delegate('.line_num', 'click', function() {
+            var $num = $(this);
+            if ($num.hasClass('fold_arrow_open')) {
+                var line = parseInt($num.data('realLine'));
+                var pos = self.linesContext.getFoldPos(line);
+                var startPos = { line: pos.startPos.line, column: pos.startPos.end + 1 };
+                var endPos = { line: pos.endPos.line, column: pos.endPos.start };
+                var str = self.linesContext.getText(startPos.line);
+                str = str.substr(startPos.column) + '\n';
+                for (var l = startPos.line + 1; l < endPos.line; l++) {
+                    str += self.linesContext.getText(l) + '\n';
+                }
+                str += self.linesContext.getText(endPos.line).substring(0, endPos.column);
+                self.linesContext.setFoldText(line, str);
+                self.deleteContent(startPos, endPos);
+                $num.removeClass('fold_arrow_open').addClass('fold_arrow_close');
+            } else if ($num.hasClass('fold_arrow_close')) {
+                var line = parseInt($num.data('realLine'));
+                var pos = self.linesContext.getFoldPos(line);
+                var foldText = self.linesContext.getFoldText(line);
+                self.linesContext.setFoldText(line, '');
+                self.cursorPos.line = pos.startPos.line;
+                self.cursorPos.column = pos.startPos.end + 1;
+                self.insertContent(foldText);
+                $num.removeClass('fold_arrow_close').addClass('fold_arrow_open');
+            }
+        });
     }
     //滚动条事件
     bindScrollEvent() {

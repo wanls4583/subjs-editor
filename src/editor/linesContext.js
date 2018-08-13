@@ -14,15 +14,22 @@ class LinesContext {
         this.findMax = false; //是否要重新计算最大宽度
         this._engine = function(content) { return content }; //默认处理引擎直接返回传入的内容
         this.context = [
-        // {
-        //     content: '', //存储每行文本
-        //     htmlDom: null, //存储每行文本对应的dom元素
-        //     width: 0, //记录每行文本的宽度
-        //     lineDecs: [], //存储行内修饰
-        //     priorLineDecs: [], //存储高优先级行内修饰
-        //     wholeLineDec: '' //存储整行修饰
-        // }
-        ]
+            // {
+            //     content: '', //存储每行文本
+            //     htmlDom: null, //存储每行文本对应的dom元素
+            //     width: 0, //记录每行文本的宽度
+            //     lineDecs: [], //存储行内修饰
+            //     priorLineDecs: [], //存储高优先级行内修饰
+            //     wholeLineDec: '', //存储整行修饰
+            //     foldObj: {
+            //         foldType: 0, //折叠类型，1：open，2：close
+            //         startPos: null, //折叠开始行列坐标
+            //         endPos: null, //折叠结束行列坐标
+            //         foldText: '' //折叠的内容
+            //     }
+            // }
+        ];
+        this.closeFolds = [];
     }
     //获取一行文本
     getText(line) {
@@ -48,7 +55,12 @@ class LinesContext {
             lineDecs: [],
             priorLineDecs: [],
             lineWholeDec: '',
-            foldType: 0
+            foldObj: {
+                foldType: 0,
+                startPos: null,
+                endPos: null,
+                foldText: ''
+            }
         })
         this.context[line - 1].width = Util.getStrWidth(txt, this.Editor.charWidth, this.Editor.fullAngleCharWidth);
         if (this.context[line - 1].width > this.maxObj.width) {
@@ -202,16 +214,109 @@ class LinesContext {
      * 设置折叠状态
      * @param  {Number} line 行号
      */
-    setFoldType(line, foldType){
-        this.context[line - 1].foldType =  foldType;
+    setFoldType(line, foldType) {
+        this.context[line - 1].foldObj.foldType = foldType;
     }
     /**
      * 获取折叠状态
      * @param  {Number} line 行号
      * @return {Number}      该行对应的折叠状态
      */
-    getFoldType(line){
-        return this.context.length >= line && this.context[line - 1].foldType;
+    getFoldType(line) {
+        return this.context.length >= line && this.context[line - 1].foldObj.foldType;
+    }
+    /**
+     * 设置折叠区域行列坐标
+     * @param {Number} line     行号
+     * @param {Object} startPos 开始坐标
+     * @param {Object} endPos   结束坐标
+     */
+    setFoldPos(line, startPos, endPos) {
+        this.context[line - 1].foldObj.startPos = startPos;
+        this.context[line - 1].foldObj.endPos = endPos;
+    }
+    /**
+     * 获取折叠区域坐标
+     * @param  {Number} line 行号
+     * @return {Object}      开始结束坐标
+     */
+    getFoldPos(line) {
+        if (this.context.length >= line) {
+            return {
+                startPos: this.context[line - 1].foldObj.startPos,
+                endPos: this.context[line - 1].foldObj.endPos
+            }
+        }
+    }
+    /**
+     * 设置折叠内容
+     * @param {Number} line    行号
+     * @param {String} content 折叠内容
+     */
+    setFoldText(line, content) {
+        var foldObj = this.context[line - 1].foldObj;
+        foldObj.foldText = content;
+        if (content) {
+            this.closeFolds.push({
+                line: line,
+                length: foldObj.endPos.line - foldObj.startPos.line
+            });
+            //折叠记录，用于计算行号
+            this.closeFolds.sort(function(arg1, arg2) {
+                if (arg1.line < arg2.line) {
+                    return -1;
+                } else if (arg1.line > arg2.line) {
+                    return 1
+                }
+                return 0;
+            });
+        } else {
+            for (var i = 0, length = this.closeFolds.length; i < length; i++) {
+                if (this.closeFolds[i].line == line) {
+                    this.closeFolds.splice(i, 1);
+                    return;
+                }
+            }
+        }
+    }
+    /**
+     * 获取折叠的内容
+     * @param  {Number} line 行号
+     * @return {String}      折叠内容
+     */
+    getFoldText(line) {
+        return this.context.length >= line && this.context[line - 1].foldObj.foldText;
+    }
+    /**
+     * 获取该行折叠了多少行
+     * @param  {Number} line 行号
+     * @return {Number}      折叠的行数
+     */
+    getFoldLength(line) {
+        if (this.context.length >= line) {
+            var context = this.context[line - 1];
+            var foldType = context.foldObj.foldType;
+            if (foldType == 2) {
+                return context.foldObj.endPos.line - context.foldObj.startPos.line;
+            }
+        }
+        return 0;
+    }
+    /**
+     * 获取行号对应的折叠后的行号
+     * @param  {Number} line 行号
+     * @return {Number}      计算行号
+     */
+    getLineNum(line) {
+        var realLine = line;
+        for (var i = 0, length = this.closeFolds.length; i < length; i++) {
+            if (this.closeFolds[i].line < line) {
+                realLine += this.closeFolds[i].length
+            }else{
+                break;
+            }
+        }
+        return realLine;
     }
 }
 
