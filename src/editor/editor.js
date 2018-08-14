@@ -75,7 +75,8 @@ class Editor {
     createLeftNumBg() {
         this.$leftNumBg = $('<div class="line_num_bg" style="padding-bottom:' + Editor.charHight + 'px;"></div>');
         this.$wrapper.prepend(this.$leftNumBg);
-        for (var i = 1; i <= this.maxVisualLine; i++) {
+        //最后一个用来撑开最大宽度
+        for (var i = 1; i <= this.maxVisualLine + 1; i++) {
             var $num = $('<span class="line_num"><span class="num"></span><i></i></span>');
             $num.css({
                 'height': Editor.charHight + 'px',
@@ -414,8 +415,15 @@ class Editor {
                 if (!this.leftNumDom[i][0].isConnected) {
                     this.$leftNumBg.append(this.leftNumDom[i]);
                 }
+                this.leftNumDom[i].css({ 'visibility': 'visible' });
             }
-            for (var i = allDom.length; i < this.leftNumDom.length; i++) {
+            //多出一个用来撑开宽度
+            if (!this.leftNumDom[allDom.length][0].isConnected) {
+                this.$leftNumBg.append(this.leftNumDom[allDom.length]);
+            }
+            this.leftNumDom[allDom.length].css({ 'visibility': 'hidden' });
+            this.leftNumDom[allDom.length].find('.num').html(this.linesContext.getLength());
+            for (var i = allDom.length + 1; i < this.leftNumDom.length; i++) {
                 this.leftNumDom[i].remove();
             }
         } else if (firstLine >= this.firstLine && firstLine < this.firstLine + this.maxVisualLine) {
@@ -837,19 +845,18 @@ class Editor {
         })
         this.$textarea.on('mouseup', function(e) {});
         //点击行号右边的折叠按钮
-        this.$wrapper.delegate('.line_num', 'click', function() {
-            var $num = $(this);
+        this.$wrapper.delegate('.line_num i', 'click', function() {
+            var $num = $(this).parent('.line_num');
             if ($num.hasClass('fold_arrow_open')) {
                 var line = parseInt($num.data('realLine'));
                 var pos = self.linesContext.getFoldPos(line);
                 var startPos = { line: pos.startPos.line, column: pos.startPos.end + 1 };
-                var endPos = { line: pos.endPos.line, column: pos.endPos.start };
+                var endPos = { line: pos.endPos.line - 1, column: self.linesContext.getText(pos.endPos.line - 1).length };
                 var str = self.linesContext.getText(startPos.line);
-                str = str.substr(startPos.column) + '\n';
-                for (var l = startPos.line + 1; l < endPos.line; l++) {
-                    str += self.linesContext.getText(l) + '\n';
+                str = str.substr(startPos.column);
+                for (var l = startPos.line + 1; l <= endPos.line; l++) {
+                    str += '\n' + getFullText(l);
                 }
-                str += self.linesContext.getText(endPos.line).substring(0, endPos.column);
                 self.linesContext.setFoldText(line, str);
                 self.deleteContent(startPos, endPos);
                 $num.removeClass('fold_arrow_open').addClass('fold_arrow_close');
@@ -857,13 +864,23 @@ class Editor {
                 var line = parseInt($num.data('realLine'));
                 var pos = self.linesContext.getFoldPos(line);
                 var foldText = self.linesContext.getFoldText(line);
+                var scrollTop = self.$vScrollWrap[0].scrollTop;
                 self.linesContext.setFoldText(line, '');
                 self.cursorPos.line = pos.startPos.line;
                 self.cursorPos.column = pos.startPos.end + 1;
                 self.insertContent(foldText);
                 $num.removeClass('fold_arrow_close').addClass('fold_arrow_open');
+                self.$vScrollWrap[0].scrollTop = scrollTop;
             }
         });
+        /**
+         * 获取一行的计算文本（该行可能已经折叠）
+         * @param  {Number} line 行号
+         * @return {String}      文本
+         */
+        function getFullText(line) {
+            return self.linesContext.getText(line) + self.linesContext.getFoldText(line);
+        }
     }
     //滚动条事件
     bindScrollEvent() {

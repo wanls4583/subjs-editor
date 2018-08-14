@@ -43,6 +43,7 @@
     display: block;
     margin-top: -3px;
     content: '';
+    cursor: pointer;
     border-width: 6px 4px 0 4px;
     border-style: solid;
     border-color: rgb(139,139,132) transparent;
@@ -54,6 +55,7 @@
     display: block;
     margin-top: -3px;
     content: '';
+    cursor: pointer;
     border-width: 6px 4px 0 4px;
     border-style: solid;
     border-color: rgb(169,169,167) transparent;
@@ -65,6 +67,7 @@
     display: block;
     margin-top: -4px;
     content: '';
+    cursor: pointer;
     border-width: 4px 0 4px 6px;
     border-style: solid;
     border-color: transparent rgb(139,139,132);
@@ -76,6 +79,7 @@
     display: block;
     margin-top: -4px;
     content: '';
+    cursor: pointer;
     border-width: 4px 0 4px 6px;
     border-style: solid;
     border-color: transparent rgb(169,169,167);

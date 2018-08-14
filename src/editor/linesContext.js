@@ -78,6 +78,14 @@ class LinesContext {
     delete(startLine, endLine) {
         this.context.splice(startLine - 1, endLine - startLine + 1);
         this.findMax = true;
+        //删除折叠的行
+        for (var i = 0; i < this.closeFolds.length; i++) {
+            var obj = this.closeFolds[i];
+            if (obj.line >= startLine && obj.line <= endLine) {
+                this.closeFolds.splice(i, 1);
+                i--;
+            }
+        }
     }
     //获取总行数
     getLength() {
@@ -259,7 +267,7 @@ class LinesContext {
         if (content) {
             this.closeFolds.push({
                 line: line,
-                length: foldObj.endPos.line - foldObj.startPos.line
+                length: content.match(/\n/g).length + 1
             });
             //折叠记录，用于计算行号
             this.closeFolds.sort(function(arg1, arg2) {
@@ -285,22 +293,7 @@ class LinesContext {
      * @return {String}      折叠内容
      */
     getFoldText(line) {
-        return this.context.length >= line && this.context[line - 1].foldObj.foldText;
-    }
-    /**
-     * 获取该行折叠了多少行
-     * @param  {Number} line 行号
-     * @return {Number}      折叠的行数
-     */
-    getFoldLength(line) {
-        if (this.context.length >= line) {
-            var context = this.context[line - 1];
-            var foldType = context.foldObj.foldType;
-            if (foldType == 2) {
-                return context.foldObj.endPos.line - context.foldObj.startPos.line;
-            }
-        }
-        return 0;
+        return this.context.length >= line && this.context[line - 1].foldObj.foldText || '';
     }
     /**
      * 获取行号对应的折叠后的行号
@@ -311,8 +304,8 @@ class LinesContext {
         var realLine = line;
         for (var i = 0, length = this.closeFolds.length; i < length; i++) {
             if (this.closeFolds[i].line < line) {
-                realLine += this.closeFolds[i].length
-            }else{
+                realLine += this.closeFolds[i].length - 1;
+            } else {
                 break;
             }
         }

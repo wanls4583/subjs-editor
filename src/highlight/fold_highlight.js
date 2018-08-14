@@ -82,8 +82,12 @@ class FoldHightLight {
                         }
                         tmp.suffixToken = next;
                         next.preToken = tmp;
-                        if (tmp.line < next.line && !tmp.foldType) {
-                            tmp.foldType = CONST.FOLD_OPEN_TYPE;
+                        if (tmp.line < next.line) {
+                            if(self.editor.linesContext.getFoldText(tmp.line)){
+                                tmp.foldType = CONST.FOLD_CLOSE_TYPE;
+                            }else{
+                                tmp.foldType = CONST.FOLD_OPEN_TYPE;
+                            }
                         }
                         self.renderFold(tmp);
                         if (tmp == tokenNode) {
@@ -122,7 +126,11 @@ class FoldHightLight {
                         tmp.preToken = pre;
                         pre.suffixToken = tmp;
                         if (pre.line < tmp.line && !pre.foldType) {
-                            pre.foldType = CONST.FOLD_OPEN_TYPE;
+                            if(self.editor.linesContext.getFoldText(pre.line)){
+                                pre.foldType = CONST.FOLD_CLOSE_TYPE;
+                            }else{
+                                pre.foldType = CONST.FOLD_OPEN_TYPE;
+                            }
                         }
                         self.renderFold(pre);
                         if (tmp == tokenNode) {
