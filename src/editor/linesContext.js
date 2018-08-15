@@ -136,6 +136,10 @@ class LinesContext {
             if (!$dom.hasUpdate) {
                 $dom.hasUpdate = true;
             }
+            //折叠省略号
+            if(this.getFoldText(line)){
+                $dom.find('.code').append('<i class="ellipsis">..</i>')
+            }
         }
     }
     /**

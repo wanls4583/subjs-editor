@@ -18,6 +18,16 @@
     top: 0;
     left: 0;;
 }
+.ellipsis{
+    display: inline-block;
+    height: 6px;
+    border-radius: 2px;
+    background: rgb(255,221,51);
+    line-height: 0;
+    color: #666;
+    vertical-align: middle;
+    /*letter-spacing: -2px;*/
+}
 .line_num_bg{
     position: relative;
     z-index: 2;
@@ -36,50 +46,45 @@
     user-select: none;
     text-align: right;
 }
-.line_num.fold_arrow_open i{
+.fold_arrow_open i,
+.fold_arrow_close i{
     position: absolute;
-    top: 50%;
-    right: 3px;
+    top: 0;
+    right: 0;
     display: block;
-    margin-top: -3px;
-    content: '';
+    box-sizing: border-box;
+    height: 100%;
+    padding: 3px 3px 0 3px;
     cursor: pointer;
+}
+.line_num.fold_arrow_open i:after{
+    display: block;
+    margin-top: 50%;
+    content: '';
     border-width: 6px 4px 0 4px;
     border-style: solid;
     border-color: rgb(139,139,132) transparent;
 }
-.line_num.fold_arrow_open:hover i{
-    position: absolute;
-    top: 50%;
-    right: 3px;
+.line_num.fold_arrow_open:hover i:after{
     display: block;
-    margin-top: -3px;
+    margin-top: 50%;
     content: '';
-    cursor: pointer;
     border-width: 6px 4px 0 4px;
     border-style: solid;
     border-color: rgb(169,169,167) transparent;
 }
-.line_num.fold_arrow_close i{
-    position: absolute;
-    top: 50%;
-    right: 3px;
+.line_num.fold_arrow_close i:after{
     display: block;
-    margin-top: -4px;
+    margin-top: 50%;
     content: '';
-    cursor: pointer;
     border-width: 4px 0 4px 6px;
     border-style: solid;
     border-color: transparent rgb(139,139,132);
 }
-.line_num.fold_arrow_close:hover i{
-    position: absolute;
-    top: 50%;
-    right: 3px;
+.line_num.fold_arrow_close:hover i:after{
     display: block;
-    margin-top: -4px;
+    margin-top: 50%;
     content: '';
-    cursor: pointer;
     border-width: 4px 0 4px 6px;
     border-style: solid;
     border-color: transparent rgb(169,169,167);

@@ -153,6 +153,10 @@ class Editor {
         if (match) {
             left += match.length * (Editor.fullAngleCharWidth - Editor.charWidth);
         }
+        //折叠省略号
+        if (column > str.length) {
+            left += Editor.charWidth * 2;
+        }
         return {
             top: top + rect.paddingTop,
             left: left + rect.paddingLeft
@@ -189,7 +193,10 @@ class Editor {
                 maxWidth += match.length * (Editor.fullAngleCharWidth - Editor.charWidth);
             }
             if (left > maxWidth) {
-                left = maxWidth;
+                //折叠省略号
+                if (left > maxWidth + Editor.charWidth && this.linesContext.getFoldText(line)) {
+                    column += 2;
+                }
             } else {
                 while (column > 0) {
                     var str = this.linesContext.getText(line).substring(0, column);
@@ -324,40 +331,42 @@ class Editor {
     insertContent(newContent) {
         var str = this.linesContext.getText(this.cursorPos.line) || '',
             strs = null,
-            firstLine;
+            firstLine,
+            pos = { line: this.cursorPos.line, column: this.cursorPos.column };
         str = str.substring(0, this.cursorPos.column) + newContent + str.substr(this.cursorPos.column);
         strs = str.split(/\r\n|\r|\n/);
         if (strs[0]) { //'\n'.split(/\r\n|\r|\n/)->['','']
             this.linesContext.setText(this.cursorPos.line, strs[0]);
             if (strs.length > 1) {
-                this.cursorPos.column = strs[strs.length - 1].length;
+                pos.column = strs[strs.length - 1].length;
             } else {
-                this.cursorPos.column = this.cursorPos.column + newContent.length;
+                pos.column = pos.column + newContent.length;
             }
         } else if (this.linesContext.getLength() == 0) {
-            this.cursorPos.line = 0;
+            pos.line = 0;
         }
-        if (this.highlighter && this.cursorPos.line >= 1) {
-            this.highlighter.onInsertBefore(this.cursorPos.line, this.cursorPos.line + strs.length - 1);
+        if (this.highlighter && pos.line >= 1) {
+            this.highlighter.onInsertBefore(pos.line, pos.line + strs.length - 1);
         }
         //粘贴操作可能存在换号符,需要添加新行
         for (var tmp = 1; tmp < strs.length; tmp++) {
-            this.linesContext.add(this.cursorPos.line + tmp, strs[tmp]);
+            this.linesContext.add(pos.line + tmp, strs[tmp]);
         }
         firstLine = this.firstLine;
         //计算可视区域的首行
-        if (this.cursorPos.line - this.firstLine + strs.length > this.maxVisualLine) {
-            firstLine = this.cursorPos.line + strs.length - this.maxVisualLine;
+        if (pos.line - this.firstLine + strs.length > this.maxVisualLine) {
+            firstLine = pos.line + strs.length - this.maxVisualLine;
         }
         this.renderLine(firstLine);
         if (this.highlighter) {
-            if (this.cursorPos.line < 1) { //初始化坐标为(0,0)
+            if (pos.line < 1) { //初始化坐标为(0,0)
                 this.highlighter.onInsertAfter(1, 1);
             } else {
-                this.highlighter.onInsertAfter(this.cursorPos.line, this.cursorPos.line + strs.length - 1);
+                this.highlighter.onInsertAfter(pos.line, pos.line + strs.length - 1);
             }
         }
-        this.cursorPos.line = this.cursorPos.line + strs.length - 1;
+        pos.line = pos.line + strs.length - 1;
+        this.setCursorPos(pos);
         this.updateScroll(true);
         this.updateCursorPos();
     }
@@ -367,6 +376,7 @@ class Editor {
      * @param  {Object} endPos   结束行列坐标{line,column}
      */
     deleteContent(startPos, endPos) {
+        var pos = { line: this.cursorPos.line, column: this.cursorPos.column };
         if (typeof startPos == 'number') {
             var line = startPos;
             if (line > 1) {
@@ -380,7 +390,7 @@ class Editor {
         if (startPos.line == endPos.line) {
             var str = this.linesContext.getText(startPos.line);
             this.linesContext.setText(startPos.line, str.substring(0, startPos.column) + str.substring(endPos.column));
-            this.cursorPos.column = startPos.column;
+            pos.column = startPos.column;
         } else {
             var str = this.linesContext.getText(startPos.line).substring(0, startPos.column) + this.linesContext.getText(endPos.line).substring(endPos.column);
             this.linesContext.setText(startPos.line, str);
@@ -391,9 +401,10 @@ class Editor {
             }
             //删除行
             this.linesContext.delete(startPos.line + 1, endPos.line);
-            this.cursorPos.line = startPos.line;
-            this.cursorPos.column = startPos.column;
+            pos.line = startPos.line;
+            pos.column = startPos.column;
         }
+        this.setCursorPos(pos);
         this.renderLine();
         this.highlighter && this.highlighter.onDeleteAfter(startPos.line, endPos.line);
         this.updateScroll();
@@ -460,6 +471,10 @@ class Editor {
             var str = self.linesContext.getText(startPos.line);
             var width = Util.getStrWidth(str, Editor.charWidth, Editor.fullAngleCharWidth, startPos.column, endPos.column);
             var px = self.posToPx(startPos.line, startPos.column);
+            //折叠省略号
+            if (endPos.column > str.length) {
+                width += 2 * Editor.charWidth;
+            }
             _renderRange(px.top, px.left, width);
             self.selection.selectText = str.substring(startPos.column, endPos.column);
             self.$lineBg.hide(); //隐藏当前行背景
@@ -477,6 +492,10 @@ class Editor {
             str = self.linesContext.getText(endPos.line);
             width = Util.getStrWidth(str, Editor.charWidth, Editor.fullAngleCharWidth, 0, endPos.column);
             px = self.posToPx(endPos.line, 0);
+            //折叠省略号
+            if (endPos.column > str.length) {
+                width += 2 * Editor.charWidth;
+            }
             _renderRange(px.top, px.left, width);
             self.selection.selectText += '\n' + str.substring(0, endPos.column);
             self.$lineBg.hide(); //隐藏当前行背景
@@ -769,12 +788,11 @@ class Editor {
         this.$context.on('mouseup', function(e) {
             var rect = Util.getRect(self.$scroller[0]);
             var top = e.clientY - rect.top + self.$scroller[0].scrollTop;
-            var _px = self.pxToPos(top, e.clientX - rect.left + self.$scroller[0].scrollLeft);
-            var line = _px.line;
-            var column = _px.column;
+            var pos = self.pxToPos(top, e.clientX - rect.left + self.$scroller[0].scrollLeft);
+            var line = pos.line;
+            var column = pos.column;
             if (e.button != 2) { //单纯的点击
-                self.cursorPos.line = line;
-                self.cursorPos.column = column;
+                self.setCursorPos(pos);
                 self.$textarea[0].focus();
                 self.updateCursorPos();
             } else {
@@ -866,8 +884,10 @@ class Editor {
                 var foldText = self.linesContext.getFoldText(line);
                 var scrollTop = self.$vScrollWrap[0].scrollTop;
                 self.linesContext.setFoldText(line, '');
-                self.cursorPos.line = pos.startPos.line;
-                self.cursorPos.column = pos.startPos.end + 1;
+                self.setCursorPos({
+                    line: pos.startPos.line,
+                    column: pos.startPos.end + 1
+                })
                 self.insertContent(foldText);
                 $num.removeClass('fold_arrow_close').addClass('fold_arrow_open');
                 self.$vScrollWrap[0].scrollTop = scrollTop;
@@ -926,51 +946,78 @@ class Editor {
             } else {
                 switch (e.keyCode) {
                     case 37: //left arrow
+                        var pos = {};
                         if (self.selection.startPos) {
-                            self.cursorPos.line = self.selection.startPos.line;
-                            self.cursorPos.column = self.selection.startPos.column;
+                            pos.line = self.selection.startPos.line;
+                            pos.column = self.selection.startPos.column;
                             self.$selectBg.html('');
                             self.selection = {};
+                            self.setCursorPos(pos);
                         } else if (self.cursorPos.column > 0) {
-                            self.cursorPos.column--;
+                            pos.line = self.cursorPos.line;
+                            pos.column = self.cursorPos.column - 1;
+                            if (pos.column > self.linesContext.getText(pos.line).length) {
+                                pos.column--;
+                            }
+                            self.setCursorPos(pos);
                         } else if (self.cursorPos.line > 1) {
-                            self.cursorPos.line--;
-                            self.cursorPos.column = self.linesContext.getText(self.cursorPos.line).length;
+                            pos.line = self.cursorPos.line - 1;
+                            pos.column = self.linesContext.getText(pos.line).length;
+                            if (self.linesContext.getFoldText(pos.line)) {
+                                pos.column += 2;
+                            }
+                            self.setCursorPos(pos);
                         }
                         break;
                     case 38: //up arrow
+                        var pos = {};
                         if (self.selection.startPos) {
-                            self.cursorPos.line = self.selection.startPos.line;
-                            self.cursorPos.column = self.selection.startPos.column;
+                            pos.line = self.selection.startPos.line;
+                            pos.column = self.selection.startPos.column;
                             self.$selectBg.html('');
                             self.selection = {};
+                            self.setCursorPos(pos);
                         } else if (self.cursorPos.line > 1) {
-                            self.cursorPos.line--;
-                            self.cursorPos.column = self.pxToPos(self.cursorPos.line, self.cursorPos.left, true).column;
+                            pos.line = self.cursorPos.line - 1;
+                            pos.column = self.pxToPos(pos.line, self.cursorPos.left, true).column;
+                            self.setCursorPos(pos);
                         }
                         break;
                     case 39: //right arrow
+                        var pos = {};
+                        var strLength = self.linesContext.getText(self.cursorPos.line).length;
                         if (self.selection.startPos) {
-                            self.cursorPos.line = self.selection.endPos.line;
-                            self.cursorPos.column = self.selection.endPos.column;
+                            pos.line = self.selection.endPos.line;
+                            pos.column = self.selection.endPos.column;
                             self.$selectBg.html('');
                             self.selection = {};
-                        } else if (self.cursorPos.column < self.linesContext.getText(self.cursorPos.line).length) {
-                            self.cursorPos.column++;
+                            self.setCursorPos(pos);
+                        } else if (self.cursorPos.column < strLength) {
+                            pos.line = self.cursorPos.line;
+                            pos.column = self.cursorPos.column + 1;
+                            self.setCursorPos(pos);
+                        } else if (self.cursorPos.column == strLength && self.linesContext.getFoldText(self.cursorPos.line)) {
+                            pos.line = self.cursorPos.line;
+                            pos.column = self.cursorPos.column + 2;
+                            self.setCursorPos(pos);
                         } else if (self.cursorPos.line < self.linesContext.getLength()) {
-                            self.cursorPos.line++;
-                            self.cursorPos.column = 0;
+                            pos.line = self.cursorPos.line + 1;
+                            pos.column = 0;
+                            self.setCursorPos(pos);
                         }
                         break;
                     case 40: //down arrow
+                        var pos = {};
                         if (self.selection.startPos) {
-                            self.cursorPos.line = self.selection.endPos.line;
-                            self.cursorPos.column = self.selection.endPos.column;
+                            pos.line = self.selection.endPos.line;
+                            pos.column = self.selection.endPos.column;
                             self.$selectBg.html('');
                             self.selection = {};
+                            self.setCursorPos(pos);
                         } else if (self.cursorPos.line < self.linesContext.getLength()) {
-                            self.cursorPos.line++;
-                            self.cursorPos.column = self.pxToPos(self.cursorPos.line, self.cursorPos.left, true).column;
+                            pos.line = self.cursorPos.line + 1;
+                            pos.column = self.pxToPos(pos.line, self.cursorPos.left, true).column;
+                            self.setCursorPos(pos);
                         }
                         break;
                     case 46: //delete

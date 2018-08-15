@@ -191,7 +191,9 @@ class FoldHightLight {
             if (preToken.suffixToken.line > preToken.line) {
                 this.editor.linesContext.setFoldType(preToken.line, 0);
             }
-            preToken.foldType = 0;
+            if(!this.editor.linesContext.getFoldText(preToken.line)){
+                preToken.foldType = 0;
+            }
             preToken.suffixToken.preToken = null;
             preToken.suffixToken = null;
             this.editor.updateNum(preToken.line, true);
