@@ -407,10 +407,10 @@ class Editor {
             pos.column = startPos.column;
         }
         //删除折叠省略号
-        if(endPos.column > endLineText.length){
+        if (endPos.column > endLineText.length) {
             this.linesContext.setFoldText(endPos.line, '');
         }
-        if(pos.column > endLineText.length){
+        if (pos.column > endLineText.length) {
             pos.column = endLineText.length;
         }
         this.setCursorPos(pos);
@@ -442,7 +442,7 @@ class Editor {
                 this.$leftNumBg.append(this.leftNumDom[allDom.length]);
             }
             this.leftNumDom[allDom.length].css({ 'visibility': 'hidden' });
-            this.leftNumDom[allDom.length].find('.num').html(this.linesContext.getLength());
+            this.leftNumDom[allDom.length].find('.num').html(this.linesContext.getLength() + 10);
             for (var i = allDom.length + 1; i < this.leftNumDom.length; i++) {
                 this.leftNumDom[i].remove();
             }
@@ -899,7 +899,7 @@ class Editor {
                 self.insertContent(foldText);
                 $num.removeClass('fold_arrow_close');
                 //折叠尾部有匹配
-                if(self.linesContext.getFoldPos()){
+                if (self.linesContext.getFoldPos()) {
                     $num.addClass('fold_arrow_open');
                 }
                 self.$vScrollWrap[0].scrollTop = scrollTop;
