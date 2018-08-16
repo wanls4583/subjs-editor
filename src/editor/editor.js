@@ -376,7 +376,8 @@ class Editor {
      * @param  {Object} endPos   结束行列坐标{line,column}
      */
     deleteContent(startPos, endPos) {
-        var pos = { line: this.cursorPos.line, column: this.cursorPos.column };
+        var pos = { line: this.cursorPos.line, column: this.cursorPos.column },
+            endLineText = '';
         if (typeof startPos == 'number') {
             var line = startPos;
             if (line > 1) {
@@ -386,6 +387,7 @@ class Editor {
             }
             endPos = { line: line, column: this.linesContext.getText(line).length };
         }
+        endLineText = this.linesContext.getText(endPos.line);
         this.highlighter && this.highlighter.onDeleteBefore(startPos.line, endPos.line);
         if (startPos.line == endPos.line) {
             var str = this.linesContext.getText(startPos.line);
@@ -403,6 +405,13 @@ class Editor {
             this.linesContext.delete(startPos.line + 1, endPos.line);
             pos.line = startPos.line;
             pos.column = startPos.column;
+        }
+        //删除折叠省略号
+        if(endPos.column > endLineText.length){
+            this.linesContext.setFoldText(endPos.line, '');
+        }
+        if(pos.column > endLineText.length){
+            pos.column = endLineText.length;
         }
         this.setCursorPos(pos);
         this.renderLine();
@@ -442,15 +451,14 @@ class Editor {
         }
 
         function _update(line) {
-            var foldType = self.linesContext.getFoldType(line);
             var hasWDec = self.linesContext.getWholeLineDec(line);
             var $dom = self.leftNumDom[line - self.firstLine];
             var lineNum = self.linesContext.getLineNum(line);
             $dom.data('realLine', line);
-            if (foldType == 1 && !hasWDec) {
-                $dom.addClass('fold_arrow_open').removeClass('fold_arrow_close').find('.num').html(lineNum);
-            } else if (foldType == 2 && !hasWDec) {
+            if (self.linesContext.getFoldText(line)) {
                 $dom.addClass('fold_arrow_close').removeClass('fold_arrow_open').find('.num').html(lineNum);
+            } else if (self.linesContext.getFoldPos(line) && !hasWDec) {
+                $dom.addClass('fold_arrow_open').removeClass('fold_arrow_close').find('.num').html(lineNum);
             } else {
                 $dom.removeClass('fold_arrow_close').removeClass('fold_arrow_open').find('.num').html(lineNum);
             }
@@ -885,11 +893,15 @@ class Editor {
                 var scrollTop = self.$vScrollWrap[0].scrollTop;
                 self.linesContext.setFoldText(line, '');
                 self.setCursorPos({
-                    line: pos.startPos.line,
-                    column: pos.startPos.end + 1
-                })
+                    line: line,
+                    column: self.linesContext.getText(line).length
+                });
                 self.insertContent(foldText);
-                $num.removeClass('fold_arrow_close').addClass('fold_arrow_open');
+                $num.removeClass('fold_arrow_close');
+                //折叠尾部有匹配
+                if(self.linesContext.getFoldPos()){
+                    $num.addClass('fold_arrow_open');
+                }
                 self.$vScrollWrap[0].scrollTop = scrollTop;
             }
         });
@@ -1037,7 +1049,7 @@ class Editor {
                                 var startPos = { line: self.cursorPos.line, column: self.cursorPos.column - 1 };
                                 var endPos = { line: self.cursorPos.line, column: self.cursorPos.column };
                                 self.deleteContent(startPos, endPos);
-                            } else if (self.cursorPos.line > 1) {
+                            } else if (self.cursorPos.line > 1) { //删除空行
                                 var startPos = { line: self.cursorPos.line - 1, column: self.linesContext.getText(self.cursorPos.line - 1) };
                                 var endPos = { line: self.cursorPos.line, column: 0 };
                                 self.deleteContent(self.cursorPos.line);

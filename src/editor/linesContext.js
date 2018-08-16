@@ -22,7 +22,6 @@ class LinesContext {
             //     priorLineDecs: [], //存储高优先级行内修饰
             //     wholeLineDec: '', //存储整行修饰
             //     foldObj: {
-            //         foldType: 0, //折叠类型，1：open，2：close
             //         startPos: null, //折叠开始行列坐标
             //         endPos: null, //折叠结束行列坐标
             //         foldText: '' //折叠的内容
@@ -56,7 +55,6 @@ class LinesContext {
             priorLineDecs: [],
             lineWholeDec: '',
             foldObj: {
-                foldType: 0,
                 startPos: null,
                 endPos: null,
                 foldText: ''
@@ -223,21 +221,6 @@ class LinesContext {
         this._engine = engine;
     }
     /**
-     * 设置折叠状态
-     * @param  {Number} line 行号
-     */
-    setFoldType(line, foldType) {
-        this.context[line - 1].foldObj.foldType = foldType;
-    }
-    /**
-     * 获取折叠状态
-     * @param  {Number} line 行号
-     * @return {Number}      该行对应的折叠状态
-     */
-    getFoldType(line) {
-        return this.context.length >= line && this.context[line - 1].foldObj.foldType;
-    }
-    /**
      * 设置折叠区域行列坐标
      * @param {Number} line     行号
      * @param {Object} startPos 开始坐标
@@ -254,9 +237,12 @@ class LinesContext {
      */
     getFoldPos(line) {
         if (this.context.length >= line) {
-            return {
-                startPos: this.context[line - 1].foldObj.startPos,
-                endPos: this.context[line - 1].foldObj.endPos
+            var foldObj = this.context[line - 1].foldObj;
+            if(foldObj.startPos){
+                return {
+                    startPos: foldObj.startPos,
+                    endPos: foldObj.endPos
+                }
             }
         }
     }

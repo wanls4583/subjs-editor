@@ -82,13 +82,6 @@ class FoldHightLight {
                         }
                         tmp.suffixToken = next;
                         next.preToken = tmp;
-                        if (tmp.line < next.line) {
-                            if(self.editor.linesContext.getFoldText(tmp.line)){
-                                tmp.foldType = CONST.FOLD_CLOSE_TYPE;
-                            }else{
-                                tmp.foldType = CONST.FOLD_OPEN_TYPE;
-                            }
-                        }
                         self.renderFold(tmp);
                         if (tmp == tokenNode) {
                             recheckNode && _findSuffixToken(recheckNode);
@@ -125,13 +118,6 @@ class FoldHightLight {
                         }
                         tmp.preToken = pre;
                         pre.suffixToken = tmp;
-                        if (pre.line < tmp.line && !pre.foldType) {
-                            if(self.editor.linesContext.getFoldText(pre.line)){
-                                pre.foldType = CONST.FOLD_CLOSE_TYPE;
-                            }else{
-                                pre.foldType = CONST.FOLD_OPEN_TYPE;
-                            }
-                        }
                         self.renderFold(pre);
                         if (tmp == tokenNode) {
                             recheckNode && _findPreToken(recheckNode);
@@ -178,8 +164,9 @@ class FoldHightLight {
      * @param  {Object} preToken 折叠头
      */
     renderFold(preToken) {
-        this.editor.linesContext.setFoldType(preToken.line, preToken.foldType);
-        this.editor.linesContext.setFoldPos(preToken.line, preToken, preToken.suffixToken);
+        if(preToken.suffixToken.line - preToken.line > 3){
+            this.editor.linesContext.setFoldPos(preToken.line, preToken, preToken.suffixToken);
+        }
         this.editor.updateNum(preToken.line, true);
     }
     /**
@@ -188,12 +175,7 @@ class FoldHightLight {
      */
     undoFold(preToken) {
         if (preToken.suffixToken) {
-            if (preToken.suffixToken.line > preToken.line) {
-                this.editor.linesContext.setFoldType(preToken.line, 0);
-            }
-            if(!this.editor.linesContext.getFoldText(preToken.line)){
-                preToken.foldType = 0;
-            }
+            this.editor.linesContext.setFoldPos(preToken.line, null, null);
             preToken.suffixToken.preToken = null;
             preToken.suffixToken = null;
             this.editor.updateNum(preToken.line, true);
@@ -360,7 +342,7 @@ class FoldHightLight {
      * @param  {[type]} line行号
      */
     delFoldLine(line) {
-        if (this.editor.linesContext.getFoldType(line)) {
+        if (this.editor.linesContext.getFoldPos(line)) {
             var recheckLines = this.undoFoldLine(line);
             this.taskList.del(line);
             //过滤多行匹配中的行
