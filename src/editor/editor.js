@@ -1053,9 +1053,9 @@ class Editor {
                                 var endPos = { line: self.cursorPos.line, column: self.cursorPos.column };
                                 self.deleteContent(startPos, endPos);
                             } else if (self.cursorPos.line > 1) { //删除空行
-                                var startPos = { line: self.cursorPos.line - 1, column: self.linesContext.getText(self.cursorPos.line - 1) };
+                                var startPos = { line: self.cursorPos.line - 1, column: self.linesContext.getText(self.cursorPos.line - 1).length };
                                 var endPos = { line: self.cursorPos.line, column: 0 };
-                                self.deleteContent(self.cursorPos.line);
+                                self.deleteContent(startPos, endPos);
                             }
                         }
                         break;
