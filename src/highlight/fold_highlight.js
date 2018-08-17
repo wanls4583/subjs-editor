@@ -9,7 +9,7 @@ class FoldHightLight {
         this.rules = rules;
         this.editor = editor;
         this.tokenLists = []; //折叠符号记录
-        this.taskList = new TaskLink(1000, function(line) {
+        this.taskList = new TaskLink(1000, 0, function(line) {
             self.updateLine(line);
         }); //折叠待处理队列
         for (var i = 0; i < this.rules.length; i++) {
@@ -164,7 +164,7 @@ class FoldHightLight {
      * @param  {Object} preToken 折叠头
      */
     renderFold(preToken) {
-        if(preToken.suffixToken.line - preToken.line >= 3){
+        if (preToken.suffixToken.line - preToken.line >= 3) {
             this.editor.linesContext.setFoldPos(preToken.line, preToken, preToken.suffixToken);
         }
         this.editor.updateNum(preToken.line, true);
@@ -234,7 +234,7 @@ class FoldHightLight {
         for (var i = 0; i < recheckLines.length; i++) {
             var line = recheckLines[i];
             //整行匹配还没做处理
-            if(line  > startLine){
+            if (line > startLine) {
                 line += endLine - startLine;
             }
             if (!this.editor.linesContext.getWholeLineDec(line)) {
@@ -314,7 +314,7 @@ class FoldHightLight {
         for (var i = 0; i < recheckLines.length; i++) {
             var line = recheckLines[i];
             //整行匹配还没做处理
-            if(line  > endLine){
+            if (line > endLine) {
                 line -= endLine - startLine;
             }
             if (!this.editor.linesContext.getWholeLineDec(line)) {

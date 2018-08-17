@@ -20,9 +20,10 @@ class TaskNode {
 class TaskLink {
     /**
      * @param {Number} skipGap      跳表最小间隔
+     * @param {Number} minUnit      最新执行单元
      * @param {Object} processCb    回调
      */
-    constructor(skipGap, processCb) {
+    constructor(skipGap, minUnit, processCb) {
         this.skipGap = skipGap;
         this.head = new TaskNode(0);
         this.last = this.head;
@@ -31,14 +32,13 @@ class TaskLink {
         this.nowTask = this.head;
         this.insertCache = [];
         this.processCb = processCb;
+        this.minUnit = minUnit || 100;
     }
     //执行
     process() {
-        var startTime = new Date().getTime(),
-            endTime = startTime,
-            self = this;
+        var self = this;
         clearTimeout(this.timer);
-        while (endTime - startTime <= 17) {
+        for (var i = 0; i < this.minUnit; i++) {
             if (this.insertCache.length) {
                 for (var i = 0, length = this.insertCache.length; i < 100 && i < length; i++) {
                     this._insert(this.insertCache.pop())
@@ -52,7 +52,6 @@ class TaskLink {
                 this.nowTask = this.nowTask.pre;
                 this.del(this.nowTask.next);
             }
-            endTime = new Date().getTime();
         }
         if (this.head.next || this.insertCache.length) {
             this.timer = setTimeout(function() {
@@ -192,14 +191,14 @@ class TaskLink {
      * @param  {Function} callback 回调函数
      * @param  {Function} callback 回调函数
      */
-    eachTask(callback,baseLine) {
+    eachTask(callback, baseLine) {
         baseLine = baseLine || 0;
         for (var i = this.insertCache.length; i >= 0; i--) {
-            if(this.insertCache[i] > baseLine){
+            if (this.insertCache[i] > baseLine) {
                 callback(this.insertCache, i);
             }
         }
-        
+
         var skipHead = this.skipHead;
         //寻找跳表头
         while (skipHead && skipHead.line < baseLine) {

@@ -17,7 +17,7 @@ class Mode {
         this.linesContext.setDecEngine(Mode.decEngine); //设置修饰对象的处理引擎
         this.pairHighLight = new PairHighLight(editor,  Mode.pairRules);
         this.foldHighLight = new FoldHighLight(editor, Mode.foldRules);
-        this.taskList = new TaskLink(1000, function(line) {
+        this.taskList = new TaskLink(1000, 1000, function(line) {
             self.updateLine(line);
         });
     }
