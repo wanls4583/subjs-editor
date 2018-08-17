@@ -410,8 +410,9 @@ class Editor {
         if (endPos.column > endLineText.length) {
             this.linesContext.setFoldText(endPos.line, '');
         }
-        if (pos.column > endLineText.length) {
-            pos.column = endLineText.length;
+        //折叠时光标定位到省略号后面
+        if (this.linesContext.getFoldText(pos.line) && pos.column >= this.linesContext.getText(pos.line).length) {
+            pos.column = this.linesContext.getText(pos.line).length + 2;
         }
         this.setCursorPos(pos);
         this.renderLine();
@@ -874,11 +875,11 @@ class Editor {
         this.$wrapper.delegate('.line_num i', 'click', function() {
             var $num = $(this).parent('.line_num');
             if ($num.hasClass('fold_arrow_open')) {
-                var line = parseInt($num.data('realLine'));
-                var pos = self.linesContext.getFoldPos(line);
-                var startPos = { line: pos.startPos.line, column: pos.startPos.end + 1 };
-                var endPos = { line: pos.endPos.line - 1, column: self.linesContext.getText(pos.endPos.line - 1).length };
-                var str = self.linesContext.getText(startPos.line);
+                var line = parseInt($num.data('realLine')),
+                    pos = self.linesContext.getFoldPos(line),
+                    startPos = { line: pos.startPos.line, column: pos.startPos.end + 1 },
+                    endPos = { line: pos.endPos.line - 1, column: self.linesContext.getText(pos.endPos.line - 1).length },
+                    str = self.linesContext.getText(startPos.line);
                 str = str.substr(startPos.column);
                 for (var l = startPos.line + 1; l <= endPos.line; l++) {
                     str += '\n' + getFullText(l);
@@ -887,21 +888,23 @@ class Editor {
                 self.deleteContent(startPos, endPos);
                 $num.removeClass('fold_arrow_open').addClass('fold_arrow_close');
             } else if ($num.hasClass('fold_arrow_close')) {
-                var line = parseInt($num.data('realLine'));
-                var pos = self.linesContext.getFoldPos(line);
-                var foldText = self.linesContext.getFoldText(line);
-                var scrollTop = self.$vScrollWrap[0].scrollTop;
+                var line = parseInt($num.data('realLine')),
+                    str = self.linesContext.getText(line + 1),
+                    foldText = self.linesContext.getFoldText(line),
+                    scrollTop = self.$vScrollWrap[0].scrollTop;
                 self.linesContext.setFoldText(line, '');
                 self.setCursorPos({
                     line: line,
                     column: self.linesContext.getText(line).length
                 });
                 self.insertContent(foldText);
+                //光标定位到折叠尾行位置
+                self.setCursorPos({
+                    line: self.cursorPos.line + 1,
+                    column: 0
+                });
+                self.updateCursorPos();
                 $num.removeClass('fold_arrow_close');
-                //折叠尾部有匹配
-                if (self.linesContext.getFoldPos()) {
-                    $num.addClass('fold_arrow_open');
-                }
                 self.$vScrollWrap[0].scrollTop = scrollTop;
             }
         });

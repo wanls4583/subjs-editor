@@ -164,7 +164,7 @@ class FoldHightLight {
      * @param  {Object} preToken 折叠头
      */
     renderFold(preToken) {
-        if(preToken.suffixToken.line - preToken.line > 3){
+        if(preToken.suffixToken.line - preToken.line >= 3){
             this.editor.linesContext.setFoldPos(preToken.line, preToken, preToken.suffixToken);
         }
         this.editor.updateNum(preToken.line, true);
@@ -232,7 +232,12 @@ class FoldHightLight {
         //过滤多行匹配中的行
         var filterLines = [];
         for (var i = 0; i < recheckLines.length; i++) {
-            if (!this.editor.linesContext.getWholeLineDec(recheckLines[i])) {
+            var line = recheckLines[i];
+            //整行匹配还没做处理
+            if(line  > startLine){
+                line += endLine - startLine;
+            }
+            if (!this.editor.linesContext.getWholeLineDec(line)) {
                 filterLines.push(recheckLines[i]);
             }
         }
@@ -307,7 +312,12 @@ class FoldHightLight {
         //过滤多行匹配中的行
         var filterLines = [];
         for (var i = 0; i < recheckLines.length; i++) {
-            if (!this.editor.linesContext.getWholeLineDec(recheckLines[i])) {
+            var line = recheckLines[i];
+            //整行匹配还没做处理
+            if(line  > endLine){
+                line -= endLine - startLine;
+            }
+            if (!this.editor.linesContext.getWholeLineDec(line)) {
                 filterLines.push(recheckLines[i]);
             }
         }
