@@ -36,9 +36,12 @@ class TaskLink {
     }
     //执行
     process() {
-        var self = this;
+        var self = this,
+            startTime = new Date().getTime(),
+            endTime = startTime;
         clearTimeout(this.timer);
-        for (var i = 0; i < this.minUnit; i++) {
+        //避免浏览器阻塞
+        for (var i = 0; i < this.minUnit && endTime - startTime < 17; i++) {
             if (this.insertCache.length) {
                 for (var i = 0, length = this.insertCache.length; i < 100 && i < length; i++) {
                     this._insert(this.insertCache.pop())
@@ -52,7 +55,9 @@ class TaskLink {
                 this.nowTask = this.nowTask.pre;
                 this.del(this.nowTask.next);
             }
+            endTime = new Date().getTime();
         }
+        //继续下一个任务
         if (this.head.next || this.insertCache.length) {
             this.timer = setTimeout(function() {
                 self.process();

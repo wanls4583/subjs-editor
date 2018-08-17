@@ -848,7 +848,10 @@ class Editor {
                 self.copyText = copyText;
             }
             if (copyText) {
-                self.insertContent(self.copyText);
+                //避免连续 ctrl+v
+                Util.nextFrame(function(){
+                    self.insertContent(self.copyText);
+                });
             }
             //如果不返回false，textarea会接受大量数据，网页会很卡
             return false;

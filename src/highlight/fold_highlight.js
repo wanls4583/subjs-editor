@@ -229,26 +229,14 @@ class FoldHightLight {
         for (var i = startLine + 1; i <= endLine; i++) {
             recheckLines.push(i);
         }
-        //过滤多行匹配中的行
-        var filterLines = [];
-        for (var i = 0; i < recheckLines.length; i++) {
-            var line = recheckLines[i];
-            //整行匹配还没做处理
-            if (line > startLine) {
-                line += endLine - startLine;
-            }
-            if (!this.editor.linesContext.getWholeLineDec(line)) {
-                filterLines.push(recheckLines[i]);
-            }
+        Util.sortNum(recheckLines);
+        for (var i = 0; i < recheckLines.length -1; i++) {
+            this.taskList.insert(recheckLines[i]);
         }
-        Util.sortNum(filterLines);
-        for (var i = 0; i < filterLines.length; i++) {
-            this.taskList.insert(filterLines[i]);
-        }
-        if (filterLines.length) {
+        if (recheckLines.length) {
             //同步插入
-            this.taskList.insert(filterLines[filterLines.length - 1], true);
-            this.setPriorLine(filterLines[filterLines.length - 1]);
+            this.taskList.insert(recheckLines[recheckLines.length - 1], true);
+            this.setPriorLine(recheckLines[recheckLines.length - 1]);
         }
     }
     /**
@@ -309,26 +297,14 @@ class FoldHightLight {
                 recheckLines[i] -= endLine - startLine;
             }
         }
-        //过滤多行匹配中的行
-        var filterLines = [];
-        for (var i = 0; i < recheckLines.length; i++) {
-            var line = recheckLines[i];
-            //整行匹配还没做处理
-            if (line > endLine) {
-                line -= endLine - startLine;
-            }
-            if (!this.editor.linesContext.getWholeLineDec(line)) {
-                filterLines.push(recheckLines[i]);
-            }
+        Util.sortNum(recheckLines);
+        for (var i = 0; i < recheckLines.length -1; i++) {
+            this.taskList.insert(recheckLines[i]);
         }
-        Util.sortNum(filterLines);
-        for (var i = 0; i < filterLines.length; i++) {
-            this.taskList.insert(filterLines[i]);
-        }
-        if (filterLines.length) {
+        if (recheckLines.length) {
             //同步插入
-            this.taskList.insert(filterLines[filterLines.length - 1], true);
-            this.setPriorLine(filterLines[filterLines.length - 1]);
+            this.taskList.insert(recheckLines[recheckLines.length - 1], true);
+            this.setPriorLine(recheckLines[recheckLines.length - 1]);
         }
     }
     /**
