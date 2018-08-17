@@ -348,10 +348,12 @@ class Editor {
         if (this.highlighter && pos.line >= 1) {
             this.highlighter.onInsertBefore(pos.line, pos.line + strs.length - 1);
         }
+        var lineArr = [];
         //粘贴操作可能存在换号符,需要添加新行
         for (var tmp = 1; tmp < strs.length; tmp++) {
-            this.linesContext.add(pos.line + tmp, strs[tmp]);
+            lineArr.push(strs[tmp]);
         }
+        this.linesContext.add(pos.line + 1, lineArr);
         firstLine = this.firstLine;
         //计算可视区域的首行
         if (pos.line - this.firstLine + strs.length > this.maxVisualLine) {

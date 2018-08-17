@@ -47,26 +47,36 @@ class LinesContext {
     }
     //在指定行添加一行文本
     add(line, txt) {
-        this.context.splice(line - 1, 0, {
-            content: txt,
-            htmlDom: null,
-            width: 0,
-            lineDecs: [],
-            priorLineDecs: [],
-            lineWholeDec: '',
-            foldObj: {
-                startPos: null,
-                endPos: null,
-                foldText: ''
-            }
-        })
-        this.context[line - 1].width = Util.getStrWidth(txt, this.Editor.charWidth, this.Editor.fullAngleCharWidth);
-        if (this.context[line - 1].width > this.maxObj.width) {
-            this.maxObj.width = this.context[line - 1].width;
-            this.maxObj.line = line;
-        } else if (line == this.maxObj.line) {
-            this.maxObj.line = line + 1;
+        var arr = []
+        if(Object.prototype.toString.call(txt)  === '[object Array]'){
+            arr = txt;
+        }else{
+            arr = [txt];
         }
+        for(var i=0,length = arr.length; i<length; i++){
+            txt = arr[i];
+            arr[i] = {
+                content: txt,
+                htmlDom: null,
+                width: 0,
+                lineDecs: [],
+                priorLineDecs: [],
+                lineWholeDec: '',
+                foldObj: {
+                    startPos: null,
+                    endPos: null,
+                    foldText: ''
+                }
+            }
+            arr[i].width = Util.getStrWidth(txt, this.Editor.charWidth, this.Editor.fullAngleCharWidth);
+            if (arr[i].width > this.maxObj.width) {
+                this.maxObj.width = arr[i].width;
+                this.maxObj.line = line + i;
+            } else if (line + i == this.maxObj.line) {
+                this.maxObj.line = line + i + 1;
+            }
+        }
+        this.context = this.context.slice(0,line - 1).concat(arr).concat(this.context.slice(line - 1));
     }
     /**
      * 删除多行（大数据处理时提高效率）
