@@ -409,9 +409,8 @@ class PairHighLight {
     /**
      * 设置优先处理行[外部接口]
      * @param {Nunber} endLine 优先处理的末行
-     * @param  {String} type 更新类型
      */
-    setPriorLine(endLine, type) {
+    setPriorLine(endLine) {
         this.taskList.setPriorLine(endLine);
     }
 }

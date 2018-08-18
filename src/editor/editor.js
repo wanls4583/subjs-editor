@@ -342,8 +342,13 @@ class Editor {
             } else {
                 pos.column = pos.column + newContent.length;
             }
-        } else if (this.linesContext.getLength() == 0) {
-            pos.line = 0;
+        } else {
+            if(this.linesContext.getText(this.cursorPos.line)){
+                this.linesContext.setText(this.cursorPos.line, '');
+            }
+            if (this.linesContext.getLength() == 0) {
+                pos.line = 0;
+            }
         }
         if (this.highlighter && pos.line >= 1) {
             this.highlighter.onInsertBefore(pos.line, pos.line + strs.length - 1);
@@ -559,6 +564,8 @@ class Editor {
         //设置优先处理行
         if (this.highlighter) {
             this.highlighter.setPriorLine(firstLine + this.maxVisualLine);
+            this.highlighter.setPriorLine(firstLine + this.maxVisualLine, 'fold');
+            this.highlighter.setPriorLine(firstLine + this.maxVisualLine, 'pair');
         }
         var self = this,
             allDom = this.$context.find('.pre_code_line');

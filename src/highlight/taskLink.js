@@ -175,20 +175,25 @@ class TaskLink {
     }
     //设置优先处理行
     setPriorLine(endLine) {
-        var skipHead = this.skipHead;
-        //寻找跳表头
-        while (skipHead && skipHead.line < endLine) {
-            skipHead = skipHead.skipNext;
-        }
+        var index = this.insertCache.indexOf(endLine);
+        if(index > -1){
+            this.insertCache = this.insertCache.slice(index).concat(this.insertCache.slice(0,index));
+        }else{
+            var skipHead = this.skipHead;
+            //寻找跳表头
+            while (skipHead && skipHead.line < endLine) {
+                skipHead = skipHead.skipNext;
+            }
 
-        skipHead = skipHead && skipHead.skipPre || this.skipLast;
+            skipHead = skipHead && skipHead.skipPre || this.skipLast;
 
-        while (skipHead && skipHead.line < endLine) {
-            skipHead = skipHead.next;
-        }
+            while (skipHead && skipHead.line < endLine) {
+                skipHead = skipHead.next;
+            }
 
-        if (skipHead) {
-            this.nowTask = skipHead;
+            if (skipHead) {
+                this.nowTask = skipHead;
+            }
         }
     }
     /**
