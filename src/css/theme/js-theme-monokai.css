@@ -1,12 +1,12 @@
 /*monokai 主题*/
 
 .editor_wrap {
+    background-color: #272822;
     font-family: Consolas, Monaco, monospace;
     font-size: 13px;
     line-height: 1.5;
+    color: #f8f8f2;
     letter-spacing: .5px;
-    color: #F8F8F2;
-    background-color: #272822;
 }
 
 .editor_wrap textarea {
@@ -16,7 +16,7 @@
 .cursor {
     width: 1px !important;
     user-select: none;
-    background-color: #F8F8F0 !important;
+    background-color: #f8f8f0 !important;
 }
 
 .current_line_bg {
@@ -32,79 +32,79 @@
 }
 
 .line_num.active {
-    background-color: #3E3D32;
+    background-color: #3e3d32;
 }
 
 .selection_line_bg {
-    background-color: #49483E !important;
+    background-color: #49483e !important;
 }
 
 
 /*关键字*/
 
 .key {
-    color: #F92672;
+    color: #f92672;
 }
 
 
 /*类型*/
 
 .type {
-    color: #66D9EF;
+    color: #66d9ef;
 }
 
 
 /*函数执行*/
 
 .function {
-    color: #66D9EF;
+    color: #66d9ef;
 }
 
 .class {
-    color: #A6E22E;
+    color: #a6e22e;
 }
 
 
 /*函数名称*/
 
 .function_name {
-    color: #A6E22E;
+    color: #a6e22e;
 }
 
 
 /*函数参数*/
 
 .function_arg {
-    color: #FD971F;
+    color: #fd971f;
 }
 
 .tag {
-    color: #F92672;
+    color: #f92672;
 }
 
 .tag_attr {
-    color: #A6E22E;
+    color: #a6e22e;
 }
 
 
 /*内置函数*/
 
 .lib_function {
-    color: #66D9EF;
+    color: #66d9ef;
 }
 
 
 /*内置变量*/
 
 .lib_var {
-    color: #66D9EF;
+    color: #66d9ef;
 }
 
 
 /*操作符号*/
 
 .oprator {
-    color: #F92672;
+    color: #f92672;
 }
 
 
@@ -112,19 +112,25 @@
 
 .comment,
 .pair_comment {
-    color: #75715E;
+    color: #75715e;
 }
 
 
 /*字符串*/
 
 .string {
-    color: #E6DB74;
+    color: #e6db74;
 }
 
 
 /*数字*/
 
 .number {
-    color: #AE81FF;
+    color: #ae81ff;
+}
+
+/*对齐*/
+.indent{
+    display: inline-block;
+    background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAYAAACZgbYnAAAAEklEQVQImWPQ0FD0ZXBzd/wPAAjVAoxeSgNeAAAAAElFTkSuQmCC) right repeat-y;
 }

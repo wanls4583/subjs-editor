@@ -46,6 +46,10 @@ var rules = [{
     token: 'function_arg',
     callback: Util.execArgsReg
 }, {
+    reg: / {4}(?= )/g,
+    exclude: [/[^ ]+? {4}[\s\S]*$/g],
+    token: 'indent'
+}, {
     reg: /'[^']*?'|"[^"]*?"/g,
     token: 'string'
 }, {

@@ -1,12 +1,12 @@
 /*monokai 主题*/
 
 .editor_wrap {
+    background-color: #fff;
     font-family: Consolas, Monaco, monospace;
     font-size: 13px;
     line-height: 1.5;
-    letter-spacing: .5px;
     color: #000;
-    background-color: #fff;
+    letter-spacing: .5px;
 }
 
 .editor_wrap textarea {
@@ -28,7 +28,7 @@
 }
 
 .line_num {
-    color: rgba(0,0,0,0.3);
+    color: rgba(0,0,0,.3);
 }
 
 .line_num.active {
@@ -36,33 +36,32 @@
 }
 
 .selection_line_bg {
-    background-color: #BAD6FD !important;
+    background-color: #bad6fd !important;
 }
 
 
 /*关键字*/
 
 .key {
-    color: #0000FF;
+    color: #00f;
 }
 
 
 /*类型*/
 
 .type {
-    color: #3333FF;
+    color: #33f;
 }
 
 
 /*函数执行*/
 
 .function {
-    color: #3333FF;
-
+    color: #33f;
 }
 
 .class {
-    color: #3333FF;
+    color: #33f;
 }
 
 
@@ -80,7 +79,7 @@
 }
 
 .tag {
-    color: #0033CC;
+    color: #03c;
 }
 
 .tag_attr {
@@ -91,14 +90,14 @@
 /*内置函数*/
 
 .lib_function {
-    color: #3333FF;
+    color: #33f;
 }
 
 
 /*内置变量*/
 
 .lib_var {
-    color: #3333FF;
+    color: #33f;
 }
 
 
@@ -120,7 +119,7 @@
 /*字符串*/
 
 .string {
-    color: #FF00FF;
+    color: #f0f;
 }
 
 
@@ -128,4 +127,10 @@
 
 .number {
     color: #800080;
+}
+
+/*对齐*/
+.indent{
+    display: inline-block;
+    background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAYAAACZgbYnAAAAE0lEQVQImWP4////f4bLly//BwAmVgd1/w11/gAAAABJRU5ErkJggg==') right repeat-y;
 }
