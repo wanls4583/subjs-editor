@@ -17,7 +17,7 @@ class Mode {
         this.linesContext.setDecEngine(Mode.decEngine); //设置修饰对象的处理引擎
         this.pairHighLight = new PairHighLight(editor,  Mode.pairRules);
         this.foldHighLight = new FoldHighLight(editor, Mode.foldRules);
-        this.taskList = new TaskLink(1000, 1000, function(line) {
+        this.taskList = new TaskLink(1000, 100, function(line) {
             self.updateLine(line);
         });
     }
@@ -76,7 +76,7 @@ class Mode {
         for (var i = startLine; i <= endLine; i++) {
             this.taskList.insert(i);
         }
-        this.setPriorLine(endLine, true);
+        this.setPriorLine(endLine);
         this.pairHighLight.onInsertBefore(startLine, endLine);
         this.foldHighLight.onInsertBefore(startLine, endLine);
     }
@@ -111,15 +111,16 @@ class Mode {
     /**
      * 设置优先处理行[外部接口]
      * @param {Nunber} endLine 优先处理的末行
+     * @param {Boolean} ifProcess 是否立刻处理
      * @param  {String} type 更新类型
      */
-    setPriorLine(endLine, type) {
+    setPriorLine(endLine, ifProcess, type) {
         if (type == 'fold') {
-            this.foldHighLight.setPriorLine(endLine);
+            this.foldHighLight.setPriorLine(endLine, ifProcess);
         } else if(type == 'pair') {
-            this.pairHighLight.setPriorLine(endLine);
+            this.pairHighLight.setPriorLine(endLine, ifProcess);
         } else{
-            this.taskList.setPriorLine(endLine);
+            this.taskList.setPriorLine(endLine, ifProcess);
         }
     }
     /**

@@ -8,7 +8,7 @@ class PairHighLight {
 		var self = this;
 		this.rules = rules;
 		this.editor = editor;
-		this.taskList = new TaskLink(1000, 1000, function(line){
+		this.taskList = new TaskLink(1000, 100, function(line){
             self.updateLine(line);
         }); //高亮待处理队列
         this.tokenLists = []; //多行匹配符号记录
@@ -409,9 +409,10 @@ class PairHighLight {
     /**
      * 设置优先处理行[外部接口]
      * @param {Nunber} endLine 优先处理的末行
+     * @param {Boolean} ifProcess 是否立刻处理
      */
-    setPriorLine(endLine) {
-        this.taskList.setPriorLine(endLine);
+    setPriorLine(endLine, ifProcess) {
+        this.taskList.setPriorLine(endLine, ifProcess);
     }
 }
 

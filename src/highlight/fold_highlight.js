@@ -9,7 +9,7 @@ class FoldHightLight {
         this.rules = rules;
         this.editor = editor;
         this.tokenLists = []; //折叠符号记录
-        this.taskList = new TaskLink(1000, 1000, function(line) {
+        this.taskList = new TaskLink(1000, 100, function(line) {
             self.updateLine(line);
         }); //折叠待处理队列
         for (var i = 0; i < this.rules.length; i++) {
@@ -318,9 +318,10 @@ class FoldHightLight {
     /**
      * 设置优先处理行[外部接口]
      * @param {Nunber} endLine 优先处理的末行
+     * @param {Boolean} ifProcess 是否立刻处理
      */
-    setPriorLine(endLine) {
-        this.taskList.setPriorLine(endLine);
+    setPriorLine(endLine, ifProcess) {
+        this.taskList.setPriorLine(endLine, ifProcess);
     }
     /**
      * 删除折叠行[对外接口]

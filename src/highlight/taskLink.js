@@ -43,7 +43,7 @@ class TaskLink {
         //避免浏览器阻塞
         for (var i = 0; i < this.minUnit && endTime - startTime < 17; i++) {
             if (this.insertCache.length) {
-                for (var i = 0, length = this.insertCache.length; i < 100 && i < length; i++) {
+                for (var j = 0; j < 10 && j < this.insertCache.length; j++) {
                     this._insert(this.insertCache.pop())
                 }
             }
@@ -173,27 +173,38 @@ class TaskLink {
 
         return null;
     }
-    //设置优先处理行
-    setPriorLine(endLine) {
+    /**
+     * 设置优先处理行
+     * @param {Number}  endLine   末尾优先行
+     * @param {Boolean} ifProcess 是否立刻处理
+     */
+    setPriorLine(endLine, ifProcess) {
         var index = this.insertCache.indexOf(endLine);
-        if(index > -1){
-            this.insertCache = this.insertCache.slice(index).concat(this.insertCache.slice(0,index));
-        }else{
-            var skipHead = this.skipHead;
-            //寻找跳表头
-            while (skipHead && skipHead.line < endLine) {
-                skipHead = skipHead.skipNext;
+        if (index > -1) {
+            this.insertCache = this.insertCache.slice(index + 1).concat(this.insertCache.slice(0, index + 1));
+            for (var i = 0; i < 100 && i < this.insertCache.length; i++) {
+                this._insert(this.insertCache.pop());
             }
+        }
 
-            skipHead = skipHead && skipHead.skipPre || this.skipLast;
+        var skipHead = this.skipHead;
+        //寻找跳表头
+        while (skipHead && skipHead.line < endLine) {
+            skipHead = skipHead.skipNext;
+        }
 
-            while (skipHead && skipHead.line < endLine) {
-                skipHead = skipHead.next;
-            }
+        skipHead = skipHead && skipHead.skipPre || this.skipLast;
 
-            if (skipHead) {
-                this.nowTask = skipHead;
-            }
+        while (skipHead && skipHead.line < endLine) {
+            skipHead = skipHead.next;
+        }
+
+        if (skipHead) {
+            this.nowTask = skipHead;
+        }
+
+        if (ifProcess) {
+            this.process();
         }
     }
     /**

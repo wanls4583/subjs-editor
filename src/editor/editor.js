@@ -563,9 +563,9 @@ class Editor {
         }
         //设置优先处理行
         if (this.highlighter) {
-            this.highlighter.setPriorLine(firstLine + this.maxVisualLine);
-            this.highlighter.setPriorLine(firstLine + this.maxVisualLine, 'fold');
-            this.highlighter.setPriorLine(firstLine + this.maxVisualLine, 'pair');
+            this.highlighter.setPriorLine(firstLine + this.maxVisualLine, true);
+            this.highlighter.setPriorLine(firstLine + this.maxVisualLine, true, 'fold');
+            this.highlighter.setPriorLine(firstLine + this.maxVisualLine, true, 'pair');
         }
         var self = this,
             allDom = this.$context.find('.pre_code_line');
