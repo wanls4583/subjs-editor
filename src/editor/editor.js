@@ -414,8 +414,13 @@ class Editor {
             pos.column = startPos.column;
         }
         //删除折叠省略号
-        if (endPos.column > endLineText.length) {
+        if (startPos.line == endPos.line && endPos.column > endLineText.length) {
             this.linesContext.setFoldText(endPos.line, '');
+        }else if(startPos.line != endPos.line && this.linesContext.getDom(startPos.line).find('.ellipsis').length){
+            this.linesContext.setFoldText(startPos.line, '');
+        }
+        if(endPos.line == startPos.line && pos.column > endLineText.length){
+            pos.column = endLineText.length;
         }
         //折叠时光标定位到省略号后面
         if (this.linesContext.getFoldText(pos.line) && pos.column >= this.linesContext.getText(pos.line).length) {
