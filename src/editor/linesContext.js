@@ -132,14 +132,7 @@ class LinesContext {
         $dom && ($dom.hasUpdate = false);
         //只有挂载到页面的元素才真正更新
         if ($dom && $dom[0].isConnected) {
-            var wholeLineDec = this.context[line - 1].lineWholeDec;
-            if (wholeLineDec) {
-                $dom.find('.code').html(Util.htmlTrans(this.context[line - 1].content));
-                $dom.find('.code').addClass(wholeLineDec);
-            } else {
-                $dom.find('.code').attr('class', 'code');
-                $dom.find('.code').html(this._engine(this.context[line - 1].content, this.context[line - 1].lineDecs, this.context[line - 1].priorLineDecs));
-            }
+            $dom.find('.code').html(this._engine(this.context[line - 1].content, this.context[line - 1].lineDecs, this.context[line - 1].priorLineDecs, this.context[line - 1].lineWholeDec));
             //设置更新标识
             if (!$dom.hasUpdate) {
                 $dom.hasUpdate = true;

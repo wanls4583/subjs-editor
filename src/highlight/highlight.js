@@ -15,7 +15,7 @@ class Mode {
         var self = this;
         this.linesContext = editor.linesContext;
         this.linesContext.setDecEngine(Mode.decEngine); //设置修饰对象的处理引擎
-        this.pairHighLight = new PairHighLight(editor,  Mode.pairRules);
+        this.pairHighLight = new PairHighLight(editor, Mode.pairRules);
         this.foldHighLight = new FoldHighLight(editor, Mode.foldRules);
         this.taskList = new TaskLink(1000, 100, function(line) {
             self.updateLine(line);
@@ -117,74 +117,113 @@ class Mode {
     setPriorLine(endLine, ifProcess, type) {
         if (type == 'fold') {
             this.foldHighLight.setPriorLine(endLine, ifProcess);
-        } else if(type == 'pair') {
+        } else if (type == 'pair') {
             this.pairHighLight.setPriorLine(endLine, ifProcess);
-        } else{
+        } else {
             this.taskList.setPriorLine(endLine, ifProcess);
         }
     }
     /**
      * 修饰引擎，用来处理修饰，生成HTML字符串
-     * @param  {String} content 一行内容
-     * @param  {Object} lineToken 修饰对象
-     * @return {String}         HTML字符串
+     * @param  {String} content         一行内容
+     * @param  {Object} lineToken       修饰对象
+     * @param  {String} lineWholeToken  整行修饰
+     * @return {String}                 HTML字符串
      */
-    static decEngine(content, lineToken, priorLineToken) {
-        //处理HTML转义'>,<'--'&gt;,&lt;'
-        var reg = />|</g,
-            match = null,
-            indexs = [],
-            copyToken = Util.copyObj(lineToken); //避免原始修饰start被修改
-        while (match = reg.exec(content)) {
-            indexs.push(match.index);
+    static decEngine(content, lineToken, priorLineToken, lineWholeToken) {
+        //行首的对齐修饰
+        var indentToken = [];
+        for (var i = 0; i < lineToken.length; i++) {
+            if (lineToken[i].token == 'indent') {
+                indentToken.push(lineToken[i]);
+            } else {
+                break;
+            }
         }
-        //高优先级修饰覆盖(多行匹配的头尾修饰)
-        if (priorLineToken && priorLineToken.length) {
-            for (var i = 0; i < priorLineToken.length; i++) {
-                var tokenNode = priorLineToken[i];
-                for (var j = 0; j < copyToken.length; j++) {
+        //该行为整行修饰
+        if (lineWholeToken) {
+            var indent = '';
+            if (indentToken.length) {
+                var index = indentToken[indentToken.length - 1].end;
+                indent = content.substring(0, index + 1);
+                indent = _render(indent, indentToken);
+                content = content.substring(index + 1);
+            }
+            return `${indent}<span class="${lineWholeToken}"">${content}</span>`;
+        } else {
+            return _render(content, lineToken, priorLineToken, indentToken)
+        }
+
+        function _render(content, lineToken, priorLineToken, indentToken) {
+            //处理HTML转义'>,<'--'&gt;,&lt;'
+            var reg = />|</g,
+                match = null,
+                indexs = [],
+                copyToken = Util.copyObj(lineToken); //避免原始修饰start被修改
+            while (match = reg.exec(content)) {
+                indexs.push(match.index);
+            }
+            //高优先级修饰覆盖(多行匹配的头尾修饰)
+            if (priorLineToken && priorLineToken.length) {
+                //防止行首对齐修饰被覆盖
+                if (indentToken && indentToken.length) {
+                    var end = indentToken[indentToken.length - 1].end;
+                    for (var i = 0; i < priorLineToken.length; i++) {
+                        if (priorLineToken[i].start <= end) {
+                            priorLineToken[i].start = end + 1;
+                        }
+                        if (priorLineToken[i].end <= end) {
+                            priorLineToken.splice(i);
+                            i--;
+                        }
+                    }
+                }
+                for (var i = 0; i < priorLineToken.length; i++) {
+                    var tokenNode = priorLineToken[i];
+                    for (var j = 0; j < copyToken.length; j++) {
+                        var obj = copyToken[j];
+                        //有交叉则删除
+                        if (!(obj.end < tokenNode.start || obj.start > tokenNode.end)) {
+                            copyToken.splice(j, 1);
+                            j--;
+                        }
+                    }
+                    copyToken.push(tokenNode);
+                    copyToken.sort(function(arg1, arg2) {
+                        if (arg1.start < arg2.start) {
+                            return -1
+                        } else if (arg1.start == arg2.start) {
+                            return 0;
+                        } else {
+                            return 1;
+                        }
+                    });
+                }
+            }
+            //避免原始修饰start被修改
+            copyToken = Util.copyObj(copyToken);
+            //倒序移动位置
+            for (var i = indexs.length - 1; i >= 0; i--) {
+                var index = indexs[i];
+                for (var j = copyToken.length - 1; j >= 0; j--) {
                     var obj = copyToken[j];
-                    //有交叉则删除
-                    if (!(obj.end < tokenNode.start || obj.start > tokenNode.end)) {
-                        copyToken.splice(j, 1);
-                        j--;
+                    if (obj.start > index) {
+                        obj.start += 3;
+                    }
+                    if (obj.end >= index) {
+                        obj.end += 3;
                     }
                 }
-                copyToken.push(tokenNode);
-                copyToken.sort(function(arg1, arg2) {
-                    if (arg1.start < arg2.start) {
-                        return -1
-                    } else if (arg1.start == arg2.start) {
-                        return 0;
-                    } else {
-                        return 1;
-                    }
-                });
             }
-        }
-        //避免原始修饰start被修改
-        copyToken = Util.copyObj(copyToken);
-        //倒序移动位置
-        for (var i = indexs.length - 1; i >= 0; i--) {
-            var index = indexs[i];
-            for (var j = copyToken.length - 1; j >= 0; j--) {
-                var obj = copyToken[j];
-                if (obj.start > index) {
-                    obj.start += 3;
-                }
-                if (obj.end >= index) {
-                    obj.end += 3;
-                }
+            content = Util.htmlTrans(content);
+            //生成HTML
+            for (var i = copyToken.length - 1; i >= 0; i--) {
+                var obj = copyToken[i];
+                content = Util.insertStr(content, obj.end + 1, '</span>');
+                content = Util.insertStr(content, obj.start, '<span class="' + obj.token + '">');
             }
+            return content;
         }
-        content = Util.htmlTrans(content);
-        //生成HTML
-        for (var i = copyToken.length - 1; i >= 0; i--) {
-            var obj = copyToken[i];
-            content = Util.insertStr(content, obj.end + 1, '</span>');
-            content = Util.insertStr(content, obj.start, '<span class="' + obj.token + '">');
-        }
-        return content;
     }
 }
 
