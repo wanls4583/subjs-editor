@@ -3,7 +3,7 @@ import { TokenLink, TokenNode } from './token_link.js';
 import TaskLink from './task_link.js';
 import CONST from '../common/const_var.js';
 
-class PairHighLight {
+class CommentHighLight {
 	constructor(editor, rules){
 		var self = this;
 		this.rules = rules;
@@ -416,4 +416,4 @@ class PairHighLight {
     }
 }
 
-export default PairHighLight;
+export default CommentHighLight;

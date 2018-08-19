@@ -15,7 +15,7 @@ class Mode {
         var self = this;
         this.linesContext = editor.linesContext;
         this.linesContext.setDecEngine(Mode.decEngine); //设置修饰对象的处理引擎
-        this.commentHighLight = new CommentHighLight(editor, Mode.pairRules);
+        this.commentHighLight = new CommentHighLight(editor, Mode.commentRules);
         this.fold = new Fold(editor, Mode.foldRules);
         this.taskList = new TaskLink(1000, 100, function(line) {
             self.updateLine(line);
