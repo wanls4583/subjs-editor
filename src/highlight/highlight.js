@@ -1,8 +1,8 @@
 import Util from './util.js';
-import { TokenLink, TokenNode } from './tokenlink.js';
-import TaskLink from './tasklink.js';
-import PairHighLight from './pair_highlight.js';
-import FoldHighLight from './fold_highlight.js';
+import { TokenLink, TokenNode } from './token_link.js';
+import TaskLink from './task_link.js';
+import CommentHighLight from './comment_highlight.js';
+import Fold from './fold.js';
 
 ////////////
 // 高亮基础模板 //
@@ -15,8 +15,8 @@ class Mode {
         var self = this;
         this.linesContext = editor.linesContext;
         this.linesContext.setDecEngine(Mode.decEngine); //设置修饰对象的处理引擎
-        this.pairHighLight = new PairHighLight(editor, Mode.pairRules);
-        this.foldHighLight = new FoldHighLight(editor, Mode.foldRules);
+        this.commentHighLight = new CommentHighLight(editor, Mode.pairRules);
+        this.fold = new Fold(editor, Mode.foldRules);
         this.taskList = new TaskLink(1000, 100, function(line) {
             self.updateLine(line);
         });
@@ -77,8 +77,8 @@ class Mode {
             this.taskList.insert(i);
         }
         this.setPriorLine(endLine);
-        this.pairHighLight.onInsertBefore(startLine, endLine);
-        this.foldHighLight.onInsertBefore(startLine, endLine);
+        this.commentHighLight.onInsertBefore(startLine, endLine);
+        this.fold.onInsertBefore(startLine, endLine);
     }
     /**
      * 插入新行之后触发[外部接口]
@@ -87,16 +87,16 @@ class Mode {
      */
     onInsertAfter(startLine, endLine) {
         this.taskList.process();
-        this.pairHighLight.taskList.process(startLine, endLine);
-        this.foldHighLight.taskList.process(startLine, endLine);
+        this.commentHighLight.taskList.process(startLine, endLine);
+        this.fold.taskList.process(startLine, endLine);
     }
     /**
      * 删除行之前触发[外部接口]
      * @param  {Number} startLine 行号
      */
     onDeleteBefore(startLine, endLine) {
-        this.pairHighLight.onDeleteBefore(startLine, endLine);
-        this.foldHighLight.onDeleteBefore(startLine, endLine);
+        this.commentHighLight.onDeleteBefore(startLine, endLine);
+        this.fold.onDeleteBefore(startLine, endLine);
     }
     /**
      * 删除行之后触发[外部接口]
@@ -105,8 +105,8 @@ class Mode {
      */
     onDeleteAfter(startLine, endLine) {
         this.updateLine(startLine);
-        this.pairHighLight.onDeleteAfter(startLine, endLine);
-        this.foldHighLight.onDeleteAfter(startLine, endLine);
+        this.commentHighLight.onDeleteAfter(startLine, endLine);
+        this.fold.onDeleteAfter(startLine, endLine);
     }
     /**
      * 设置优先处理行[外部接口]
@@ -116,9 +116,9 @@ class Mode {
      */
     setPriorLine(endLine, ifProcess, type) {
         if (type == 'fold') {
-            this.foldHighLight.setPriorLine(endLine, ifProcess);
+            this.fold.setPriorLine(endLine, ifProcess);
         } else if (type == 'pair') {
-            this.pairHighLight.setPriorLine(endLine, ifProcess);
+            this.commentHighLight.setPriorLine(endLine, ifProcess);
         } else {
             this.taskList.setPriorLine(endLine, ifProcess);
         }

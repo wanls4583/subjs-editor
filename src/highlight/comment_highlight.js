@@ -1,6 +1,6 @@
 import Util from './util.js';
-import { TokenLink, TokenNode } from './tokenlink.js';
-import TaskLink from './tasklink.js';
+import { TokenLink, TokenNode } from './token_link.js';
+import TaskLink from './task_link.js';
 import CONST from '../common/const_var.js';
 
 class PairHighLight {
@@ -191,7 +191,7 @@ class PairHighLight {
         //添加整行修饰
         function __addWholeLineDec() {
             for (var i = preToken.line + 1; i <= endLine; i++) {
-                self.editor.highlighter.foldHighLight.delFoldLine(i);
+                self.editor.highlighter.fold.delFoldLine(i);
                 self.editor.linesContext.setWhoeLineDec(i, preToken.token);
                 self.editor.linesContext.updateDom(i);
             }

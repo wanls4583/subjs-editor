@@ -1,5 +1,6 @@
 import Util from './util.js';
-import LinesContext from './linesContext.js';
+import LinesContext from './lines_context.js';
+import History from './history.js';
 import $ from 'jquery';
 import css from '../css/editor.css';
 
@@ -24,7 +25,8 @@ class Editor {
         }
         this.config.tabsize = option.tabsize || 4;
         this.linesContext = new LinesContext(Editor); //所有的行
-        this.highlighter = option.highlighter && new option.highlighter(this);
+        this.highlighter = option.highlighter && new option.highlighter(this); //高亮器
+        this.history = new History(this); //历史记录管理器
         this.leftNumDom = []; //行号dom
         this.cursorPos = { line: 1, column: 0 }; //光标位置
         this.selection = {};
@@ -41,7 +43,7 @@ class Editor {
         this.createScrollBar();
         this.bindEvent();
         this.bindEditorEvent();
-        this.insertContent('\n');
+        this.insertContent('\n', true);
     }
     bindEvent() {
         this.bindInputEvent();
@@ -326,63 +328,68 @@ class Editor {
     }
     /**
      * 在当前光标位置处插入内容
-     * @param  {string} val 插入的内容
+     * @param  {string}     val         插入的内容
+     * @param  {Boolean}    noHistory   是否添加到记录历史
      */
-    insertContent(newContent) {
+    insertContent(newContent, noHistory) {
         var str = this.linesContext.getText(this.cursorPos.line) || '',
             strs = null,
             firstLine,
-            pos = { line: this.cursorPos.line, column: this.cursorPos.column };
+            startPos = { line: this.cursorPos.line, column: this.cursorPos.column },
+            endPos = { line: this.cursorPos.line, column: this.cursorPos.column };
         str = str.substring(0, this.cursorPos.column) + newContent + str.substr(this.cursorPos.column);
         strs = str.split(/\r\n|\r|\n/);
         if (strs[0]) { //'\n'.split(/\r\n|\r|\n/)->['','']
             this.linesContext.setText(this.cursorPos.line, strs[0]);
             if (strs.length > 1) {
-                pos.column = strs[strs.length - 1].length;
+                endPos.column = strs[strs.length - 1].length;
             } else {
-                pos.column = pos.column + newContent.length;
+                endPos.column = endPos.column + newContent.length;
             }
         } else {
-            if(this.linesContext.getText(this.cursorPos.line)){
+            if (this.linesContext.getText(this.cursorPos.line)) {
                 this.linesContext.setText(this.cursorPos.line, '');
             }
             if (this.linesContext.getLength() == 0) {
-                pos.line = 0;
+                endPos.line = 0;
             }
         }
-        if (this.highlighter && pos.line >= 1) {
-            this.highlighter.onInsertBefore(pos.line, pos.line + strs.length - 1);
+        if (this.highlighter && endPos.line >= 1) {
+            this.highlighter.onInsertBefore(endPos.line, endPos.line + strs.length - 1);
         }
         var lineArr = [];
         //粘贴操作可能存在换号符,需要添加新行
         for (var tmp = 1; tmp < strs.length; tmp++) {
             lineArr.push(strs[tmp]);
         }
-        this.linesContext.add(pos.line + 1, lineArr);
+        this.linesContext.add(endPos.line + 1, lineArr);
         firstLine = this.firstLine;
         //计算可视区域的首行
-        if (pos.line - this.firstLine + strs.length > this.maxVisualLine) {
-            firstLine = pos.line + strs.length - this.maxVisualLine;
+        if (endPos.line - this.firstLine + strs.length > this.maxVisualLine) {
+            firstLine = endPos.line + strs.length - this.maxVisualLine;
         }
         this.renderLine(firstLine);
         if (this.highlighter) {
-            if (pos.line < 1) { //初始化坐标为(0,0)
+            if (endPos.line < 1) { //初始化坐标为(0,0)
                 this.highlighter.onInsertAfter(1, 1);
             } else {
-                this.highlighter.onInsertAfter(pos.line, pos.line + strs.length - 1);
+                this.highlighter.onInsertAfter(endPos.line, endPos.line + strs.length - 1);
             }
         }
-        pos.line = pos.line + strs.length - 1;
-        this.setCursorPos(pos);
+        endPos.line = endPos.line + strs.length - 1;
+        //添加历史记录
+        !noHistory && this.history.push('add', startPos, endPos, newContent);
+        this.setCursorPos(endPos);
         this.updateScroll(true);
         this.updateCursorPos();
     }
     /**
      * 从编辑器中删除多行
-     * @param  {object/number} startPos 开始行列坐标{line,column}/行号
-     * @param  {Object} endPos   结束行列坐标{line,column}
+     * @param  {object/number}  startPos    开始行列坐标{line,column}/行号
+     * @param  {Object}         endPos      结束行列坐标{line,column}
+     * @param  {Boolean}        noHistory   是否添加到记录历史
      */
-    deleteContent(startPos, endPos) {
+    deleteContent(startPos, endPos, noHistory) {
         var pos = { line: this.cursorPos.line, column: this.cursorPos.column },
             endLineText = '';
         if (typeof startPos == 'number') {
@@ -394,8 +401,10 @@ class Editor {
             }
             endPos = { line: line, column: this.linesContext.getText(line).length };
         }
-        endLineText = this.linesContext.getText(endPos.line);
+        //添加历史记录
+        !noHistory && this.history.push('del', startPos, endPos, this.linesContext.getRangeText(startPos, endPos));
         this.highlighter && this.highlighter.onDeleteBefore(startPos.line, endPos.line);
+        endLineText = this.linesContext.getText(endPos.line);
         if (startPos.line == endPos.line) {
             var str = this.linesContext.getText(startPos.line);
             this.linesContext.setText(startPos.line, str.substring(0, startPos.column) + str.substring(endPos.column));
@@ -416,10 +425,11 @@ class Editor {
         //删除折叠省略号
         if (startPos.line == endPos.line && endPos.column > endLineText.length) {
             this.linesContext.setFoldText(endPos.line, '');
-        }else if(startPos.line != endPos.line && this.linesContext.getDom(startPos.line).find('.ellipsis').length){
+        } else if (startPos.line != endPos.line && this.linesContext.getDom(startPos.line).find('.ellipsis').length) {
             this.linesContext.setFoldText(startPos.line, '');
         }
-        if(endPos.line == startPos.line && pos.column > endLineText.length){
+        //只删除了折叠内容，光标向前移动两个字符的距离
+        if (endPos.line == startPos.line && pos.column > endLineText.length) {
             pos.column = endLineText.length;
         }
         //折叠时光标定位到省略号后面
@@ -505,10 +515,6 @@ class Editor {
             var width = Util.getStrWidth(str, Editor.charWidth, Editor.fullAngleCharWidth, 0, startPos.column);
             var px = self.posToPx(startPos.line, startPos.column);
             _renderRange(px.top, px.left, maxWidth - width);
-            self.selection.selectText = str;
-            for (var l = startPos.line + 1; l < endPos.line; l++) {
-                self.selection.selectText += '\n' + self.linesContext.getText(l);
-            }
             _renderBlock(startPos, endPos, rect.paddingLeft, maxWidth);
             str = self.linesContext.getText(endPos.line);
             width = Util.getStrWidth(str, Editor.charWidth, Editor.fullAngleCharWidth, 0, endPos.column);
@@ -518,7 +524,7 @@ class Editor {
                 width += 2 * Editor.charWidth;
             }
             _renderRange(px.top, px.left, width);
-            self.selection.selectText += '\n' + str.substring(0, endPos.column);
+            self.selection.selectText = self.linesContext.getRangeText(startPos, endPos);
             self.$lineBg.hide(); //隐藏当前行背景
         }
         /**
@@ -863,7 +869,7 @@ class Editor {
             }
             if (copyText) {
                 //避免连续 ctrl+v
-                Util.nextFrame(function(){
+                Util.nextFrame(function() {
                     self.insertContent(self.copyText);
                 });
             }
@@ -897,10 +903,7 @@ class Editor {
                     startPos = { line: pos.startPos.line, column: pos.startPos.end + 1 },
                     endPos = { line: pos.endPos.line - 1, column: self.linesContext.getText(pos.endPos.line - 1).length },
                     str = self.linesContext.getText(startPos.line);
-                str = str.substr(startPos.column);
-                for (var l = startPos.line + 1; l <= endPos.line; l++) {
-                    str += '\n' + getFullText(l);
-                }
+                str = self.linesContext.getRangeText(startPos, endPos);
                 self.linesContext.setFoldText(line, str);
                 self.deleteContent(startPos, endPos);
                 $num.removeClass('fold_arrow_open').addClass('fold_arrow_close');
@@ -973,8 +976,10 @@ class Editor {
             if (e.ctrlKey && e.keyCode == 65) { //ctrl+a
                 e.preventDefault();
                 self.selectAll();
-            } else if (e.ctrlKey && e.keyCode == 67) { //ctrl+c
-                self.$textarea.val('');
+            } else if (e.ctrlKey && (e.keyCode == 90 || e.keyCode == 122)) { //ctrl+z，撤销
+                self.history.undo();
+            } else if (e.ctrlKey && (e.keyCode == 89 || e.keyCode == 121)) { //ctrl+y，重做
+                self.history.redo();
             } else {
                 switch (e.keyCode) {
                     case 37: //left arrow

@@ -1,6 +1,6 @@
 import Util from './util.js';
-import { TokenLink, TokenNode } from './tokenlink.js';
-import TaskLink from './tasklink.js';
+import { TokenLink, TokenNode } from './token_link.js';
+import TaskLink from './task_link.js';
 import CONST from '../common/const_var.js';
 
 class FoldHightLight {
@@ -16,8 +16,8 @@ class FoldHightLight {
             this.tokenLists.push(new TokenLink(1000));
         }
     }
-    //代码折叠标记
-    highlight(startLine) {
+    //折叠代码
+    fold(startLine) {
         var nodes = [],
             self = this;
         //先撤销
@@ -144,11 +144,11 @@ class FoldHightLight {
             var tokenList = this.tokenLists[i];
             var tokenNode = tokenList.find(line);
             while (tokenNode && tokenNode.line == line) {
-                //有可能已经 highlight 过一次，此时 tokenNode.suffixToken.preToken 有可能不再等于 tokenNode
+                //有可能已经 fold 过一次，此时 tokenNode.suffixToken.preToken 有可能不再等于 tokenNode
                 if (tokenNode.type == CONST.FOLD_PRE_TYPE && tokenNode.suffixToken && tokenNode.suffixToken.preToken == tokenNode) {
                     recheckLines.push(tokenNode.suffixToken.line);
                     this.undoFold(tokenNode);
-                    //有可能已经 highlight 过一次，此时 tokenNode.preToken.suffixToken 有可能不再等于 tokenNode
+                    //有可能已经 fold 过一次，此时 tokenNode.preToken.suffixToken 有可能不再等于 tokenNode
                 } else if (tokenNode.preToken && tokenNode.preToken.suffixToken == tokenNode) {
                     recheckLines.push(tokenNode.preToken.line);
                     this.undoFold(tokenNode.preToken);
@@ -187,7 +187,7 @@ class FoldHightLight {
      * @param  {String} type 更新类型
      */
     updateLine(line) {
-        this.highlight(line);
+        this.fold(line);
     }
     //折叠匹配插入前回调
     onInsertBefore(startLine, endLine) {

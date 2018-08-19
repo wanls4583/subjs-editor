@@ -30,10 +30,42 @@ class LinesContext {
         ];
         this.closeFolds = [];
     }
-    //获取一行文本
+    /**
+     * 获取一行的计算文本
+     * @param  {Number} line 行号
+     * @return {String}      文本
+     */
     getText(line) {
         return this.context.length >= line && this.context[line - 1].content;
     }
+    /**
+     * 获取一行的计算文本（该行可能已经折叠）
+     * @param  {Number} line 行号
+     * @return {String}      文本
+     */
+    getFullText(line) {
+        return this.getText(line) + this.getFoldText(line);
+    }
+    /**
+     * 获取范围内的文本
+     * @param  {Object} startPos 开始行列坐标
+     * @param  {Object} endPos   结束行列坐标
+     * @return {String}          范围内的文本
+     */
+    getRangeText(startPos, endPos) {
+        var str = this.getFullText(startPos.line),
+            endStr = '';
+        str = str.substr(startPos.column);
+        for (var line = startPos.line + 1; line < endPos.line; line++) {
+            str += '\n' + this.getFullText(line);
+        }
+        if(endPos.line > startPos.line){
+            endStr = this.getFullText(endPos.line);
+            endStr = '\n' + endStr.substring(0, endPos.column);
+        }
+        return str +  endStr;
+    }
+
     //更新一行文本
     setText(line, txt) {
         this.context[line - 1].content = txt;
@@ -48,12 +80,12 @@ class LinesContext {
     //在指定行添加一行文本
     add(line, txt) {
         var arr = []
-        if(Object.prototype.toString.call(txt)  === '[object Array]'){
+        if (Object.prototype.toString.call(txt) === '[object Array]') {
             arr = txt;
-        }else{
+        } else {
             arr = [txt];
         }
-        for(var i=0,length = arr.length; i<length; i++){
+        for (var i = 0, length = arr.length; i < length; i++) {
             txt = arr[i];
             arr[i] = {
                 content: txt,
@@ -76,7 +108,7 @@ class LinesContext {
                 this.maxObj.line = line + i + 1;
             }
         }
-        this.context = this.context.slice(0,line - 1).concat(arr).concat(this.context.slice(line - 1));
+        this.context = this.context.slice(0, line - 1).concat(arr).concat(this.context.slice(line - 1));
     }
     /**
      * 删除多行（大数据处理时提高效率）
@@ -138,7 +170,7 @@ class LinesContext {
                 $dom.hasUpdate = true;
             }
             //折叠省略号
-            if(this.getFoldText(line)){
+            if (this.getFoldText(line)) {
                 $dom.find('.code').append('<i class="ellipsis">..</i>')
             }
         }
@@ -241,7 +273,7 @@ class LinesContext {
     getFoldPos(line) {
         if (this.context.length >= line) {
             var foldObj = this.context[line - 1].foldObj;
-            if(foldObj.startPos){
+            if (foldObj.startPos) {
                 return {
                     startPos: foldObj.startPos,
                     endPos: foldObj.endPos
