@@ -616,6 +616,46 @@ class Editor {
         this.renderSelectBg(startPos, endPos);
         this.setCursorPos(endPos);
     }
+    /**
+     * 折叠
+     * @param  {Number}     line        行号
+     * @param  {Boolean}    noHistory   是否添加到记录历史
+     */
+    fold(line, noHistory) {
+        var pos = this.linesContext.getFoldPos(line),
+            startPos = { line: pos.startPos.line, column: pos.startPos.end + 1 },
+            endPos = { line: pos.endPos.line - 1, column: this.linesContext.getText(pos.endPos.line - 1).length },
+            str = this.linesContext.getText(startPos.line);
+        str = this.linesContext.getRangeText(startPos, endPos);
+        this.linesContext.setFoldText(line, str);
+        this.deleteContent(startPos, endPos, true);
+        !noHistory && this.history.push('fold', startPos, endPos);
+    }
+    /**
+     * 展开
+     * @param  {Number}     line        行号
+     * @param  {Boolean}    noHistory   是否添加到记录历史
+     */
+    unFold(line, noHistory) {
+        var str = this.linesContext.getText(line + 1),
+            foldText = this.linesContext.getFoldText(line),
+            scrollTop = this.$vScrollWrap[0].scrollTop,
+            startPos = {line: this.cursorPos.line, column: this.cursorPos.column};
+        this.linesContext.setFoldText(line, '');
+        this.setCursorPos({
+            line: line,
+            column: this.linesContext.getText(line).length
+        });
+        this.insertContent(foldText, true);
+        //光标定位到折叠尾行位置
+        this.setCursorPos({
+            line: this.cursorPos.line + 1,
+            column: 0
+        });
+        this.updateCursorPos();
+        this.$vScrollWrap[0].scrollTop = scrollTop;
+        !noHistory && this.history.push('unFold', startPos);
+    }
     //选中事件
     bindSelectEvent() {
         var self = this,
@@ -898,34 +938,13 @@ class Editor {
         this.$wrapper.delegate('.line_num i', 'click', function() {
             var $num = $(this).parent('.line_num');
             if ($num.hasClass('fold_arrow_open')) {
-                var line = parseInt($num.data('realLine')),
-                    pos = self.linesContext.getFoldPos(line),
-                    startPos = { line: pos.startPos.line, column: pos.startPos.end + 1 },
-                    endPos = { line: pos.endPos.line - 1, column: self.linesContext.getText(pos.endPos.line - 1).length },
-                    str = self.linesContext.getText(startPos.line);
-                str = self.linesContext.getRangeText(startPos, endPos);
-                self.linesContext.setFoldText(line, str);
-                self.deleteContent(startPos, endPos);
+                var line = parseInt($num.data('realLine'));
+                self.fold(line);
                 $num.removeClass('fold_arrow_open').addClass('fold_arrow_close');
             } else if ($num.hasClass('fold_arrow_close')) {
-                var line = parseInt($num.data('realLine')),
-                    str = self.linesContext.getText(line + 1),
-                    foldText = self.linesContext.getFoldText(line),
-                    scrollTop = self.$vScrollWrap[0].scrollTop;
-                self.linesContext.setFoldText(line, '');
-                self.setCursorPos({
-                    line: line,
-                    column: self.linesContext.getText(line).length
-                });
-                self.insertContent(foldText);
-                //光标定位到折叠尾行位置
-                self.setCursorPos({
-                    line: self.cursorPos.line + 1,
-                    column: 0
-                });
-                self.updateCursorPos();
+                var line = parseInt($num.data('realLine'));
+                self.unFold(line);
                 $num.removeClass('fold_arrow_close');
-                self.$vScrollWrap[0].scrollTop = scrollTop;
             }
         });
         /**
