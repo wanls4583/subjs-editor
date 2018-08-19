@@ -70,15 +70,34 @@ class History {
                 if (record.op == 'fold' && record.startPos.line == startPos.line) {
                     this.record.splice(i, 1);
                     break;
+                } else if (!record.outFold && record.startPos.line > startPos.line) { //重置历史记录的行号
+                    record.startPos.line += endPos.line - startPos.line;
+                    record.endPos.line += endPos.line - startPos.line;
                 }
             }
-        } else if (op == 'fold') { //移除被覆盖的折叠记录
+        } else if (op == 'fold') {
+            //移除被覆盖的折叠记录
             for (var i = 0; i < this.record.length; i++) {
                 var record = this.record[i];
                 //移除对应的折叠记录
-                if (record.op == 'fold' && record.startPos.line > startPos.line && record.endPos.line < endPos.line) {
+                if (record.op == 'fold' && record.startPos.line > startPos.line && record.startPos.line <= endPos.line) {
                     this.record.splice(i, 1);
+                    record.del = true;
                     i--;
+                }
+            }
+            //重置历史记录的行号
+            for (var i = 0; i < this.record.length; i++) {
+                var record = this.record[i];
+                if (!record.outFold && record.startPos.line > startPos.line && record.endPos.line <= endPos.line) {
+                    record.outFold = node;
+                    record.relativeLine = record.startPos.line - startPos.line; //相对行号
+                } else if (record.outFold && record.outFold.del) {
+                    record.relativeLine = record.relativeLine + record.outFold.startPos.line - node.line; //相对行号
+                    record.outFold = node;
+                } else if (record.startPos.line > endPos.line) {
+                    record.startPos.line -= endPos.line - startPos.line;
+                    record.endPos.line -= endPos.line - startPos.line;
                 }
             }
             this.record.push(node);
@@ -133,13 +152,19 @@ class History {
         }
         //包含当前操作区域的折叠需要展开
         function _unFod(node) {
-            for (var i = 0; i < self.record.length; i++) {
-                var record = self.record[i];
-                //展开对应的折叠
-                if (record.op == 'fold' && record.startPos.line < node.startPos.line && record.endPos.line >= node.startPos.line) {
-                    self.editor.unFold(record.startPos.line);
-                    self.record.splice(i, 1);
-                    break;
+            if (node.outFold) {
+                var index = self.record.indexOf(node);
+                self.record.splice(index, 1);
+                self.editor.unFold(node.startPos.line);
+            }else{
+                for (var i = 0; i < self.record.length; i++) {
+                    var record = self.record[i];
+                    //展开对应的折叠
+                    if (record.op == 'fold' && record.startPos.line <= node.startPos.line && record.endPos.line >= node.startPos.line) {
+                        self.editor.unFold(record.startPos.line);
+                        self.record.splice(i, 1);
+                        break;
+                    }
                 }
             }
         }

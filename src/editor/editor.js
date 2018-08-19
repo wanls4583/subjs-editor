@@ -640,13 +640,15 @@ class Editor {
         var str = this.linesContext.getText(line + 1),
             foldText = this.linesContext.getFoldText(line),
             scrollTop = this.$vScrollWrap[0].scrollTop,
-            startPos = {line: this.cursorPos.line, column: this.cursorPos.column};
+            startPos = { line: this.cursorPos.line, column: this.cursorPos.column },
+            endPos = null;
         this.linesContext.setFoldText(line, '');
         this.setCursorPos({
             line: line,
             column: this.linesContext.getText(line).length
         });
         this.insertContent(foldText, true);
+        endPos = { line: this.cursorPos.line, column: this.cursorPos.column };
         //光标定位到折叠尾行位置
         this.setCursorPos({
             line: this.cursorPos.line + 1,
@@ -654,7 +656,7 @@ class Editor {
         });
         this.updateCursorPos();
         this.$vScrollWrap[0].scrollTop = scrollTop;
-        !noHistory && this.history.push('unFold', startPos);
+        !noHistory && this.history.push('unFold', startPos, endPos);
     }
     //选中事件
     bindSelectEvent() {
