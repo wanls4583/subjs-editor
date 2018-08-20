@@ -54,14 +54,17 @@ class History {
     //添加记录
     push(op, startPos, endPos, content) {
         var preNode = this.record[this.nowIndex],
-            node = new Node(op, startPos, endPos, content),
-            delNode = this.record.slice(this.nowIndex + 1);
-        //新增历史时删除之后的历史记录
-        this.record = this.record.slice(0, this.nowIndex + 1);
-        //保留折叠记录
-        for (var i = 0; i < delNode.length; i++) {
-            if (delNode[i].op == 'fold') {
-                this.record.push(delNode[i]);
+            node = new Node(op, startPos, endPos, content);
+        //折叠记录不更改历史栈
+        if (op != 'fold' && op != 'unFold') {
+            var delNode = this.record.slice(this.nowIndex + 1);
+            //新增历史时删除之后的历史记录
+            this.record = this.record.slice(0, this.nowIndex + 1);
+            //保留折叠记录
+            for (var i = 0; i < delNode.length; i++) {
+                if (delNode[i].op == 'fold') {
+                    this.record.push(delNode[i]);
+                }
             }
         }
         if (op == 'unFold') { //展开操作，不记录历史
@@ -76,7 +79,7 @@ class History {
                     record.endPos.line += endPos.line - startPos.line;
                 }
             }
-        } else if (op == 'fold') {
+        } else if (op == 'fold') { //折叠操作入栈
             //移除被覆盖的折叠记录
             for (var i = 0; i < this.record.length; i++) {
                 var record = this.record[i];
@@ -109,7 +112,7 @@ class History {
             preNode.endPos.column == startPos.column) { //两次插入操作合并
             preNode.content += content;
             preNode.endPos = endPos;
-        } else {
+        } else { //添加新记录到历史栈
             this.record.push(node);
             this.nowIndex = this.record.length - 1;
         }
@@ -158,7 +161,8 @@ class History {
                 //相对坐标还原成绝对坐标
                 node.endPos.line = node.endPos.line - node.startPos.line + node.outFold.startPos.line + node.relativeLine;
                 node.startPos.line = node.outFold.startPos.line + node.relativeLine;
-            }else{
+                delete node.outFold;
+            } else {
                 for (var i = 0; i < self.record.length; i++) {
                     var record = self.record[i];
                     //展开对应的折叠

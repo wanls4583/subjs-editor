@@ -290,9 +290,16 @@ class LinesContext {
         var foldObj = this.context[line - 1].foldObj;
         foldObj.foldText = content;
         if (content) {
+            var length = content.match(/\n/g).length + 1;
+            //重置其他折叠行记录的行号
+            for (var i = 0, _length = this.closeFolds.length; i < _length; i++) {
+                if (this.closeFolds[i].line > line) {
+                    this.closeFolds[i].line -= length - 1;
+                }
+            }
             this.closeFolds.push({
                 line: line,
-                length: content.match(/\n/g).length + 1
+                length: length
             });
             //折叠记录，用于计算行号
             this.closeFolds.sort(function(arg1, arg2) {

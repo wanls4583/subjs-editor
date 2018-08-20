@@ -627,9 +627,11 @@ class Editor {
             endPos = { line: pos.endPos.line - 1, column: this.linesContext.getText(pos.endPos.line - 1).length },
             str = this.linesContext.getText(startPos.line);
         str = this.linesContext.getRangeText(startPos, endPos);
-        this.linesContext.setFoldText(line, str);
         this.deleteContent(startPos, endPos, true);
+        //需要先删除后设置折叠内容(删除操作会影响折叠行号)
+        this.linesContext.setFoldText(line, str);
         !noHistory && this.history.push('fold', startPos, endPos);
+        this.updateNum(this.firstLine);
     }
     /**
      * 展开
