@@ -56,9 +56,10 @@ class History {
         var preNode = this.record[this.nowIndex],
             node = new Node(op, startPos, endPos, content),
             delNode = this.record.slice(this.nowIndex + 1);
+        //新增历史时删除之后的历史记录
         this.record = this.record.slice(0, this.nowIndex + 1);
         //保留折叠记录
-        for (var i = 0; i < delNode; i++) {
+        for (var i = 0; i < delNode.length; i++) {
             if (delNode[i].op == 'fold') {
                 this.record.push(delNode[i]);
             }
@@ -153,16 +154,16 @@ class History {
         //包含当前操作区域的折叠需要展开
         function _unFod(node) {
             if (node.outFold) {
-                var index = self.record.indexOf(node);
-                self.record.splice(index, 1);
-                self.editor.unFold(node.startPos.line);
+                self.editor.unFold(node.outFold.startPos.line);
+                //相对坐标还原成绝对坐标
+                node.endPos.line = node.endPos.line - node.startPos.line + node.outFold.startPos.line + node.relativeLine;
+                node.startPos.line = node.outFold.startPos.line + node.relativeLine;
             }else{
                 for (var i = 0; i < self.record.length; i++) {
                     var record = self.record[i];
                     //展开对应的折叠
                     if (record.op == 'fold' && record.startPos.line <= node.startPos.line && record.endPos.line >= node.startPos.line) {
                         self.editor.unFold(record.startPos.line);
-                        self.record.splice(i, 1);
                         break;
                     }
                 }

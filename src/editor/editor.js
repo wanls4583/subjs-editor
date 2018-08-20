@@ -640,13 +640,14 @@ class Editor {
         var str = this.linesContext.getText(line + 1),
             foldText = this.linesContext.getFoldText(line),
             scrollTop = this.$vScrollWrap[0].scrollTop,
-            startPos = { line: this.cursorPos.line, column: this.cursorPos.column },
+            startPos = null,
             endPos = null;
         this.linesContext.setFoldText(line, '');
         this.setCursorPos({
             line: line,
             column: this.linesContext.getText(line).length
         });
+        startPos = { line: this.cursorPos.line, column: this.cursorPos.column };
         this.insertContent(foldText, true);
         endPos = { line: this.cursorPos.line, column: this.cursorPos.column };
         //光标定位到折叠尾行位置
