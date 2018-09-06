@@ -25,7 +25,7 @@
 
 请查看[**`example`**](https://github.com/wanls4583/subjs-editor/tree/master/src/example)
 
-[**`在线 demo`**](https://blog.lisong.hn.cn/code/subjs-editor/index.html)
+[**`online demo`**](https://blog.lisong.hn.cn/code/subjs-editor/dist/example/index.html)
 
 ## 贡献
 
