@@ -9,7 +9,7 @@ class FoldHightLight {
         this.rules = rules;
         this.editor = editor;
         this.tokenLists = []; //折叠符号记录
-        this.taskList = new TaskLink(1000, 100, function(line) {
+        this.taskList = new TaskLink(100, function(line) {
             self.updateLine(line);
         }); //折叠待处理队列
         for (var i = 0; i < this.rules.length; i++) {

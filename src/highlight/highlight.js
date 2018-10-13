@@ -1,5 +1,5 @@
 import Util from './util.js';
-import { TokenLink, TokenNode } from './token_link.js';
+import { TokenNode } from './token_link.js';
 import TaskLink from './task_link.js';
 import CommentHighLight from './comment_highlight.js';
 import Fold from './fold.js';
@@ -17,7 +17,7 @@ class Mode {
         this.linesContext.setDecEngine(Mode.decEngine); //设置修饰对象的处理引擎
         this.commentHighLight = new CommentHighLight(editor, Mode.commentRules);
         this.fold = new Fold(editor, Mode.foldRules);
-        this.taskList = new TaskLink(1000, 100, function(line) {
+        this.taskList = new TaskLink(100, function(line) {
             self.updateLine(line);
         });
     }
@@ -87,8 +87,8 @@ class Mode {
      */
     onInsertAfter(startLine, endLine) {
         this.taskList.process();
-        this.commentHighLight.taskList.process(startLine, endLine);
-        this.fold.taskList.process(startLine, endLine);
+        this.commentHighLight.taskList.process();
+        this.fold.taskList.process();
     }
     /**
      * 删除行之前触发[外部接口]

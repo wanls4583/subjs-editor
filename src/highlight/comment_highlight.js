@@ -8,7 +8,7 @@ class CommentHighLight {
 		var self = this;
 		this.rules = rules;
 		this.editor = editor;
-		this.taskList = new TaskLink(1000, 100, function(line){
+		this.taskList = new TaskLink(100, function(line){
             self.updateLine(line);
         }); //高亮待处理队列
         this.tokenLists = []; //多行匹配符号记录
