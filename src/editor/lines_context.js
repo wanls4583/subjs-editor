@@ -86,7 +86,7 @@ class LinesContext {
             arr = [txt];
         }
         for (var i = 0, length = arr.length; i < length; i++) {
-            txt = arr[i];
+            txt = arr[i].replace(/\t/g, '    '); //处理制表符
             arr[i] = {
                 content: txt,
                 htmlDom: null,
