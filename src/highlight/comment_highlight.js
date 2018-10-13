@@ -236,7 +236,7 @@ class CommentHighLight {
     }
     //多行匹配插入前回调
     onInsertBefore(startLine, endLine) {
-        var recheckLines = [],
+        var recheckLines = [startLine],
             self = this;
         if (endLine > startLine) {
             var preFlag = false,
@@ -294,16 +294,12 @@ class CommentHighLight {
             recheckLines.push(i);
         }
         Util.sortNum(recheckLines);
-        for (var i = 0; i < recheckLines.length - 1; i++) {
+        for (var i = 0; i < recheckLines.length; i++) {
             this.taskList.insert(recheckLines[i]);
         }
-        //同步插入
-        this.taskList.insert(startLine, true);
         //设置优先处理行
         this.setPriorLine(startLine);
         if (recheckLines.length) {
-            //同步插入
-            this.taskList.insert(recheckLines[recheckLines.length - 1], true);
             setTimeout(function() {
                 //设置优先处理行，处理顺序从后到前
                 self.setPriorLine(recheckLines[recheckLines.length - 1]);
@@ -318,7 +314,7 @@ class CommentHighLight {
      * @param  {Number} startLine 行号
      */
     onDeleteBefore(startLine, endLine) {
-        var recheckLines = [],
+        var recheckLines = [startLine],
             self = this;
         if (endLine > startLine) {
             var preFlag = false,
@@ -360,19 +356,11 @@ class CommentHighLight {
                 }
             }
         }
-        this.taskList.eachTask(function(taskNode, index) {
-            if (taskNode.line) {
-                if (taskNode.line > endLine) {
-                    taskNode.line -= endLine - startLine;
-                } else if (taskNode.line > startLine) {
-                    self.taskList.del(taskNode);
-                }
-            } else { //缓存中待处理的行
-                if (taskNode[index] > endLine) {
-                    taskNode[index] -= endLine - startLine;
-                } else if (taskNode[index] > startLine) {
-                    taskNode.splice(index, 1);
-                }
+        this.taskList.eachTask(function(taskNode) {
+            if (taskNode.line > endLine) {
+                taskNode.line -= endLine - startLine;
+            } else if (taskNode.line > startLine) {
+                self.taskList.del(taskNode);
             }
         }, startLine);
         recheckLines = recheckLines.concat(this.undoTokenLine(startLine));
@@ -382,16 +370,11 @@ class CommentHighLight {
             }
         }
         Util.sortNum(recheckLines);
-        for (var i = 0; i < recheckLines.length - 1; i++) {
+        for (var i = 0; i < recheckLines.length; i++) {
             this.taskList.insert(recheckLines[i]);
         }
-        //同步插入
-        this.taskList.insert(startLine, true);
-        //设置优先级
         this.setPriorLine(startLine);
         if (recheckLines.length) {
-            //同步插入
-            this.taskList.insert(recheckLines[recheckLines.length - 1], true);
             setTimeout(function() {
                 //设置优先级，处理顺序从后往前
                 self.setPriorLine(recheckLines[recheckLines.length - 1]);

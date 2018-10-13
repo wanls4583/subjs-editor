@@ -215,10 +215,7 @@ class LinesContext {
     delPriorLineDecs(line, decoration) {
         this.context[line - 1].priorLineDecs = this.context[line - 1].priorLineDecs || [];
         for (var i = 0; i < this.context[line - 1].priorLineDecs.length; i++) {
-            if (!this.context[line - 1].priorLineDecs[i]) {
-                debugger;
-            }
-            if (this.context[line - 1].priorLineDecs[i].start == decoration.start && this.context[line - 1].priorLineDecs[i].end == decoration.end) {
+            if (this.context[line - 1].priorLineDecs[i].start == decoration.start || this.context[line - 1].priorLineDecs[i].end == decoration.end) {
                 this.context[line - 1].priorLineDecs.splice(i, 1);
                 i--;
             }
