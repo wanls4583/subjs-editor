@@ -23,8 +23,8 @@ class Editor {
         } else {
             return new Error('$wrapper must be string or object');
         }
-        this.config.tabsize = option.tabsize || 4;
-        this.linesContext = new LinesContext(Editor); //所有的行
+        this.config.tabsize = Editor.tabsize = option.tabsize || 4;
+        this.linesContext = new LinesContext(Editor,this.config); //所有的行
         this.highlighter = option.highlighter && new option.highlighter(this); //高亮器
         this.history = new History(this); //历史记录管理器
         this.leftNumDom = []; //行号dom

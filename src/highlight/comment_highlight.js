@@ -191,9 +191,9 @@ class CommentHighLight {
         //添加整行修饰
         function __addWholeLineDec() {
             for (var i = preToken.line + 1; i <= endLine; i++) {
-                self.editor.highlighter.fold.delFoldLine(i);
                 self.editor.linesContext.setWhoeLineDec(i, preToken.token);
                 self.editor.linesContext.updateDom(i);
+                self.editor.highlighter.fold.delFoldLine(i);
             }
         }
     }

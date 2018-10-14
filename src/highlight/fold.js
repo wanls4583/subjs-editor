@@ -230,12 +230,10 @@ class FoldHightLight {
             recheckLines.push(i);
         }
         Util.sortNum(recheckLines);
-        for (var i = 0; i < recheckLines.length -1; i++) {
+        for (var i = 0; i < recheckLines.length; i++) {
             this.taskList.insert(recheckLines[i]);
         }
         if (recheckLines.length) {
-            //同步插入
-            this.taskList.insert(recheckLines[recheckLines.length - 1], true);
             this.setPriorLine(recheckLines[recheckLines.length - 1]);
         }
     }
@@ -298,12 +296,10 @@ class FoldHightLight {
             }
         }
         Util.sortNum(recheckLines);
-        for (var i = 0; i < recheckLines.length -1; i++) {
+        for (var i = 0; i < recheckLines.length; i++) {
             this.taskList.insert(recheckLines[i]);
         }
         if (recheckLines.length) {
-            //同步插入
-            this.taskList.insert(recheckLines[recheckLines.length - 1], true);
             this.setPriorLine(recheckLines[recheckLines.length - 1]);
         }
     }

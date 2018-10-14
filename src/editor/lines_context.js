@@ -29,6 +29,12 @@ class LinesContext {
             // }
         ];
         this.closeFolds = [];
+        this.tabSpace = (function(tabsize) {
+            var str = '';
+            for (var i = 0; i < tabsize; i++) {
+                str += ' ';
+            }
+        })(this.Editor.tabsize);
     }
     /**
      * 获取一行的计算文本
@@ -86,7 +92,7 @@ class LinesContext {
             arr = [txt];
         }
         for (var i = 0, length = arr.length; i < length; i++) {
-            txt = arr[i].replace(/\t/g, '    '); //处理制表符
+            txt = arr[i].replace(/\t/g, this.tabSpace); //处理制表符
             arr[i] = {
                 content: txt,
                 htmlDom: null,
