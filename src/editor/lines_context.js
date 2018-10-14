@@ -290,11 +290,11 @@ class LinesContext {
         var foldObj = this.context[line - 1].foldObj;
         foldObj.foldText = content;
         if (content) {
-            var length = content.match(/\n/g).length + 1;
+            var length = content.match(/\n/g).length;
             //重置其后折叠行记录的行号
             for (var i = 0, _length = this.closeFolds.length; i < _length; i++) {
                 if (this.closeFolds[i].line > line) {
-                    this.closeFolds[i].line -= length - 1;
+                    this.closeFolds[i].line -= length;
                 }
             }
             this.closeFolds.push({
@@ -317,7 +317,7 @@ class LinesContext {
                     //重置其后折叠行记录的行号
                     for (var j = 0, _length = this.closeFolds.length; j < _length; j++) {
                         if (this.closeFolds[j].line > line) {
-                            this.closeFolds[j].line += length - 1;
+                            this.closeFolds[j].line += length;
                         }
                     }
                     this.closeFolds.splice(i, 1);
@@ -343,7 +343,7 @@ class LinesContext {
         var realLine = line;
         for (var i = 0, length = this.closeFolds.length; i < length; i++) {
             if (this.closeFolds[i].line < line) {
-                realLine += this.closeFolds[i].length - 1;
+                realLine += this.closeFolds[i].length;
             } else {
                 break;
             }
