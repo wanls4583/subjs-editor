@@ -59,11 +59,11 @@ class LinesContext {
         for (var line = startPos.line + 1; line < endPos.line; line++) {
             str += '\n' + this.getFullText(line);
         }
-        if(endPos.line > startPos.line){
+        if (endPos.line > startPos.line) {
             endStr = this.getFullText(endPos.line);
             endStr = '\n' + endStr.substring(0, endPos.column);
         }
-        return str +  endStr;
+        return str + endStr;
     }
 
     //更新一行文本
@@ -116,16 +116,19 @@ class LinesContext {
      * @param  {Number} endLine         结束行
      */
     delete(startLine, endLine) {
-        this.context.splice(startLine - 1, endLine - startLine + 1);
-        this.findMax = true;
-        //删除折叠的行
+        //清空与删除区域交叉的折叠内容
+        var lines = [];
         for (var i = 0; i < this.closeFolds.length; i++) {
             var obj = this.closeFolds[i];
             if (obj.line >= startLine && obj.line <= endLine) {
-                this.closeFolds.splice(i, 1);
-                i--;
+                lines.push(obj.line);
             }
         }
+        for (var i = 0; i < lines.length; i++) {
+            this.setFoldText(lines[i], '');
+        }
+        this.context.splice(startLine - 1, endLine - startLine + 1);
+        this.findMax = true;
     }
     //获取总行数
     getLength() {
@@ -288,7 +291,7 @@ class LinesContext {
         foldObj.foldText = content;
         if (content) {
             var length = content.match(/\n/g).length + 1;
-            //重置其他折叠行记录的行号
+            //重置其后折叠行记录的行号
             for (var i = 0, _length = this.closeFolds.length; i < _length; i++) {
                 if (this.closeFolds[i].line > line) {
                     this.closeFolds[i].line -= length - 1;
@@ -310,6 +313,13 @@ class LinesContext {
         } else {
             for (var i = 0, length = this.closeFolds.length; i < length; i++) {
                 if (this.closeFolds[i].line == line) {
+                    length = this.closeFolds[i].length;
+                    //重置其后折叠行记录的行号
+                    for (var j = 0, _length = this.closeFolds.length; j < _length; j++) {
+                        if (this.closeFolds[j].line > line) {
+                            this.closeFolds[j].line += length - 1;
+                        }
+                    }
                     this.closeFolds.splice(i, 1);
                     return;
                 }
