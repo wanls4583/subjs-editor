@@ -6,10 +6,12 @@ import $ from 'jquery';
 ///////////
 class LinesContext {
     /**
-     * @param  {Editor} Editor 文本编辑类
+     * @param  {Function} Editor 文本编辑类
+     * @param  {Editor} editor 文本编辑类实例
      */
-    constructor(Editor) {
+    constructor(Editor, editor) {
         this.Editor = Editor;
+        this.editor = editor;
         this.maxObj = { line: 1, width: 0 }; //文本当前最大宽度
         this.findMax = false; //是否要重新计算最大宽度
         this._engine = function(content) { return content }; //默认处理引擎直接返回传入的内容
@@ -34,7 +36,7 @@ class LinesContext {
             for (var i = 0; i < tabsize; i++) {
                 str += ' ';
             }
-        })(this.Editor.tabsize);
+        })(this.editor.config.tabsize);
     }
     /**
      * 获取一行的计算文本

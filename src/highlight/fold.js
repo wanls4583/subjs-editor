@@ -10,7 +10,9 @@ class FoldHightLight {
         this.editor = editor;
         this.tokenLists = []; //折叠符号记录
         this.taskList = new TaskLink(100, function(line) {
-            self.updateLine(line);
+            if (self.checkConflict(line)) {
+                self.updateLine(line);
+            }
         }); //折叠待处理队列
         for (var i = 0; i < this.rules.length; i++) {
             this.tokenLists.push(new TokenLink(1000));
@@ -324,23 +326,58 @@ class FoldHightLight {
      * @param  {[type]} line行号
      */
     delFoldLine(line) {
-        if (this.editor.linesContext.getFoldPos(line)) {
-            var recheckLines = this.undoFoldLine(line);
-            this.taskList.del(line);
-            //过滤多行匹配中的行
-            var filterLines = [];
-            for (var i = 0; i < recheckLines.length; i++) {
-                if (!this.editor.linesContext.getWholeLineDec(recheckLines[i])) {
-                    filterLines.push(recheckLines[i]);
+        for (var i = 0; i < this.rules.length; i++) {
+            var tokenList = this.tokenLists[i];
+            var tokenNode = tokenList.find(line);
+            while (tokenNode && tokenNode.line == line) {
+                if (!this.checkConflict(tokenNode)) {
+                    var recheckLines = this.undoFoldLine(line);
+                    this.taskList.del(line);
+                    tokenList.del(line);
+                    //过滤多行匹配中的行
+                    var filterLines = [];
+                    for (var i = 0; i < recheckLines.length; i++) {
+                        if (this.checkConflict(recheckLines[i])) {
+                            filterLines.push(recheckLines[i]);
+                        }
+                    }
+                    Util.sortNum(filterLines);
+                    for (var i = 0; i < filterLines.length; i++) {
+                        if (filterLines[i] != line) {
+                            this.taskList.insert(filterLines[i]);
+                        }
+                    }
+                    break;
                 }
+                tokenNode = tokenNode.next;
             }
-            Util.sortNum(filterLines);
-            for (var i = 0; i < filterLines.length; i++) {
-                if (filterLines[i] != line) {
-                    this.taskList.insert(filterLines[i]);
+        }
+    }
+    /**
+     * 检测折叠标记是否合法（可能处于注释中）
+     * @param  {Number} line  行号
+     * @return {Boolean}      是否合法
+     */
+    checkConflict(line) {
+        var pass = true;
+        if (typeof line == 'number') { //该行是否为整行注释
+            pass = !this.editor.linesContext.getWholeLineDec(line);
+        } else {
+            var tokenNode = line;
+            pass = !this.editor.linesContext.getWholeLineDec(tokenNode.line); //该行是否为整行注释
+            if (pass) {
+                var priLineDecs = this.editor.linesContext.getPriorLineDecs(tokenNode.line);
+                //和多行注释的首尾行是否有交叉
+                for (var i = 0; i < priLineDecs.length; i++) {
+                    var lineDec = priLineDecs[i];
+                    if (lineDec.token == 'pair_comment' && !(lineDec.start > tokenNode.end || lineDec.end < tokenNode.start)) {
+                        pass = false;
+                        break;
+                    }
                 }
             }
         }
+        return pass;
     }
 }
 

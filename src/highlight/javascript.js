@@ -60,9 +60,9 @@ var rules = [{
 //折叠规则
 var foldRules = [{
     pre: /\{/g,
-    pre_exclude: [Util.excludeStrReg(/\{/), /\/\/.*?\{/g, /\/\*.*?\{/g],
+    pre_exclude: [Util.excludeStrReg(/\{/)],
     suffix: /\}/g,
-    suffix_exclude: [Util.excludeStrReg(/\}/), /\/\/.*?\}/g, /\/\*.*?\}/g],
+    suffix_exclude: [Util.excludeStrReg(/\}/)],
     token: 'fold'
 }]
 
