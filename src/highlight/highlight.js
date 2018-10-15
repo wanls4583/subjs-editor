@@ -87,8 +87,8 @@ class Mode {
      */
     onInsertAfter(startLine, endLine) {
         this.taskList.process();
-        this.commentHighLight.taskList.process();
-        this.fold.taskList.process();
+        this.commentHighLight.onInsertAfter(startLine, endLine);
+        this.fold.onInsertAfter(startLine, endLine);
     }
     /**
      * 删除行之前触发[外部接口]

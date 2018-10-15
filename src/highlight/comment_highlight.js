@@ -296,9 +296,10 @@ class CommentHighLight {
         for (var i = 0; i < recheckLines.length; i++) {
             this.taskList.insert(recheckLines[i]);
         }
-        //设置优先处理行
-        this.setPriorLine(startLine);
-        if (recheckLines.length) {
+        //先处理当前行
+        this.updateLine(startLine);
+        this.taskList.del(startLine);
+        if (recheckLines.length > 1) {
             setTimeout(function() {
                 //设置优先处理行，处理顺序从后到前
                 self.setPriorLine(recheckLines[recheckLines.length - 1]);
@@ -372,8 +373,10 @@ class CommentHighLight {
         for (var i = 0; i < recheckLines.length; i++) {
             this.taskList.insert(recheckLines[i]);
         }
-        this.setPriorLine(startLine);
-        if (recheckLines.length) {
+        //先处理当前行
+        this.updateLine(startLine);
+        this.taskList.del(startLine);
+        if (recheckLines.length > 1) {
             setTimeout(function() {
                 //设置优先级，处理顺序从后往前
                 self.setPriorLine(recheckLines[recheckLines.length - 1]);
