@@ -310,6 +310,10 @@ class CommentHighLight {
     onDeleteBefore(startLine, endLine) {
         var recheckLines = [startLine],
             self = this;
+        //删除任务列表中还未完成的行
+        for (var i = startLine + 1; i <= endLine; i++) {
+            this.taskList.del(i);
+        }
         if (endLine > startLine) {
             var preFlag = false,
                 suffixFlag = false;

@@ -24,7 +24,7 @@ class Editor {
             return new Error('$wrapper must be string or object');
         }
         this.config.tabsize = option.tabsize || 4;
-        this.linesContext = new LinesContext(Editor,this); //所有的行
+        this.linesContext = new LinesContext(Editor, this); //所有的行
         this.highlighter = option.highlighter && new option.highlighter(this); //高亮器
         this.history = new History(this); //历史记录管理器
         this.leftNumDom = []; //行号dom
@@ -329,9 +329,10 @@ class Editor {
     /**
      * 在当前光标位置处插入内容
      * @param  {string}     val         插入的内容
-     * @param  {Boolean}    noHistory   是否添加到记录历史
+     * @param  {Boolean}    noHistory   是否阻止添加到记录历史
+     * @param  {Boolean}    noScroll    是否保持滚动距离
      */
-    insertContent(newContent, noHistory) {
+    insertContent(newContent, noHistory, noScroll) {
         var str = this.linesContext.getText(this.cursorPos.line) || '',
             strs = null,
             firstLine,
@@ -364,9 +365,11 @@ class Editor {
         }
         this.linesContext.add(endPos.line + 1, lineArr);
         firstLine = this.firstLine;
-        //计算可视区域的首行
-        if (endPos.line - this.firstLine + strs.length > this.maxVisualLine) {
-            firstLine = endPos.line + strs.length - this.maxVisualLine;
+        if (this.noScroll) {
+            //计算可视区域的首行
+            if (endPos.line - this.firstLine + strs.length > this.maxVisualLine) {
+                firstLine = endPos.line + strs.length - this.maxVisualLine;
+            }
         }
         if (this.highlighter) {
             if (endPos.line < 1) { //初始化坐标为(0,0)
@@ -375,12 +378,12 @@ class Editor {
                 this.highlighter.onInsertAfter(endPos.line, endPos.line + strs.length - 1);
             }
         }
-        this.renderLine(firstLine);
+        this.renderLine(firstLine, noScroll);
         endPos.line = endPos.line + strs.length - 1;
         //添加历史记录
         !noHistory && this.history.push('add', startPos, endPos, newContent);
         this.setCursorPos(endPos);
-        this.updateScroll(true);
+        this.updateScroll(!noScroll);
         this.updateCursorPos();
     }
     /**
@@ -567,15 +570,16 @@ class Editor {
     /**
      * 渲染可视区域的行
      * @param  {number} firstLine 首行序号
+     * @param  {Boolean} noPriFold 是否阻止设置优先处理的折叠行
      */
-    renderLine(firstLine) {
+    renderLine(firstLine, noPriFold) {
         if (!firstLine) {
             firstLine = this.firstLine;
         }
         //设置优先处理行
         if (this.highlighter) {
             this.highlighter.setPriorLine(firstLine + this.maxVisualLine, true);
-            this.highlighter.setPriorLine(firstLine + this.maxVisualLine, true, 'fold');
+            !noPriFold && this.highlighter.setPriorLine(firstLine + this.maxVisualLine, true, 'fold');
             this.highlighter.setPriorLine(firstLine + this.maxVisualLine, true, 'pair');
         }
         var self = this,
@@ -650,7 +654,7 @@ class Editor {
             column: this.linesContext.getText(line).length
         });
         startPos = { line: this.cursorPos.line, column: this.cursorPos.column };
-        this.insertContent(foldText, true);
+        this.insertContent(foldText, true, true);
         endPos = { line: this.cursorPos.line, column: this.cursorPos.column };
         //光标定位到折叠尾行位置
         this.setCursorPos({
@@ -658,7 +662,6 @@ class Editor {
             column: 0
         });
         this.updateCursorPos();
-        this.$vScrollWrap[0].scrollTop = scrollTop;
         !noHistory && this.history.push('unFold', startPos, endPos);
     }
     //选中事件
@@ -944,12 +947,16 @@ class Editor {
             var $num = $(this).parent('.line_num');
             if ($num.hasClass('fold_arrow_open')) {
                 var line = parseInt($num.data('realLine'));
-                self.fold(line);
-                $num.removeClass('fold_arrow_open').addClass('fold_arrow_close');
+                if (!self.highlighter.fold.taskList.find(line)) { //确保之前的展开操作已经完成
+                    self.fold(line);
+                    $num.removeClass('fold_arrow_open').addClass('fold_arrow_close');
+                }
             } else if ($num.hasClass('fold_arrow_close')) {
                 var line = parseInt($num.data('realLine'));
-                self.unFold(line);
-                $num.removeClass('fold_arrow_close');
+                if (!self.highlighter.fold.taskList.find(line)) { //确保之前的折叠操作已经完成
+                    self.unFold(line);
+                    $num.removeClass('fold_arrow_close');
+                }
             }
         });
         /**
