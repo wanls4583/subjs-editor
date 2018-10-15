@@ -51,7 +51,7 @@ class TaskLink {
     }
     //根据行号查找节点
     find(line) {
-        return this.avl.find(line);
+        return this.avl.search(line);
     }
     /**
      * 设置优先处理行
