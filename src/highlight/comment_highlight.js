@@ -296,17 +296,11 @@ class CommentHighLight {
         for (var i = 0; i < recheckLines.length; i++) {
             this.taskList.insert(recheckLines[i]);
         }
+    }
+    onInsertAfter(startLine, endLine) {
         //先处理当前行
         this.updateLine(startLine);
         this.taskList.del(startLine);
-        if (recheckLines.length > 1) {
-            setTimeout(function() {
-                //设置优先处理行，处理顺序从后到前
-                self.setPriorLine(recheckLines[recheckLines.length - 1]);
-            });
-        }
-    }
-    onInsertAfter(startLine, endLine) {
         this.taskList.process();
     }
     /**
@@ -373,15 +367,6 @@ class CommentHighLight {
         for (var i = 0; i < recheckLines.length; i++) {
             this.taskList.insert(recheckLines[i]);
         }
-        //先处理当前行
-        this.updateLine(startLine);
-        this.taskList.del(startLine);
-        if (recheckLines.length > 1) {
-            setTimeout(function() {
-                //设置优先级，处理顺序从后往前
-                self.setPriorLine(recheckLines[recheckLines.length - 1]);
-            });
-        }
     }
     /**
      * 删除行之后触发[外部接口]
@@ -389,10 +374,13 @@ class CommentHighLight {
      * @param  {Number} endLine   结束行号
      */
     onDeleteAfter(startLine, endLine) {
+        //先处理当前行
+        this.updateLine(startLine);
+        this.taskList.del(startLine);
         this.taskList.process();
     }
     /**
-     * 设置优先处理行[外部接口]
+     * 设置优先处理行[外部接口，每次更新都会调用]
      * @param {Nunber} endLine 优先处理的末行
      * @param {Boolean} ifProcess 是否立刻处理
      */

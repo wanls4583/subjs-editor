@@ -61,18 +61,22 @@ class TaskLink {
     setPriorLine(endLine, ifProcess) {
         var root = this.avl.root;
         var near = null; //最接近且大于 endLine 的节点
-        while (root) {
-            if (!near || (root.key < near.key && root.key > endLine)) {
-                near = root;
+        if(this.avl.last && this.avl.last.key > endLine){
+            while (root) {
+                if (!near || (root.key < near.key && root.key > endLine)) {
+                    near = root;
+                }
+                if (root.key > endLine) {
+                    root = root.lChild;
+                } else if (root.key < endLine) {
+                    root = root.rChild;
+                } else {
+                    near = root;
+                    break;
+                }
             }
-            if (root.key > endLine) {
-                root = root.lChild;
-            } else if (root.key < endLine) {
-                root = root.rChild;
-            } else {
-                near = root;
-                break;
-            }
+        } else {
+            near = this.avl.last;
         }
         if (near) {
             this.nowTask = near;

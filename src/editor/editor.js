@@ -368,7 +368,6 @@ class Editor {
         if (endPos.line - this.firstLine + strs.length > this.maxVisualLine) {
             firstLine = endPos.line + strs.length - this.maxVisualLine;
         }
-        this.renderLine(firstLine);
         if (this.highlighter) {
             if (endPos.line < 1) { //初始化坐标为(0,0)
                 this.highlighter.onInsertAfter(1, 1);
@@ -376,6 +375,7 @@ class Editor {
                 this.highlighter.onInsertAfter(endPos.line, endPos.line + strs.length - 1);
             }
         }
+        this.renderLine(firstLine);
         endPos.line = endPos.line + strs.length - 1;
         //添加历史记录
         !noHistory && this.history.push('add', startPos, endPos, newContent);
@@ -437,8 +437,8 @@ class Editor {
             pos.column = this.linesContext.getText(pos.line).length + 2;
         }
         this.setCursorPos(pos);
-        this.renderLine();
         this.highlighter && this.highlighter.onDeleteAfter(startPos.line, endPos.line);
+        this.renderLine();
         this.updateScroll();
         this.updateCursorPos();
         this.$selectBg.html('');

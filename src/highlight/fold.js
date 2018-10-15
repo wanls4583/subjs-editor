@@ -235,9 +235,6 @@ class FoldHightLight {
         for (var i = 0; i < recheckLines.length; i++) {
             this.taskList.insert(recheckLines[i]);
         }
-        if (recheckLines.length) {
-            this.setPriorLine(recheckLines[recheckLines.length - 1]);
-        }
     }
     /**
      * 插入新行之后触发[外部接口]
@@ -300,9 +297,6 @@ class FoldHightLight {
         Util.sortNum(recheckLines);
         for (var i = 0; i < recheckLines.length; i++) {
             this.taskList.insert(recheckLines[i]);
-        }
-        if (recheckLines.length) {
-            this.setPriorLine(recheckLines[recheckLines.length - 1]);
         }
     }
     /**
