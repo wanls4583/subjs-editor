@@ -205,7 +205,6 @@ _proto._delete = function(root, key) {
             this._change(root, rChild);
             //保证删除的节点没有左子树，或者没有右子树，用来递归更新所有需要更新高度的节点
             var result = this._delete(root.lChild, key);
-            this._setHeight(rChild);
             return result;
         } else { //用右子树上最小的节点代替root
             var lChild = root.rChild.lChild;
@@ -219,8 +218,7 @@ _proto._delete = function(root, key) {
             //交换root和lChild
             this._change(root, lChild);
             //保证删除的节点没有左子树，或者没有右子树，用来递归更新所有需要更新高度的节点
-            var result = this._delete(rChild, key);
-            this._setHeight(root);
+            var result = this._delete(root.rChild, key);
             return result;
         }
     } else if (root.key > key) { //在左子树上递归删除
@@ -229,6 +227,7 @@ _proto._delete = function(root, key) {
             return false;
         }
         this._checkBalance(root);
+        this._setHeight(root);
         return result;
     } else { //在右子树上删除
         var result = this._delete(root.rChild, key);
@@ -236,6 +235,7 @@ _proto._delete = function(root, key) {
             return false;
         }
         this._checkBalance(root);
+        this._setHeight(root);
         return result;
     }
 }
@@ -276,6 +276,8 @@ _proto._lRotate = function(node) {
         }
     }
     node.pNode = rc;
+    this._setHeight(node);
+    this._setHeight(rc);
 }
 
 //右旋转
@@ -295,6 +297,8 @@ _proto._rRotate = function(node) {
         }
     }
     node.pNode = lc;
+    this._setHeight(node);
+    this._setHeight(lc);
 }
 
 //先左旋转，再右旋转
@@ -334,9 +338,6 @@ _proto._checkBalance = function(node) {
         } else { //先右旋转，再左旋转
             this._rlRotate(node);
         }
-        //root将变rc的子节点，需要先更新root节点的高度
-        this._setHeight(node);
-        this._setHeight(rc);
     } else if (node.lChild && (this._getHeight(node.lChild) - this._getHeight(node.rChild) == 2)) { //不平衡，需要调整
         var lc = node.lChild;
         if (this._getHeight(node.lChild.lChild) > this._getHeight(node.lChild.rChild)) { //右旋转
@@ -344,9 +345,6 @@ _proto._checkBalance = function(node) {
         } else { //先左旋转，再右旋转
             this._lrRotate(node);
         }
-        //root将变lc的子节点，需要先更新root节点的高度
-        this._setHeight(node);
-        this._setHeight(lc);
     }
 }
 

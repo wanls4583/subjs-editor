@@ -946,16 +946,12 @@ class Editor {
             var $num = $(this).parent('.line_num');
             if ($num.hasClass('fold_arrow_open')) {
                 var line = parseInt($num.data('realLine'));
-                if (!self.highlighter.fold.taskList.find(line)) { //确保之前的展开操作已经完成
-                    self.fold(line);
-                    $num.removeClass('fold_arrow_open').addClass('fold_arrow_close');
-                }
+                $num.removeClass('fold_arrow_open');
+                self.fold(line);
             } else if ($num.hasClass('fold_arrow_close')) {
                 var line = parseInt($num.data('realLine'));
-                if (!self.highlighter.fold.taskList.find(line)) { //确保之前的折叠操作已经完成
-                    self.unFold(line);
-                    $num.removeClass('fold_arrow_close');
-                }
+                $num.removeClass('fold_arrow_close');
+                self.unFold(line);
             }
         });
         /**

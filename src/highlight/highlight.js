@@ -95,6 +95,10 @@ class Mode {
      * @param  {Number} startLine 行号
      */
     onDeleteBefore(startLine, endLine) {
+        //删除任务列表中还未完成的行
+        for (var i = startLine + 1; i <= endLine; i++) {
+            this.taskList.del(i);
+        }
         this.commentHighLight.onDeleteBefore(startLine, endLine);
         this.fold.onDeleteBefore(startLine, endLine);
     }

@@ -29,13 +29,14 @@ class TaskLink {
                 }
             }
             if (this.nowTask && this.nowTask.data.line > 0) {
-                this.processCb(this.nowTask.data.line);
-                this.del(this.nowTask.data.line);
+                var line = this.nowTask.data.line;
                 if (this.order == 'frontToBack') {
                     this.nowTask = this.nowTask.next;
                 } else {
                     this.nowTask = this.nowTask.pre;
                 }
+                this.del(line);
+                this.processCb(line);
             }
             endTime = new Date().getTime();
         }
@@ -56,6 +57,13 @@ class TaskLink {
     //删出一个待处理行
     del(line) {
         this.avl.delete(line);
+        if (this.nowTask && this.nowTask.data.line == line) {
+            if (this.order == 'frontToBack') {
+                this.nowTask = this.nowTask.next;
+            } else {
+                this.nowTask = this.nowTask.pre;
+            }
+        }
     }
     //根据行号查找节点
     find(line) {
@@ -105,6 +113,13 @@ class TaskLink {
             callback(head.data);
             head = head.next;
         }
+    }
+    /**
+     * 检测所有任是否已经完成
+     * @return {Boolean} 所有任是否已经完成
+     */
+    ifDone() {
+        return !this.avl.root;
     }
 }
 

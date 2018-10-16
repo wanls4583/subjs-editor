@@ -13,7 +13,7 @@ class FoldHightLight {
             if (self.checkConflict(line)) {
                 self.updateLine(line);
             }
-        }); //折叠待处理队列
+        }, 'frontToBack'); //折叠待处理队列
         for (var i = 0; i < this.rules.length; i++) {
             this.tokenLists.push(new TokenLink(1000));
         }
@@ -327,8 +327,10 @@ class FoldHightLight {
      */
     recheckLine(line) {
         var self = this;
-        this.taskList.insert(line);
-        this.taskList.setPriorLine(line - 50);
+        if (!this.taskList.find(line)) {
+            this.taskList.insert(line);
+            this.taskList.setPriorLine(line);
+        }
         setTimeout(function() {
             self.taskList.process();
         }, 0);

@@ -36,6 +36,7 @@ class LinesContext {
             for (var i = 0; i < tabsize; i++) {
                 str += ' ';
             }
+            return str;
         })(this.editor.config.tabsize);
     }
     /**
