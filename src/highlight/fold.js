@@ -44,9 +44,11 @@ class FoldHightLight {
                     for (var j = 0; j < result.length; j++) {
                         var obj = result[j];
                         var tokenNode = new TokenNode(startLine, obj.start, obj.end, token, ifPre ? 1 : 2, regIndex);
-                        //插入顺序链表
-                        self.tokenLists[regIndex].insert(tokenNode);
-                        nodes.push(tokenNode);
+                        if (self.checkConflict(tokenNode)) {
+                            //插入顺序链表
+                            self.tokenLists[regIndex].insert(tokenNode);
+                            nodes.push(tokenNode);
+                        }
                     }
                 }
             }
@@ -320,36 +322,16 @@ class FoldHightLight {
         this.taskList.setPriorLine(endLine, ifProcess);
     }
     /**
-     * 删除折叠行[对外接口]
-     * @param  {[type]} line行号
+     * 重新检测行[对外接口]
+     * @param  {Number} line 行号
      */
-    delFoldLine(line) {
-        for (var i = 0; i < this.rules.length; i++) {
-            var tokenList = this.tokenLists[i];
-            var tokenNode = tokenList.find(line);
-            while (tokenNode && tokenNode.line == line) {
-                if (!this.checkConflict(tokenNode)) {
-                    var recheckLines = this.undoFoldLine(line);
-                    this.taskList.del(line);
-                    tokenList.del(line);
-                    //过滤多行匹配中的行
-                    var filterLines = [];
-                    for (var i = 0; i < recheckLines.length; i++) {
-                        if (this.checkConflict(recheckLines[i])) {
-                            filterLines.push(recheckLines[i]);
-                        }
-                    }
-                    Util.sortNum(filterLines);
-                    for (var i = 0; i < filterLines.length; i++) {
-                        if (filterLines[i] != line) {
-                            this.taskList.insert(filterLines[i]);
-                        }
-                    }
-                    break;
-                }
-                tokenNode = tokenNode.next;
-            }
-        }
+    recheckLine(line) {
+        var self = this;
+        this.taskList.insert(line);
+        this.taskList.setPriorLine(line - 50);
+        setTimeout(function() {
+            self.taskList.process();
+        }, 0);
     }
     /**
      * 检测折叠标记是否合法（可能处于注释中）

@@ -8,10 +8,11 @@ class TaskLink {
      * @param {Number} minUnit      最新执行单元
      * @param {Object} processCb    回调
      */
-    constructor(minUnit, processCb) {
+    constructor(minUnit, processCb, order) {
         this.processCb = processCb;
         this.minUnit = minUnit || 100;
         this.avl = new AVL();
+        this.order = order;
     }
     //执行
     process() {
@@ -23,11 +24,18 @@ class TaskLink {
         for (var i = 0; i < this.minUnit && endTime - startTime < 17; i++) {
             if (!this.nowTask || this.nowTask.data.line < 1) {
                 this.nowTask = this.avl.last;
+                if (this.order == 'frontToBack') {
+                    this.nowTask = this.avl.first;
+                }
             }
             if (this.nowTask && this.nowTask.data.line > 0) {
                 this.processCb(this.nowTask.data.line);
                 this.del(this.nowTask.data.line);
-                this.nowTask = this.nowTask.pre;
+                if (this.order == 'frontToBack') {
+                    this.nowTask = this.nowTask.next;
+                } else {
+                    this.nowTask = this.nowTask.pre;
+                }
             }
             endTime = new Date().getTime();
         }
@@ -43,7 +51,7 @@ class TaskLink {
      * @param  {Number} line   待处理行
      */
     insert(line) {
-        return this.avl.insert(line, {line: line});
+        return this.avl.insert(line, { line: line });
     }
     //删出一个待处理行
     del(line) {
@@ -61,7 +69,7 @@ class TaskLink {
     setPriorLine(endLine, ifProcess) {
         var root = this.avl.root;
         var near = null; //最接近且大于 endLine 的节点
-        if(this.avl.last && this.avl.last.key > endLine){
+        if (this.avl.last && this.avl.last.key > endLine) {
             while (root) {
                 if (!near || (root.key < near.key && root.key > endLine)) {
                     near = root;

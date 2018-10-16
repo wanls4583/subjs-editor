@@ -365,7 +365,7 @@ class Editor {
         }
         this.linesContext.add(endPos.line + 1, lineArr);
         firstLine = this.firstLine;
-        if (this.noScroll) {
+        if (!noScroll) {
             //计算可视区域的首行
             if (endPos.line - this.firstLine + strs.length > this.maxVisualLine) {
                 firstLine = endPos.line + strs.length - this.maxVisualLine;
@@ -570,16 +570,15 @@ class Editor {
     /**
      * 渲染可视区域的行
      * @param  {number} firstLine 首行序号
-     * @param  {Boolean} noPriFold 是否阻止设置优先处理的折叠行
      */
-    renderLine(firstLine, noPriFold) {
+    renderLine(firstLine) {
         if (!firstLine) {
             firstLine = this.firstLine;
         }
         //设置优先处理行
         if (this.highlighter) {
             this.highlighter.setPriorLine(firstLine + this.maxVisualLine, true);
-            !noPriFold && this.highlighter.setPriorLine(firstLine + this.maxVisualLine, true, 'fold');
+            this.highlighter.setPriorLine(firstLine, true, 'fold');
             this.highlighter.setPriorLine(firstLine + this.maxVisualLine, true, 'pair');
         }
         var self = this,
