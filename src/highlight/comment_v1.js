@@ -28,7 +28,7 @@ class CommentHighLight {
         //查找多行匹配标识
         function _doMatch() {
             for (var i = 0; i < self.rules.length; i++) {
-                self.tokenLists[i].del(startLine);
+                self.tokenLists[i].del(startLine, true);
             }
             __exec(true);
             __exec(false);
@@ -91,7 +91,7 @@ class CommentHighLight {
 
             function _findPreToken(tokenNode) {
                 var pre = tokenNode.pre;
-                while (pre && pre.line > 0) {
+                while (pre) {
                     if (pre.type == CONST.PAIR_SUFFIX_TYPE) {
                         if (pre.next.type == CONST.PAIR_PRE_TYPE) {
                             //preToken 所在行已经渲染过一次，避免重复渲染
@@ -113,7 +113,7 @@ class CommentHighLight {
                             }
                         }
                         break;
-                    } else if (pre.pre.line == 0 && pre.type == CONST.PAIR_PRE_TYPE) {
+                    } else if (!pre.pre && pre.type == CONST.PAIR_PRE_TYPE) {
                         //preToken 所在行已经渲染过一次，避免重复渲染
                         if (pre.suffixToken && pre.suffixToken.line == tokenNode.line && pre.suffixToken.start == tokenNode.start) {
                             pre.suffixToken = tokenNode;
@@ -242,7 +242,7 @@ class CommentHighLight {
                 suffixFlag = false;
             for (var i = 0; i < this.rules.length; i++) {
                 var tokenList = this.tokenLists[i];
-                var head = tokenList.avl.first && tokenList.avl.first.next;
+                var head = tokenList.avl.first;
                 while (head) {
                     if (head.line > startLine) {
                         head.line += endLine - startLine;
@@ -319,7 +319,7 @@ class CommentHighLight {
                 suffixFlag = false;
             for (var i = 0; i < this.rules.length; i++) {
                 var tokenList = this.tokenLists[i];
-                var head = tokenList.avl.first && tokenList.avl.first.next;
+                var head = tokenList.avl.first;
                 while (head) {
                     //寻找匹配区域和边界交叉的preToken，需要重置
                     if (head.type == CONST.PAIR_PRE_TYPE) {
@@ -348,7 +348,10 @@ class CommentHighLight {
                     if (head.line > endLine) {
                         head.line -= endLine - startLine;
                     } else if (head.line > startLine) {
-                        tokenList.del(head);
+                        var deled = tokenList.del(head);
+                        if(deled.pre == head) { //删除叶子节点后，下一个任务节点引用没变(数据已经更改)
+                            continue;
+                        }
                     }
                     head = head.next;
                 }
