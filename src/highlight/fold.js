@@ -244,6 +244,9 @@ class FoldHightLight {
      * @param  {Number} endLine   结束行号
      */
     onInsertAfter(startLine, endLine) {
+        //先处理当前行
+        this.updateLine(startLine);
+        this.taskList.del(startLine);
         this.taskList.process();
     }
     /**
@@ -311,6 +314,9 @@ class FoldHightLight {
      * @param  {Number} endLine   结束行号
      */
     onDeleteAfter(startLine, endLine) {
+        //先处理当前行
+        this.updateLine(startLine);
+        this.taskList.del(startLine);
         this.taskList.process();
     }
     /**

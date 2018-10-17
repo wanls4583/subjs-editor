@@ -30,12 +30,17 @@ class TaskLink {
             }
             if (this.nowTask && this.nowTask.data.line > 0) {
                 var line = this.nowTask.data.line;
+                var deled = this.avl.delete(line);
                 if (this.order == 'frontToBack') {
-                    this.nowTask = this.nowTask.next;
+                    //删除操作只会删除叶子节点，下一个需要执行的任务可能依然为nowTask节点(数据已更改)
+                    if (deled.pre != this.nowTask) {
+                        this.nowTask = this.nowTask.next;
+                    }
                 } else {
-                    this.nowTask = this.nowTask.pre;
+                    if (deled.next != this.nowTask) {
+                        this.nowTask = this.nowTask.pre;
+                    }
                 }
-                this.del(line);
                 this.processCb(line);
             }
             endTime = new Date().getTime();
@@ -56,12 +61,18 @@ class TaskLink {
     }
     //删出一个待处理行
     del(line) {
-        this.avl.delete(line);
-        if (this.nowTask && this.nowTask.data.line == line) {
+        var nowLine = this.nowTask && this.nowTask.data.line;
+        var deled = this.avl.delete(line);
+        if(nowLine == line) {
             if (this.order == 'frontToBack') {
-                this.nowTask = this.nowTask.next;
+                //删除操作只会删除叶子节点，下一个需要执行的任务可能依然为nowTask节点(数据已更改)
+                if (deled.pre != this.nowTask) {
+                    this.nowTask = this.nowTask.next;
+                }
             } else {
-                this.nowTask = this.nowTask.pre;
+                if (deled.next != this.nowTask) {
+                    this.nowTask = this.nowTask.pre;
+                }
             }
         }
     }
