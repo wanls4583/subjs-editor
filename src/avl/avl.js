@@ -1,24 +1,32 @@
 //节点
-function AVLNode(key, data) {
+function AVLNode(key, data, ifInvade) {
     this.key = key; //查找关键字
-    this.data = data; //节点数据
     this.lChild = null; //左子树
     this.rChild = null; //右子树
     this.pre = null; //中序前一个节点
     this.next = null; //中序后一个节点
     this.pNode = null; //父节点
     this.height = 0; //节点的高度
+    if(ifInvade){
+        for(var key in data) {
+            this[key] = data[key];
+        }
+    }else{
+        this.data = data; //节点数据
+    }
 }
 
 /**
  * 二叉平衡树
  * @param {Function} compartor 重复数据的比较器
+ * @param {Boolean}  ifInvade  是否将插入的数据侵入节点
  */
-function AVLTree(compartor) {
+function AVLTree(compartor, ifInvade) {
     this.root = null;
     this.first = null; //最小的节点
     this.last = null; //最大的节点
     this.compartor = compartor || function() { return 0; };
+    this.ifInvade = ifInvade;
 }
 
 var _proto = AVLTree.prototype;
@@ -30,7 +38,7 @@ var _proto = AVLTree.prototype;
  * @return {Boolean}     插入是否成功
  */
 _proto.insert = function(key, data) {
-    var node = new AVLNode(key, data);
+    var node = new AVLNode(key, data, this.ifInvade);
     if (!this.root) {
         this.root = node;
         this.first = this.root;
@@ -39,10 +47,10 @@ _proto.insert = function(key, data) {
     }
     var result = this._insert(this.root, node);
     if(result){
-        if(this.first.key > key || this.first.key == key && this.compartor(this.first.data, data) > 0){
+        if(this.first.key > key || this.first.key == key && this.compartor(this.first.data || this.first, data) > 0){
             this.first = node;
         }
-        if(this.last.key < key || this.last.key == key && this.compartor(this.last.data, data) < 0){
+        if(this.last.key < key || this.last.key == key && this.compartor(this.last.data || this.last, data) < 0){
             this.last = node;
         }
     }
@@ -88,26 +96,31 @@ _proto.delete = function(key) {
 
 /**
  * 查找节点
- * @param  {[type]}  key 需要查找的节点的key
- * @return {Array|AVLNode}     查找结果
+ * @param  {[type]}   key     需要查找的节点的key
+ * @param  {Boolean}  ifAll   是否返回所有结果
+ * @return {Array|AVLNode}    查找结果
  */
-_proto.search = function(key) {
+_proto.search = function(key, ifAll) {
     var result = [];
     var _result = this._search(this.root, key);
-    while (_result) {
-        result.push(_result);
-        if (_result.next && _result.next.key == _result.key) {
-            _result = _result.next;
-        } else {
-            break;
+    if(ifAll){
+        while (_result) {
+            result.push(_result);
+            if (_result.next && _result.next.key == _result.key) {
+                _result = _result.next;
+            } else {
+                break;
+            }
         }
+        if (result.length == 1) {
+            result = result[0];
+        } else if (!result.length) {
+            result = false;
+        }
+    } else {
+        result = _result;
     }
-    if (result.length == 1) {
-        return result[0];
-    } else if (result.length) {
-        return result;
-    }
-    return false;
+    return result;
 }
 
 /**
@@ -117,9 +130,9 @@ _proto.search = function(key) {
  * @return {Boolean}      插入是否成功
  */
 _proto._insert = function(root, node) {
-    if (root.key == node.key && this.compartor(root.data, node.data) == 0) {
+    if (root.key == node.key && this.compartor(root.data || root, node.data || node) == 0) {
         return false;
-    } else if (root.key > node.key || root.key == node.key && this.compartor(root.data, node.data) > 0) { //插入左子树
+    } else if (root.key > node.key || root.key == node.key && this.compartor(root.data || root, node.data || node) > 0) { //插入左子树
         if (root.lChild) { //在左子树上递归插入
             if (!this._insert(root.lChild, node)) {
                 return false;
@@ -141,10 +154,10 @@ _proto._insert = function(root, node) {
         }
     }
     //生成中序遍历前后件关系
-    if (!node.next && (root.key > node.key || root.key == node.key && this.compartor(root.data, node.data) > 0)) {
+    if (!node.next && (root.key > node.key || root.key == node.key && this.compartor(root.data || root, node.data || node) > 0)) {
         node.next = root;
         root.pre = node;
-    } else if (!node.pre && (root.key < node.key || root.key == node.key && this.compartor(root.data, node.data) < 0)) {
+    } else if (!node.pre && (root.key < node.key || root.key == node.key && this.compartor(root.data || root, node.data || node) < 0)) {
         node.pre = root;
         root.next = node;
     }

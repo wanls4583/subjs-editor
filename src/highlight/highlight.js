@@ -1,7 +1,7 @@
 import Util from './util.js';
 import { TokenNode } from './token_link.js';
 import TaskLink from './task_link.js';
-import CommentHighLight from './comment.js';
+import CommentHighLight from './comment_v1.js';
 import Fold from './fold.js';
 
 ////////////
