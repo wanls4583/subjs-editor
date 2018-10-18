@@ -67,25 +67,24 @@ _proto.insert = function(key, data) {
 _proto.delete = function(key, ifAll) {
     var result = [];
     var _result = this._delete(this.root, key);
-    if (ifAll) {
-        while (_result) {
-            result.push(_result);
-            if (this.compartor(this.first.key, key) == 0) {
-                this.first = _result.pre || _result.next;
-            }
-            if (this.compartor(this.first.key, key) > 0) {
-                this.last = _result.next || _result.pre;
-            }
-            if (_result.pre) {
-                _result.pre.next = _result.next;
-            }
-            if (_result.next) {
-                _result.next.pre = _result.pre;
-            }
-            _result = this._delete(this.root, key);
+    while (_result) {
+        result.push(_result);
+        if (_result.pre) {
+            _result.pre.next = _result.next;
+        } else {
+            this.first = _result.next;
         }
-    } else {
-        result = _result;
+        if (_result.next) {
+            _result.next.pre = _result.pre;
+        } else {
+            this.last = _result.pre;
+        }
+        if (ifAll) {
+            _result = this._delete(this.root, key);
+        } else {
+            result = _result;
+            break;
+        }
     }
     if (!this.root) {
         this.first = null;

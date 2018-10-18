@@ -36,7 +36,7 @@ export class TokenLink {
                 arg2 = typeof arg2 == 'object' ? arg2.line : arg2;
                 return arg1 - arg2;
             }
-        }, true);
+        });
     }
     //插入一个节点
     insert(tokenNode) {
