@@ -150,8 +150,8 @@ class CommentHighLight {
         for (var i = 0; i < this.rules.length; i++) {
             var tokenList = this.tokenLists[i];
             var avlNode = tokenList.find(line);
-            var tokenNode = avlNode && avlNode.data;
-            while (avlNode && tokenNode.line == line) {
+            while (avlNode && avlNode.data.line == line) {
+                var tokenNode = avlNode.data;
                 if (tokenNode.type == CONST.PAIR_PRE_TYPE) {
                     if (tokenNode.suffixToken) {
                         recheckLines.push(tokenNode.suffixToken.line);
