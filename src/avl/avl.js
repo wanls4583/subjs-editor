@@ -50,7 +50,7 @@ _proto.insert = function(key, data) {
         if (this.compartor(this.first.key, key) > 0) {
             this.first = node;
         }
-        if (this.compartor(this.first.key, key) < 0) {
+        if (this.compartor(this.last.key, key) < 0) {
             this.last = node;
         }
     }

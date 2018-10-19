@@ -15,7 +15,7 @@ class FoldHightLight {
             }
         }, 'frontToBack'); //折叠待处理队列
         for (var i = 0; i < this.rules.length; i++) {
-            this.tokenLists.push(new TokenLink(1000));
+            this.tokenLists.push(new TokenLink());
         }
     }
     //折叠代码
@@ -29,7 +29,7 @@ class FoldHightLight {
         //查找多行匹配标识
         function _doMatch() {
             for (var i = 0; i < self.rules.length; i++) {
-                self.tokenLists[i].del(startLine);
+                self.tokenLists[i].del(startLine, true);
             }
             __exec(true);
             __exec(false);
@@ -46,8 +46,7 @@ class FoldHightLight {
                         var tokenNode = new TokenNode(startLine, obj.start, obj.end, token, ifPre ? 1 : 2, regIndex);
                         if (self.checkConflict(tokenNode)) {
                             //插入顺序链表
-                            self.tokenLists[regIndex].insert(tokenNode);
-                            nodes.push(tokenNode);
+                            nodes.push(self.tokenLists[regIndex].insert(tokenNode));
                         }
                     }
                 }
@@ -56,82 +55,80 @@ class FoldHightLight {
 
         function _matchToken() {
             for (var i = 0; i < nodes.length; i++) {
-                var node = nodes[i];
-                if (node.type == CONST.FOLD_PRE_TYPE) {
-                    _findSuffixToken(node);
+                var avlNode = nodes[i];
+                if (avlNode.data.type == CONST.FOLD_PRE_TYPE) {
+                    _findSuffixToken(avlNode);
                 } else {
-                    _findPreToken(node);
+                    _findPreToken(avlNode);
                 }
             }
         }
 
-        function _findSuffixToken(tokenNode) {
-            var next = tokenNode.next;
+        function _findSuffixToken(avlNode) {
+            var next = avlNode.next;
+            var tokenNode = avlNode.data;
             var stack = [tokenNode];
             while (next) {
-                if (next.type == CONST.FOLD_SUFFIX_TYPE) {
-                    if (stack[stack.length - 1].type == CONST.FOLD_PRE_TYPE) {
-                        var tmp = stack.pop();
-                        var recheckNode = null;
-                        if (tmp == tokenNode) {
-                            if (tmp.suffixToken) {
-                                self.undoFold(tmp);
-                            }
-                            if (next.preToken) {
-                                if (next.preToken.line != tokenNode.line) {
-                                    recheckNode = next.preToken;
-                                }
-                                self.undoFold(next.preToken);
-                            }
+                var _tokenNode = next.data;
+                if (_tokenNode.type == CONST.FOLD_SUFFIX_TYPE) {
+                    var tmp = stack.pop();
+                    var recheckNode = null;
+                    if (tmp == tokenNode) {
+                        if (tmp.suffixToken) {
+                            self.undoFold(tmp);
                         }
-                        tmp.suffixToken = next;
-                        next.preToken = tmp;
+                        if (_tokenNode.preToken) {
+                            if (_tokenNode.preToken.line != tokenNode.line) {
+                                recheckNode = _tokenNode.preToken;
+                            }
+                            self.undoFold(_tokenNode.preToken);
+                        }
+                        tmp.suffixToken = _tokenNode;
+                        _tokenNode.preToken = tmp;
                         self.renderFold(tmp);
-                        if (tmp == tokenNode) {
-                            recheckNode && _findSuffixToken(recheckNode);
-                            return;
+                        if (recheckNode) {
+                            var _avlNode = self.tokenLists[recheckNode.regIndex].find(recheckNode);
+                            _findSuffixToken(_avlNode);
                         }
-                    } else {
                         return;
                     }
                 } else {
-                    stack.push(next);
+                    stack.push(_tokenNode);
                 }
                 next = next.next;
             }
         }
 
-        function _findPreToken(tokenNode) {
-            var pre = tokenNode.pre;
+        function _findPreToken(avlNode) {
+            var pre = avlNode.pre;
+            var tokenNode = avlNode.data;
             var stack = [tokenNode];
             while (pre) {
-                if (pre.type == CONST.FOLD_PRE_TYPE) {
-                    if (stack[stack.length - 1].type == CONST.FOLD_SUFFIX_TYPE) {
-                        var tmp = stack.pop();
-                        var recheckNode = null;
-                        if (tmp == tokenNode) {
-                            if (tmp.preToken) {
-                                self.undoFold(tmp.preToken);
-                            }
-                            if (pre.suffixToken) {
-                                if (pre.suffixToken.line != tokenNode.line) {
-                                    recheckNode = pre.suffixToken;
-                                }
-                                self.undoFold(pre);
-                            }
+                var _tokenNode = pre.data;
+                if (_tokenNode.type == CONST.FOLD_PRE_TYPE) {
+                    var tmp = stack.pop();
+                    var recheckNode = null;
+                    if (tmp == tokenNode) {
+                        if (tmp.preToken) {
+                            self.undoFold(tmp.preToken);
                         }
-                        tmp.preToken = pre;
-                        pre.suffixToken = tmp;
-                        self.renderFold(pre);
-                        if (tmp == tokenNode) {
-                            recheckNode && _findPreToken(recheckNode);
-                            return;
+                        if (_tokenNode.suffixToken) {
+                            if (_tokenNode.suffixToken.line != tokenNode.line) {
+                                recheckNode = _tokenNode.suffixToken;
+                            }
+                            self.undoFold(_tokenNode);
                         }
-                    } else {
+                        tmp.preToken = _tokenNode;
+                        _tokenNode.suffixToken = tmp;
+                        self.renderFold(_tokenNode);
+                        if (recheckNode) {
+                            var _avlNode = self.tokenLists[recheckNode.regIndex].find(recheckNode);
+                            _findPreToken(_avlNode);
+                        }
                         return;
                     }
                 } else {
-                    stack.push(pre);
+                    stack.push(_tokenNode);
                 }
                 pre = pre.pre;
             }
@@ -146,8 +143,9 @@ class FoldHightLight {
         var recheckLines = [];
         for (var i = 0; i < this.rules.length; i++) {
             var tokenList = this.tokenLists[i];
-            var tokenNode = tokenList.find(line);
-            while (tokenNode && tokenNode.line == line) {
+            var avlNode = tokenList.find(line);
+            while (avlNode && avlNode.data.line == line) {
+                var tokenNode = avlNode.data;
                 //有可能已经 fold 过一次，此时 tokenNode.suffixToken.preToken 有可能不再等于 tokenNode
                 if (tokenNode.type == CONST.FOLD_PRE_TYPE && tokenNode.suffixToken && tokenNode.suffixToken.preToken == tokenNode) {
                     recheckLines.push(tokenNode.suffixToken.line);
@@ -158,7 +156,7 @@ class FoldHightLight {
                     this.undoFold(tokenNode.preToken);
                 }
                 recheckLines.push(tokenNode.line);
-                tokenNode = tokenNode.next;
+                avlNode = avlNode.next;
             }
         }
         return recheckLines;
@@ -200,18 +198,20 @@ class FoldHightLight {
         if (endLine > startLine) {
             for (var i = 0; i < this.rules.length; i++) {
                 var tokenList = this.tokenLists[i];
-                var head = tokenList.head.next;
+                var head = tokenList.avl.first;
                 while (head) {
+                    var tokenNode = head.data;
                     //重置匹配区域和新增区域有交叉的行
-                    if (head.line > startLine) {
-                        head.line += endLine - startLine;
-                        if (head.type == CONST.FOLD_SUFFIX_TYPE) {
-                            if (head.preToken && head.preToken.line < startLine) {
-                                recheckLines = recheckLines.concat(this.undoFoldLine(head.line));
+                    if (tokenNode.line > startLine) {
+                        head.key.line += endLine - startLine;
+                        tokenNode.line += endLine - startLine;
+                        if (tokenNode.type == CONST.FOLD_SUFFIX_TYPE) {
+                            if (tokenNode.preToken && tokenNode.preToken.line < startLine) {
+                                recheckLines = recheckLines.concat(this.undoFoldLine(tokenNode.line));
                             }
                         }
-                    } else if (head.type == CONST.FOLD_PRE_TYPE && head.suffixToken && head.suffixToken.line > startLine) {
-                        recheckLines = recheckLines.concat(this.undoFoldLine(head.line));
+                    } else if (tokenNode.type == CONST.FOLD_PRE_TYPE && tokenNode.suffixToken && tokenNode.suffixToken.line > startLine) {
+                        recheckLines = recheckLines.concat(this.undoFoldLine(tokenNode.line));
                     }
                     head = head.next;
                 }
@@ -263,20 +263,29 @@ class FoldHightLight {
         if (endLine > startLine) {
             for (var i = 0; i < this.rules.length; i++) {
                 var tokenList = this.tokenLists[i];
-                var head = tokenList.head.next;
+                var head = tokenList.avl.first;
                 while (head) {
+                    var tokenNode = head.data;
                     //重置匹配区域和删除区域有交叉的行
-                    if (head.type == CONST.FOLD_PRE_TYPE) {
-                        if (head.line < startLine && head.suffixToken && head.suffixToken.line >= startLine) {
-                            recheckLines = recheckLines.concat(this.undoFoldLine(head.line));
-                        } else if (head.line <= endLine && head.suffixToken && head.suffixToken.line > endLine) {
-                            recheckLines = recheckLines.concat(this.undoFoldLine(head.line));
+                    if (tokenNode.type == CONST.FOLD_PRE_TYPE) {
+                        if (tokenNode.line < startLine && tokenNode.suffixToken && tokenNode.suffixToken.line >= startLine) {
+                            recheckLines = recheckLines.concat(this.undoFoldLine(tokenNode.line));
+                        } else if (tokenNode.line <= endLine && tokenNode.suffixToken && tokenNode.suffixToken.line > endLine) {
+                            recheckLines = recheckLines.concat(this.undoFoldLine(tokenNode.line));
                         }
                     }
-                    if (head.line > endLine) {
-                        head.line -= endLine - startLine;
-                    } else if (head.line > startLine) {
-                        tokenList.del(head);
+                    if (tokenNode.line > endLine) {
+                        head.key.line -= endLine - startLine;
+                        tokenNode.line -= endLine - startLine;
+                    } else if (tokenNode.line > startLine) {
+                        var headPre = head.pre;
+                        tokenList.del(tokenNode);
+                        if (headPre) {
+                            head = headPre.next;
+                        } else {
+                            head = tokenList.avl.first;
+                        }
+                        continue;
                     }
                     head = head.next;
                 }

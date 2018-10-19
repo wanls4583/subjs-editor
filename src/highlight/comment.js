@@ -4,23 +4,24 @@ import TaskLink from './task_link.js';
 import CONST from '../common/const_var.js';
 
 class CommentHighLight {
-	constructor(editor, rules){
-		var self = this;
-		this.rules = rules;
-		this.editor = editor;
-		this.taskList = new TaskLink(100, function(line){
+    constructor(editor, rules) {
+        var self = this;
+        this.rules = rules;
+        this.editor = editor;
+        this.taskList = new TaskLink(100, function(line) {
             self.updateLine(line);
         }); //高亮待处理队列
         this.tokenLists = []; //多行匹配符号记录
         for (var i = 0; i < this.rules.length; i++) {
             this.tokenLists.push(new TokenLink(1000));
         }
-	}
-	updateLine(line) {
+        window.tokenLists = this.tokenLists;
+    }
+    updateLine(line) {
         this.highlight(line);
     }
     //多行代码高亮
-   	highlight(startLine) {
+    highlight(startLine) {
         var self = this,
             nodes = [];
         _doMatch();
@@ -28,7 +29,7 @@ class CommentHighLight {
         //查找多行匹配标识
         function _doMatch() {
             for (var i = 0; i < self.rules.length; i++) {
-                self.tokenLists[i].del(startLine);
+                self.tokenLists[i].del(startLine, true);
             }
             __exec(true);
             __exec(false);
@@ -44,8 +45,7 @@ class CommentHighLight {
                         var obj = result[j];
                         var tokenNode = new TokenNode(startLine, obj.start, obj.end, token, ifPre ? 1 : 2, regIndex);
                         //插入顺序链表
-                        self.tokenLists[regIndex].insert(tokenNode);
-                        nodes.push(tokenNode);
+                        nodes.push(self.tokenLists[regIndex].insert(tokenNode));
                     }
                 }
             }
@@ -54,30 +54,32 @@ class CommentHighLight {
         //符号配对
         function _matchToken() {
             for (var i = 0; i < nodes.length; i++) {
-                var tokenNode = nodes[i];
-                if (tokenNode.type == CONST.PAIR_PRE_TYPE) { //开始符
-                    _findSuffixToken(tokenNode);
+                var avlNode = nodes[i];
+                if (avlNode.data.type == CONST.PAIR_PRE_TYPE) { //开始符
+                    _findSuffixToken(avlNode);
                 } else {
-                    _findPreToken(tokenNode);
+                    _findPreToken(avlNode);
                 }
             }
 
-            function _findSuffixToken(tokenNode) {
-                var next = tokenNode.next;
+            function _findSuffixToken(avlNode) {
+                var tokenNode = avlNode.data;
+                var next = avlNode.next;
                 while (next) {
-                    if (next.type == CONST.PAIR_SUFFIX_TYPE) {
-                        if (!next.preToken || next.preToken.line > tokenNode.line ||
-                            next.preToken.line == tokenNode.line && next.preToken.start >= tokenNode.start) {
+                    var nowTokenNode = next.data;
+                    if (nowTokenNode.type == CONST.PAIR_SUFFIX_TYPE) {
+                        if (!nowTokenNode.preToken || nowTokenNode.preToken.line > tokenNode.line ||
+                            nowTokenNode.preToken.line == tokenNode.line && nowTokenNode.preToken.start >= tokenNode.start) {
                             //suffixToken 所在行已经渲染过一次，避免重复渲染
-                            if (next.preToken && next.preToken.line == tokenNode.line && next.preToken.start == tokenNode.start) {
-                                tokenNode.suffixToken = next;
-                                next.preToken = tokenNode;
+                            if (nowTokenNode.preToken && nowTokenNode.preToken.line == tokenNode.line && nowTokenNode.preToken.start == tokenNode.start) {
+                                tokenNode.suffixToken = nowTokenNode;
+                                nowTokenNode.preToken = tokenNode;
                             } else {
-                                if (next.preToken && next.preToken.line > tokenNode.line) {
-                                    self.undoToken(next.preToken);
+                                if (nowTokenNode.preToken && nowTokenNode.preToken.line > tokenNode.line) {
+                                    self.undoToken(nowTokenNode.preToken);
                                 }
-                                tokenNode.suffixToken = next;
-                                next.preToken = tokenNode;
+                                tokenNode.suffixToken = nowTokenNode;
+                                nowTokenNode.preToken = tokenNode;
                                 self.renderToken(tokenNode);
                             }
                         }
@@ -89,11 +91,14 @@ class CommentHighLight {
                 self.renderToken(tokenNode);
             }
 
-            function _findPreToken(tokenNode) {
-                var pre = tokenNode.pre;
-                while (pre && pre.line > 0) {
-                    if (pre.type == CONST.PAIR_SUFFIX_TYPE) {
-                        if (pre.next.type == CONST.PAIR_PRE_TYPE) {
+            function _findPreToken(avlNode) {
+                var tokenNode = avlNode.data;
+                var pre = avlNode.pre;
+                while (pre) {
+                    var nowTokenNode = pre.data;
+                    var nextTokenNode = pre.next.data;
+                    if (nowTokenNode.type == CONST.PAIR_SUFFIX_TYPE) {
+                        if (nextTokenNode.type == CONST.PAIR_PRE_TYPE) {
                             //preToken 所在行已经渲染过一次，避免重复渲染
                             /*
                                 preToken
@@ -102,35 +107,35 @@ class CommentHighLight {
                                 ...
                                 suffixToken
                              */
-                            if (pre.next.suffixToken && pre.next.suffixToken.line == tokenNode.line && pre.next.suffixToken.start == tokenNode.start) {
-                                pre.next.suffixToken = tokenNode;
-                                tokenNode.preToken = pre.next;
+                            if (nextTokenNode.suffixToken && nextTokenNode.suffixToken.line == tokenNode.line && nextTokenNode.suffixToken.start == tokenNode.start) {
+                                nextTokenNode.suffixToken = tokenNode;
+                                tokenNode.preToken = nextTokenNode;
                             } else {
-                                self.undoToken(pre.next);
-                                pre.next.suffixToken = tokenNode;
-                                tokenNode.preToken = pre.next;
-                                self.renderToken(pre.next);
+                                self.undoToken(nextTokenNode);
+                                nextTokenNode.suffixToken = tokenNode;
+                                tokenNode.preToken = nextTokenNode;
+                                self.renderToken(nextTokenNode);
                             }
                         }
                         break;
-                    } else if (pre.pre.line == 0 && pre.type == CONST.PAIR_PRE_TYPE) {
+                    } else if (!pre.pre && nowTokenNode.type == CONST.PAIR_PRE_TYPE) { //第一个/*
                         //preToken 所在行已经渲染过一次，避免重复渲染
-                        if (pre.suffixToken && pre.suffixToken.line == tokenNode.line && pre.suffixToken.start == tokenNode.start) {
-                            pre.suffixToken = tokenNode;
-                            tokenNode.preToken = pre;
+                        if (nowTokenNode.suffixToken && nowTokenNode.suffixToken.line == tokenNode.line && nowTokenNode.suffixToken.start == tokenNode.start) {
+                            nowTokenNode.suffixToken = tokenNode;
+                            tokenNode.preToken = nowTokenNode;
                         } else {
-                            self.undoToken(pre);
-                            pre.suffixToken = tokenNode;
-                            tokenNode.preToken = pre;
-                            self.renderToken(pre);
+                            self.undoToken(nowTokenNode);
+                            nowTokenNode.suffixToken = tokenNode;
+                            tokenNode.preToken = nowTokenNode;
+                            self.renderToken(nowTokenNode);
                         }
                         break;
                     }
                     pre = pre.pre;
                 }
                 //如果suffxiToken后面是preToken，需要为preToken重新匹配
-                if (tokenNode.next && tokenNode.next.type == CONST.PAIR_PRE_TYPE) {
-                    _findSuffixToken(tokenNode.next);
+                if (avlNode.next && avlNode.next.data.type == CONST.PAIR_PRE_TYPE) {
+                    _findSuffixToken(avlNode.next);
                 }
             }
         }
@@ -144,8 +149,9 @@ class CommentHighLight {
         var recheckLines = [];
         for (var i = 0; i < this.rules.length; i++) {
             var tokenList = this.tokenLists[i];
-            var tokenNode = tokenList.find(line);
-            while (tokenNode && tokenNode.line == line) {
+            var avlNode = tokenList.find(line);
+            while (avlNode && avlNode.data.line == line) {
+                var tokenNode = avlNode.data;
                 if (tokenNode.type == CONST.PAIR_PRE_TYPE) {
                     if (tokenNode.suffixToken) {
                         recheckLines.push(tokenNode.suffixToken.line);
@@ -156,7 +162,7 @@ class CommentHighLight {
                     this.undoToken(tokenNode.preToken);
                 }
                 recheckLines.push(tokenNode.line);
-                tokenNode = tokenNode.next;
+                avlNode = avlNode.next;
             }
         }
         return recheckLines;
@@ -242,11 +248,13 @@ class CommentHighLight {
                 suffixFlag = false;
             for (var i = 0; i < this.rules.length; i++) {
                 var tokenList = this.tokenLists[i];
-                var head = tokenList.head.next;
+                var head = tokenList.avl.first;
                 while (head) {
-                    if (head.line > startLine) {
-                        head.line += endLine - startLine;
-                        if (!suffixFlag && head.type == CONST.PAIR_SUFFIX_TYPE) {
+                    var tokenNode = head.data;
+                    if (tokenNode.line > startLine) {
+                        head.key.line += endLine - startLine; //avlNode的key也要变化
+                        tokenNode.line += endLine - startLine;
+                        if (!suffixFlag && tokenNode.type == CONST.PAIR_SUFFIX_TYPE) {
                             //最近的下一个 suffixToken，需要重置
                             /*
                                 //preToken
@@ -255,8 +263,8 @@ class CommentHighLight {
                                 //...
                                 //suffixToken(head)
                             */
-                            if (head.preToken && head.preToken.line < startLine) {
-                                recheckLines = recheckLines.concat(this.undoTokenLine(head.line));
+                            if (tokenNode.preToken && tokenNode.preToken.line < startLine) {
+                                recheckLines = recheckLines.concat(this.undoTokenLine(tokenNode.line));
                             }
                             suffixFlag = true;
                         }
@@ -268,8 +276,8 @@ class CommentHighLight {
                             //...
                             //suffixToken
                         */
-                    } else if (!preFlag && head.type == CONST.PAIR_PRE_TYPE && (head == this.endToken || head.suffixToken && head.suffixToken.line > startLine)) {
-                        recheckLines = recheckLines.concat(this.undoTokenLine(head.line));
+                    } else if (!preFlag && tokenNode.type == CONST.PAIR_PRE_TYPE && (tokenNode == this.endToken || tokenNode.suffixToken && tokenNode.suffixToken.line > startLine)) {
+                        recheckLines = recheckLines.concat(this.undoTokenLine(tokenNode.line));
                         preFlag = true;
                     }
                     head = head.next;
@@ -319,36 +327,46 @@ class CommentHighLight {
                 suffixFlag = false;
             for (var i = 0; i < this.rules.length; i++) {
                 var tokenList = this.tokenLists[i];
-                var head = tokenList.head.next;
+                var head = tokenList.avl.first;
                 while (head) {
+                    var tokenNode = head.data;
                     //寻找匹配区域和边界交叉的preToken，需要重置
-                    if (head.type == CONST.PAIR_PRE_TYPE) {
+                    if (tokenNode.type == CONST.PAIR_PRE_TYPE) {
                         /*
-                            //preToken(head)
+                            //preToken(tokenNode)
                             //...
                             //startLine
                             //...
                             //suffixToken
                         */
-                        if (!preFlag && head.line < startLine && (head == this.endToken || head.suffixToken && head.suffixToken.line >= startLine)) {
-                            recheckLines = recheckLines.concat(this.undoTokenLine(head.line));
+                        if (!preFlag && tokenNode.line < startLine && (tokenNode == this.endToken || tokenNode.suffixToken && tokenNode.suffixToken.line >= startLine)) {
+                            recheckLines = recheckLines.concat(this.undoTokenLine(tokenNode.line));
                             preFlag = true;
                             /*
-                                //preToken(head)
+                                //preToken(tokenNode)
                                 //...
                                 //endLine
                                 //...
                                 //suffixToken
                             */
-                        } else if (!suffixFlag && head.line <= endLine && (head == this.endToken || head.suffixToken && head.suffixToken.line > endLine)) {
-                            recheckLines = recheckLines.concat(this.undoTokenLine(head.line));
+                        } else if (!suffixFlag && tokenNode.line <= endLine && (tokenNode == this.endToken || tokenNode.suffixToken && tokenNode.suffixToken.line > endLine)) {
+                            recheckLines = recheckLines.concat(this.undoTokenLine(tokenNode.line));
                             suffixFlag = true;
                         }
                     }
-                    if (head.line > endLine) {
-                        head.line -= endLine - startLine;
-                    } else if (head.line > startLine) {
-                        tokenList.del(head);
+                    if (tokenNode.line > endLine) {
+                        head.key.line -= endLine - startLine; //avlNode的key也要变化
+                        tokenNode.line -= endLine - startLine;
+                    } else if (tokenNode.line > startLine) {
+                        var headPre = head.pre;
+                        tokenList.del(tokenNode);
+                        //二叉树的删除操作只会在叶子节点删除节点，当前节点引用可能变成了下一个节点的数据
+                        if (headPre) {
+                            head = headPre.next;
+                        } else {
+                            head = tokenList.avl.first;
+                        }
+                        continue;
                     }
                     head = head.next;
                 }
