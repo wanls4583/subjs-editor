@@ -306,10 +306,14 @@ class LinesContext {
         foldObj.foldText = content;
         if (content) {
             var length = content.match(/\n/g).length;
-            //重置其后折叠行记录的行号
-            for (var i = 0, _length = this.closeFolds.length; i < _length; i++) {
-                if (this.closeFolds[i].line > line) {
-                    this.closeFolds[i].line -= length;
+            for (var i = 0; i < this.closeFolds.length; i++) {
+                if (this.closeFolds[i].line > line) { 
+                    if(this.closeFolds[i].line + this.closeFolds[i].length < line+length){ //内部的折叠直接删除
+                        this.closeFolds.splice(i);
+                        i--;
+                    }else{ //重置其后折叠行记录的行号
+                        this.closeFolds[i].line -= length;
+                    }
                 }
             }
             this.closeFolds.push({
