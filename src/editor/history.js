@@ -8,6 +8,8 @@ class Node {
         this.endPos = endPos;
         this.content = content;
         this.timestamp = new Date().getTime();
+        this.length = endPos.line - startPos.line; //完整删除的行或者完整新增的行数
+        this.relativeLine = 0; //相对行号
     }
 }
 ///////////
@@ -22,6 +24,7 @@ class History {
         this.record = []; //历史操作记录
         this.nowIndex = -1; //当前记录索引
         this.closeFolds = []; //折叠记录
+        window.test = this;
     }
     //撤销
     undo() {
@@ -90,16 +93,20 @@ class History {
                 var record = self.record[i];
                 if (record.outFold && record.outFold.startPos.line == startPos.line) {
                     //历史操作区域相对坐标还原成绝对坐标
-                    record.endPos.line = record.endPos.line - record.startPos.line + record.outFold.startPos.line + record.relativeLine;
                     record.startPos.line = record.outFold.startPos.line + record.relativeLine;
+                    record.endPos.line = record.startPos.line + record.length;
+                    record.relativeLine = 0;
                     delete record.outFold;
+                } else if (record.startPos.line > startPos.line) {
+                    record.startPos.line += node.length;
+                    record.endPos.line = record.startPos.line + record.length;
                 }
             }
             for (var i = 0; i < self.closeFolds.length; i++) {
-                if (self.closeFolds[i].startPos.line > startPos.line) { 
+                if (self.closeFolds[i].startPos.line > startPos.line) {
                     //重置其后折叠行记录的行号
-                    self.closeFolds[i].startPos.line += endPos.line - startPos.line;
-                    self.closeFolds[i].endPos.line += endPos.line - startPos.line;
+                    self.closeFolds[i].startPos.line += node.length;
+                    self.closeFolds[i].endPos.line += node.length;
                 }
             }
             _delColseFold(node);
@@ -107,33 +114,51 @@ class History {
 
         //折叠操作
         function doFold() {
+            var innerRecordes = [];
             for (var i = 0; i < self.record.length; i++) {
                 var record = self.record[i];
                 //当前折叠区域包括历史记录对应的区域
                 if (!record.outFold && record.startPos.line > startPos.line && record.startPos.line <= endPos.line) {
-                    record.outFold = node;
-                    node.relRecord = record;
-                    record.relativeLine = record.startPos.line - startPos.line;
+                    innerRecordes.push(record);
                     //当前折叠区域包括旧的折叠区域，旧的折叠区域又包括了历史记录区域
                 } else if (record.outFold && record.outFold.startPos.line > startPos.line && record.outFold.startPos.line <= endPos.line) {
                     _delColseFold(record.outFold);
-                    record.relativeLine += record.outFold.startPos.line - startPos.line;
-                    record.outFold = node;
-                    node.relRecord = record;
+                    innerRecordes.push(record);
                     //折叠区域之后的历史记录区域
                 } else if (record.startPos.line > startPos.line) {
-                    record.startPos.line -= endPos.line - startPos.line;
-                    record.endPos.line -= endPos.line - startPos.line;
+                    record.startPos.line -= node.length;
+                    record.endPos.line -= node.length;
                 }
             }
+            node.innerRecordes = innerRecordes;
+            for(var i=0; i<innerRecordes.length; i++){
+                _setRel(innerRecordes[i]);
+            }
+            for(var i=0; i<innerRecordes.length; i++){
+                innerRecordes[i].outFold = node;
+            }
             for (var i = 0; i < self.closeFolds.length; i++) {
-                if (self.closeFolds[i].startPos.line > startPos.line) { 
+                if (self.closeFolds[i].startPos.line > startPos.line) {
                     //重置其后折叠行记录的行号
-                    self.closeFolds[i].startPos.line -= endPos.line - startPos.line;
-                    self.closeFolds[i].endPos.line -= endPos.line - startPos.line;
+                    self.closeFolds[i].startPos.line -= node.length;
+                    self.closeFolds[i].endPos.line -= node.length;
                 }
             }
             self.closeFolds.push(node);
+        }
+
+        //设置历史记录相对外部折叠记录的行号
+        function _setRel(record) {
+            var distance = 0; //距离外部折叠记录的行数
+            var innerRecordes = node.innerRecordes;
+            var startLine = record.outFold ? record.outFold.startPos.line : record.startPos.line;
+            for (var i = 0; i < innerRecordes.length; i++) {
+                var innerRec = innerRecordes[i].outFold ? innerRecordes[i].outFold : innerRecordes[i];
+                if (innerRec.startPos.line < startLine) {
+                    distance += innerRec.length;
+                }
+            }
+            record.relativeLine += startLine - startPos.line + distance;
         }
 
         //删除折叠记录
@@ -174,19 +199,14 @@ class History {
         }
 
         function _add(node) {
-            _unFod(node);
+            node.outFold && self.editor.unFold(node.outFold.startPos.line);
             self.editor.setCursorPos(node.startPos);
             self.editor.insertContent(node.content, true);
         }
 
         function _del(node) {
-            _unFod(node);
+            node.outFold && self.editor.unFold(node.outFold.startPos.line);
             self.editor.deleteContent(node.startPos, node.endPos, true);
-        }
-
-        //包含当前历史操作区域的折叠需要展开
-        function _unFod(node) {
-            node.outFold && self.editor.unFold(outFold.startPos.line);
         }
     }
 }
