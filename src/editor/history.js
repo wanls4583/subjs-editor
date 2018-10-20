@@ -186,14 +186,7 @@ class History {
 
         //包含当前历史操作区域的折叠需要展开
         function _unFod(node) {
-            var outFold = node.outFold;
-            if (outFold) {
-                //相对坐标还原成绝对坐标
-                node.endPos.line = node.endPos.line - node.startPos.line + node.outFold.startPos.line + node.relativeLine;
-                node.startPos.line = node.outFold.startPos.line + node.relativeLine;
-                delete node.outFold;
-                self.editor.unFold(outFold.startPos.line);
-            }
+            node.outFold && self.editor.unFold(outFold.startPos.line);
         }
     }
 }
