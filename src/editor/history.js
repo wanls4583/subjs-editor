@@ -104,7 +104,7 @@ class History {
                         record.startPos.line += node.length;
                         record.endPos.line = record.startPos.line + record.length;
                     } else if (record.endPos.line > startPos.line) {
-                        record.endPos.line = record.endPos.line + node.length;
+                        record.endPos.line += node.length;
                         record.length += node.length;
                     }
                 }
@@ -147,9 +147,17 @@ class History {
             for (var i = 0; i < innerRecordes.length; i++) {
                 _setRel(innerRecordes[i]);
             }
+            var tmp = [];
+            var length = 0; //内部的折叠记录累计长度
             for (var i = 0; i < innerRecordes.length; i++) {
+                if (innerRecordes[i].outFold && tmp.indexOf(innerRecordes[i].outFold) == -1) {
+                    tmp.push(innerRecordes[i].outFold);
+                    length += innerRecordes[i].outFold.length;
+                }
                 innerRecordes[i].outFold = node;
             }
+            node.length += length; //设置折叠记录的真实长度(加上内部的折叠记录累计长度)
+            node.endPos.line += length;
             //重置当前折叠记录后面的折叠行记录的行号
             for (var i = 0; i < self.closeFolds.length; i++) {
                 if (self.closeFolds[i].startPos.line > startPos.line) {
