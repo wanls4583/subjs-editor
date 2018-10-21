@@ -91,15 +91,22 @@ class History {
         function doUnfold() {
             for (var i = 0; i < self.record.length; i++) {
                 var record = self.record[i];
-                if (record.outFold && record.outFold.startPos.line == startPos.line) {
-                    //历史操作区域相对坐标还原成绝对坐标
-                    record.startPos.line = record.outFold.startPos.line + record.relativeLine;
-                    record.endPos.line = record.startPos.line + record.length;
-                    record.relativeLine = 0;
-                    delete record.outFold;
-                } else if (record.startPos.line > startPos.line) {
-                    record.startPos.line += node.length;
-                    record.endPos.line = record.startPos.line + record.length;
+                if (record.outFold) {
+                    if (record.outFold.startPos.line == startPos.line) {
+                        //历史操作区域相对坐标还原成绝对坐标
+                        record.startPos.line = record.outFold.startPos.line + record.relativeLine;
+                        record.endPos.line = record.startPos.line + record.length;
+                        record.relativeLine = 0;
+                        delete record.outFold;
+                    }
+                } else {
+                    if (record.startPos.line > startPos.line) {
+                        record.startPos.line += node.length;
+                        record.endPos.line = record.startPos.line + record.length;
+                    } else if (record.endPos.line > startPos.line) {
+                        record.endPos.line = record.endPos.line + node.length;
+                        record.length += node.length;
+                    }
                 }
             }
             for (var i = 0; i < self.closeFolds.length; i++) {
@@ -117,29 +124,36 @@ class History {
             var innerRecordes = [];
             for (var i = 0; i < self.record.length; i++) {
                 var record = self.record[i];
-                //当前折叠区域包括历史记录对应的区域
-                if (!record.outFold && record.startPos.line > startPos.line && record.startPos.line <= endPos.line) {
-                    innerRecordes.push(record);
+                if (record.outFold) {
                     //当前折叠区域包括旧的折叠区域，旧的折叠区域又包括了历史记录区域
-                } else if (record.outFold && record.outFold.startPos.line > startPos.line && record.outFold.startPos.line <= endPos.line) {
-                    _delColseFold(record.outFold);
-                    innerRecordes.push(record);
-                    //折叠区域之后的历史记录区域
-                } else if (record.startPos.line > startPos.line) {
-                    record.startPos.line -= node.length;
-                    record.endPos.line -= node.length;
+                    if (record.outFold.startPos.line > startPos.line && record.outFold.startPos.line <= endPos.line) {
+                        _delColseFold(record.outFold);
+                        innerRecordes.push(record);
+                    }
+                } else {
+                    //当前折叠区域包括历史记录对应的区域
+                    if (record.startPos.line > startPos.line && record.startPos.line <= endPos.line) {
+                        _delColseFold(record.outFold);
+                        innerRecordes.push(record);
+                    } else if (record.startPos.line > startPos.line) { //当前折叠区域之后的历史记录
+                        record.startPos.line -= node.length;
+                        record.endPos.line -= node.length;
+                    } else if (record.endPos.line > startPos.line) { //历史记录区域包括当前折叠区域
+                        record.endPos.line -= node.length;
+                    }
                 }
             }
             node.innerRecordes = innerRecordes;
-            for(var i=0; i<innerRecordes.length; i++){
+            //设置历史记录的相对当前折叠记录的行号
+            for (var i = 0; i < innerRecordes.length; i++) {
                 _setRel(innerRecordes[i]);
             }
-            for(var i=0; i<innerRecordes.length; i++){
+            for (var i = 0; i < innerRecordes.length; i++) {
                 innerRecordes[i].outFold = node;
             }
+            //重置当前折叠记录后面的折叠行记录的行号
             for (var i = 0; i < self.closeFolds.length; i++) {
                 if (self.closeFolds[i].startPos.line > startPos.line) {
-                    //重置其后折叠行记录的行号
                     self.closeFolds[i].startPos.line -= node.length;
                     self.closeFolds[i].endPos.line -= node.length;
                 }
@@ -152,10 +166,12 @@ class History {
             var distance = 0; //距离外部折叠记录的行数
             var innerRecordes = node.innerRecordes;
             var startLine = record.outFold ? record.outFold.startPos.line : record.startPos.line;
+            var lines = []; //折叠区域内部可能包含多个记录，避免重复叠加
             for (var i = 0; i < innerRecordes.length; i++) {
                 var innerRec = innerRecordes[i].outFold ? innerRecordes[i].outFold : innerRecordes[i];
-                if (innerRec.startPos.line < startLine) {
+                if (lines.indexOf(innerRec.startPos.line) == -1 && innerRec.startPos.line < startLine) {
                     distance += innerRec.length;
+                    lines.push(innerRec.startPos.line);
                 }
             }
             record.relativeLine += startLine - startPos.line + distance;
