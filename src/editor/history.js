@@ -133,7 +133,6 @@ class History {
                 } else {
                     //当前折叠区域包括历史记录对应的区域
                     if (record.startPos.line > startPos.line && record.startPos.line <= endPos.line) {
-                        _delColseFold(record.outFold);
                         innerRecordes.push(record);
                     } else if (record.startPos.line > startPos.line) { //当前折叠区域之后的历史记录
                         record.startPos.line -= node.length;
