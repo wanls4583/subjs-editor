@@ -7,12 +7,15 @@ class TaskLink {
     /**
      * @param {Number} minUnit      最新执行单元
      * @param {Object} processCb    回调
+     * @param {Object} order        处理顺序,默认倒叙{fontToBack: 顺序}
+     * @param {Object} onTaskDone   任务列表完成回调
      */
-    constructor(minUnit, processCb, order) {
+    constructor(minUnit, processCb, order, onTaskDone) {
         this.processCb = processCb;
         this.minUnit = minUnit || 100;
         this.avl = new AVL();
         this.order = order;
+        this.onTaskDone = onTaskDone || function(){};
     }
     //执行
     process() {
@@ -50,7 +53,14 @@ class TaskLink {
             this.timer = setTimeout(function() {
                 self.process();
             }, 0);
+        } else {
+            this.onTaskDone();
         }
+    }
+    //情况任务列表
+    empty() {
+        this.avl.root = null;
+        clearTimeout(this.timer);
     }
     /**
      * 添加待处理行

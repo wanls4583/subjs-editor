@@ -217,8 +217,6 @@ class LinesContext {
             }
         }
         this.context[line - 1].priorLineDecs.push(decoration);
-        //重新检测该行的折叠标记
-        this.editor.highlighter.fold.recheckLine(line);
     }
     /**
      * 删除优先级行内修饰
@@ -234,8 +232,6 @@ class LinesContext {
                 i--;
             }
         }
-        //重新检测该行的折叠标记
-        this.editor.highlighter.fold.recheckLine(line);
     }
     /**
      * 获取高优先级行内的修饰
@@ -252,8 +248,6 @@ class LinesContext {
      */
     setWhoeLineDec(line, className) {
         this.context[line - 1].lineWholeDec = className;
-        //重新检测该行的折叠标记
-        this.editor.highlighter.fold.recheckLine(line);
     }
     /**
      * 获取整行修饰
