@@ -65,77 +65,38 @@ class CommentHighLight {
             function _findSuffixToken(avlNode) {
                 var tokenNode = avlNode.data;
                 var next = avlNode.next;
-                while (next) {
-                    var nowTokenNode = next.data;
-                    if (nowTokenNode.type == CONST.PAIR_SUFFIX_TYPE) {
-                        if (!nowTokenNode.preToken || nowTokenNode.preToken.line > tokenNode.line ||
-                            nowTokenNode.preToken.line == tokenNode.line && nowTokenNode.preToken.start >= tokenNode.start) {
-                            //suffixToken 所在行已经渲染过一次，避免重复渲染
-                            if (nowTokenNode.preToken && nowTokenNode.preToken.line == tokenNode.line && nowTokenNode.preToken.start == tokenNode.start) {
-                                tokenNode.suffixToken = nowTokenNode;
-                                nowTokenNode.preToken = tokenNode;
-                            } else {
-                                if (nowTokenNode.preToken && nowTokenNode.preToken.line > tokenNode.line) {
-                                    self.undoToken(nowTokenNode.preToken);
-                                }
-                                tokenNode.suffixToken = nowTokenNode;
-                                nowTokenNode.preToken = tokenNode;
-                                self.renderToken(tokenNode);
-                            }
-                        }
-                        return;
-                    }
+                while (next && next.data.type == CONST.PAIR_PRE_TYPE) { //找到其后第一个 pre_tag
+                    avlNode = next;
                     next = next.next;
                 }
-                //其后没有suffixToken，检查是否可形成整行修饰
+                if (next && next.data.type == CONST.PAIR_SUFFIX_TYPE) {
+                    var _tokenNode = next.data;
+                    if (_tokenNode.preToken) {
+                        var preToken = _tokenNode.preToken;
+                        self.undoToken(_tokenNode.preToken);
+                        _findSuffixToken(self.tokenLists[_tokenNode.regIndex].find(preToken));
+                    }
+                    _tokenNode.preToken = tokenNode;
+                    tokenNode.suffixToken = _tokenNode;
+                }
                 self.renderToken(tokenNode);
             }
 
             function _findPreToken(avlNode) {
                 var tokenNode = avlNode.data;
                 var pre = avlNode.pre;
-                while (pre) {
-                    var nowTokenNode = pre.data;
-                    var nextTokenNode = pre.next.data;
-                    if (nowTokenNode.type == CONST.PAIR_SUFFIX_TYPE) {
-                        if (nextTokenNode.type == CONST.PAIR_PRE_TYPE) {
-                            //preToken 所在行已经渲染过一次，避免重复渲染
-                            /*
-                                preToken
-                                ...
-                                del lines
-                                ...
-                                suffixToken
-                             */
-                            if (nextTokenNode.suffixToken && nextTokenNode.suffixToken.line == tokenNode.line && nextTokenNode.suffixToken.start == tokenNode.start) {
-                                nextTokenNode.suffixToken = tokenNode;
-                                tokenNode.preToken = nextTokenNode;
-                            } else {
-                                self.undoToken(nextTokenNode);
-                                nextTokenNode.suffixToken = tokenNode;
-                                tokenNode.preToken = nextTokenNode;
-                                self.renderToken(nextTokenNode);
-                            }
-                        }
-                        break;
-                    } else if (!pre.pre && nowTokenNode.type == CONST.PAIR_PRE_TYPE) { //第一个/*
-                        //preToken 所在行已经渲染过一次，避免重复渲染
-                        if (nowTokenNode.suffixToken && nowTokenNode.suffixToken.line == tokenNode.line && nowTokenNode.suffixToken.start == tokenNode.start) {
-                            nowTokenNode.suffixToken = tokenNode;
-                            tokenNode.preToken = nowTokenNode;
-                        } else {
-                            self.undoToken(nowTokenNode);
-                            nowTokenNode.suffixToken = tokenNode;
-                            tokenNode.preToken = nowTokenNode;
-                            self.renderToken(nowTokenNode);
-                        }
-                        break;
-                    }
+                while (pre && pre.data.type == CONST.PAIR_PRE_TYPE) { //找到最前面的一个 pre_tag
+                    avlNode = pre;
                     pre = pre.pre;
                 }
-                //如果suffxiToken后面是preToken，需要为preToken重新匹配
-                if (avlNode.next && avlNode.next.data.type == CONST.PAIR_PRE_TYPE) {
-                    _findSuffixToken(avlNode.next);
+                if (avlNode.data.type == CONST.PAIR_PRE_TYPE) {
+                    var _tokenNode = avlNode.data;
+                    var suffixToken = _tokenNode.suffixToken;
+                    self.undoToken(_tokenNode); //_tokenNode可能是endPreToken
+                    suffixToken && _findPreToken(self.tokenLists[_tokenNode.regIndex].find(suffixToken));
+                    _tokenNode.suffixToken = tokenNode;
+                    tokenNode.preToken = _tokenNode;
+                    self.renderToken(_tokenNode);
                 }
             }
         }
@@ -161,7 +122,6 @@ class CommentHighLight {
                     recheckLines.push(tokenNode.preToken.line);
                     this.undoToken(tokenNode.preToken);
                 }
-                recheckLines.push(tokenNode.line);
                 avlNode = avlNode.next;
             }
         }
@@ -186,12 +146,12 @@ class CommentHighLight {
                 self.editor.linesContext.updateDom(preToken.suffixToken.line);
             }
             __addWholeLineDec();
-        } else if (!self.endToken ||
-            preToken.line < self.endToken.line ||
-            preToken.line == self.endToken.line && preToken.start < self.endToken.start) {
+        } else if (!self.endPreToken ||
+            preToken.line < self.endPreToken.line ||
+            preToken.line == self.endPreToken.line && preToken.start < self.endPreToken.start) {
             self.editor.linesContext.setPriorLineDecs(preToken.line, { start: preToken.start, end: self.editor.linesContext.getText(preToken.line).length - 1, token: preToken.token });
             self.editor.linesContext.updateDom(preToken.line);
-            self.endToken = preToken;
+            self.endPreToken = preToken;
             __addWholeLineDec();
         }
         //添加整行修饰
@@ -208,7 +168,7 @@ class CommentHighLight {
      */
     undoToken(preToken) {
         var self = this;
-        var endLine = (self.endToken == preToken && self.editor.linesContext.getLength()) || -1;
+        var endLine = (self.endPreToken == preToken && self.editor.linesContext.getLength()) || -1;
         if (preToken.suffixToken) {
             endLine = preToken.suffixToken.line - 1;
             if (preToken.line == preToken.suffixToken.line) {
@@ -221,10 +181,10 @@ class CommentHighLight {
                 self.editor.linesContext.updateDom(preToken.suffixToken.line);
             }
             __delWholeLineDec();
-        } else if (self.endToken == preToken) {
+        } else if (self.endPreToken == preToken) {
             self.editor.linesContext.delPriorLineDecs(preToken.line, { start: preToken.start, end: self.editor.linesContext.getText(preToken.line).length - 1 });
             self.editor.linesContext.updateDom(preToken.line);
-            self.endToken = null;
+            self.endPreToken = null;
             __delWholeLineDec();
         }
         if (preToken.suffixToken) {
@@ -248,48 +208,33 @@ class CommentHighLight {
                 suffixFlag = false;
             for (var i = 0; i < this.rules.length; i++) {
                 var tokenList = this.tokenLists[i];
-                var head = tokenList.avl.first;
+                var head = tokenList.find(startLine);
+                var count = 1;
+                var len = this.editor.linesContext.getLength();
+                //寻找startLine行后的第一个token节点
+                while (!head && count < 10000 && startLine + count < len) {
+                    head = tokenList.find(startLine + count);
+                    count++;
+                }
+                if (!head) {
+                    head = tokenList.avl.first;
+                }
                 while (head) {
                     var tokenNode = head.data;
-                    if (tokenNode.line > startLine) {
-                        head.key.line += endLine - startLine; //avlNode的key也要变化
+                    //寻找匹配区域和startLine有交叉的preToken，需要重置
+                    if (tokenNode.type == CONST.PAIR_SUFFIX_TYPE && tokenNode.preToken && tokenNode.preToken.line < startLine) {
+                        recheckLines = recheckLines.concat(this.undoTokenLine(tokenNode.preToken.line));
+                    } else if (tokenNode.line > startLine) {
+                        head.key.line += endLine - startLine;
                         tokenNode.line += endLine - startLine;
-                        if (!suffixFlag && tokenNode.type == CONST.PAIR_SUFFIX_TYPE) {
-                            //最近的下一个 suffixToken，需要重置
-                            /*
-                                //preToken
-                                //...
-                                //startLine
-                                //...
-                                //suffixToken(head)
-                            */
-                            if (tokenNode.preToken && tokenNode.preToken.line < startLine) {
-                                recheckLines = recheckLines.concat(this.undoTokenLine(tokenNode.line));
-                            }
-                            suffixFlag = true;
-                        }
-                        //最近的前一个 preToken，需要重置
-                        /*
-                            //preToken(head)
-                            //...
-                            //startLine
-                            //...
-                            //suffixToken
-                        */
-                    } else if (!preFlag && tokenNode.type == CONST.PAIR_PRE_TYPE && (tokenNode == this.endToken || tokenNode.suffixToken && tokenNode.suffixToken.line > startLine)) {
-                        recheckLines = recheckLines.concat(this.undoTokenLine(tokenNode.line));
-                        preFlag = true;
                     }
                     head = head.next;
                 }
             }
         }
-        this.taskList.eachTask(function(taskNode, index) {
-            if (taskNode.line) {
-                taskNode.line += endLine - startLine;
-            } else { //缓存中的待处理行
-                taskNode[index] += endLine - startLine;
-            }
+        this.taskList.eachTask(function(avlNode, index) {
+            avlNode.key.line += endLine - startLine;
+            avlNode.data.line += endLine - startLine;
         }, startLine);
         recheckLines = recheckLines.concat(this.undoTokenLine(startLine));
         for (var i = 0, length = recheckLines.length; i < length; i++) {
@@ -327,32 +272,24 @@ class CommentHighLight {
                 suffixFlag = false;
             for (var i = 0; i < this.rules.length; i++) {
                 var tokenList = this.tokenLists[i];
-                var head = tokenList.avl.first;
+                var head = tokenList.find(startLine);
+                var count = 1;
+                var len = this.editor.linesContext.getLength();
+                //寻找startLine行后的第一个token节点
+                while (!head && count < 10000 && startLine + count < len) {
+                    head = tokenList.find(startLine + count);
+                    count++;
+                }
+                if (!head) {
+                    head = tokenList.avl.first;
+                }
                 while (head) {
                     var tokenNode = head.data;
                     //寻找匹配区域和边界交叉的preToken，需要重置
-                    if (tokenNode.type == CONST.PAIR_PRE_TYPE) {
-                        /*
-                            //preToken(tokenNode)
-                            //...
-                            //startLine
-                            //...
-                            //suffixToken
-                        */
-                        if (!preFlag && tokenNode.line < startLine && (tokenNode == this.endToken || tokenNode.suffixToken && tokenNode.suffixToken.line >= startLine)) {
-                            recheckLines = recheckLines.concat(this.undoTokenLine(tokenNode.line));
-                            preFlag = true;
-                            /*
-                                //preToken(tokenNode)
-                                //...
-                                //endLine
-                                //...
-                                //suffixToken
-                            */
-                        } else if (!suffixFlag && tokenNode.line <= endLine && (tokenNode == this.endToken || tokenNode.suffixToken && tokenNode.suffixToken.line > endLine)) {
-                            recheckLines = recheckLines.concat(this.undoTokenLine(tokenNode.line));
-                            suffixFlag = true;
-                        }
+                    if (tokenNode.type == CONST.PAIR_PRE_TYPE && tokenNode.line <= endLine && (tokenNode == this.endPreToken || tokenNode.suffixToken && tokenNode.suffixToken.line > endLine)) {
+                        recheckLines = recheckLines.concat(this.undoTokenLine(tokenNode.line));
+                    } else if (tokenNode.type == CONST.PAIR_SUFFIX_TYPE && tokenNode.line > startLine && tokenNode.preToken && tokenNode.preToken.line < startLine) {
+                        recheckLines = recheckLines.concat(this.undoTokenLine(tokenNode.preToken.line));
                     }
                     if (tokenNode.line > endLine) {
                         head.key.line -= endLine - startLine; //avlNode的key也要变化
@@ -372,12 +309,9 @@ class CommentHighLight {
                 }
             }
         }
-        this.taskList.eachTask(function(taskNode) {
-            if (taskNode.line > endLine) {
-                taskNode.line -= endLine - startLine;
-            } else if (taskNode.line > startLine) {
-                self.taskList.del(taskNode);
-            }
+        this.taskList.eachTask(function(avlNode) {
+            avlNode.key.line -= endLine - startLine;
+            avlNode.data.line -= endLine - startLine;
         }, startLine);
         recheckLines = recheckLines.concat(this.undoTokenLine(startLine));
         for (var i = 0, length = recheckLines.length; i < length; i++) {

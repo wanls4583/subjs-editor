@@ -131,7 +131,7 @@ class TaskLink {
         baseLine = baseLine || 0;
         var head = this.avl.first;
         while (head) {
-            callback(head.data);
+            callback(head);
             head = head.next;
         }
     }

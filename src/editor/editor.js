@@ -483,7 +483,7 @@ class Editor {
             $dom.data('realLine', line);
             if (self.linesContext.getFoldText(line)) {
                 $dom.addClass('fold_arrow_close').removeClass('fold_arrow_open').find('.num').html(lineNum);
-            } else if (self.linesContext.getFoldPos(line) && !hasWDec) {
+            } else if (self.linesContext.getFoldPos(line)) {
                 $dom.addClass('fold_arrow_open').removeClass('fold_arrow_close').find('.num').html(lineNum);
             } else {
                 $dom.removeClass('fold_arrow_close').removeClass('fold_arrow_open').find('.num').html(lineNum);
