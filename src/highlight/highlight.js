@@ -153,7 +153,7 @@ class Mode {
                 indent = _render(indent, indentToken);
                 content = content.substring(index + 1);
             }
-            return `${indent}<span class="${lineWholeToken}">${content}</span>`;
+            return `${indent}<span class="${lineWholeToken}">${Util.htmlTrans(content)}</span>`;
         } else {
             return _render(content, lineToken, priorLineToken, indentToken)
         }

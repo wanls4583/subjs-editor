@@ -232,9 +232,11 @@ class CommentHighLight {
                 }
             }
         }
-        this.taskList.eachTask(function(avlNode, index) {
-            avlNode.key += endLine - startLine;
-            avlNode.data += endLine - startLine;
+        this.taskList.eachTask(function(avlNode) {
+            if (avlNode.key > startLine) {
+                avlNode.key += endLine - startLine;
+                avlNode.data.line += endLine - startLine;
+            }
         }, startLine);
         recheckLines = recheckLines.concat(this.undoTokenLine(startLine));
         for (var i = 0, length = recheckLines.length; i < length; i++) {
@@ -310,8 +312,10 @@ class CommentHighLight {
             }
         }
         this.taskList.eachTask(function(avlNode) {
-            avlNode.key -= endLine - startLine;
-            avlNode.data -= endLine - startLine;
+            if (avlNode.key > endLine) {
+                avlNode.key -= endLine - startLine;
+                avlNode.data.line -= endLine - startLine;
+            }
         }, startLine);
         recheckLines = recheckLines.concat(this.undoTokenLine(startLine));
         for (var i = 0, length = recheckLines.length; i < length; i++) {
