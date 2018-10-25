@@ -338,6 +338,7 @@ class LinesContext {
                 }
             }
         }
+        this.updateDom(line); //更新省略号
     }
     /**
      * 获取折叠的内容

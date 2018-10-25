@@ -577,7 +577,7 @@ class Editor {
         }
         //设置优先处理行
         if (this.highlighter) {
-            this.highlighter.setPriorLine(firstLine + this.maxVisualLine, true);
+            this.highlighter.setPriorLine(firstLine, true);
             this.highlighter.setPriorLine(firstLine, true, 'fold');
             this.highlighter.setPriorLine(firstLine + this.maxVisualLine, true, 'pair');
         }

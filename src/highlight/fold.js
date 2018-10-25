@@ -161,7 +161,6 @@ class FoldHightLight {
                     }
                     break;
                 } else if (head.data.line > this.endLine) {
-                    this.addEndLine = 0;
                     break;
                 }
                 head = head.next;
@@ -187,12 +186,12 @@ class FoldHightLight {
         this.startTime = new Date().getTime();
         this.taskList.empty();
         this.tokenLists = []; //折叠符号记录
-        this.taskDone = true;
+        this.addEndLine = 0;
+        this.endLine = starLine + this.editor.maxVisualLine;
+        this.endLine = this.endLine > this.editor.linesContext.getLength() ? this.editor.linesContext.getLength() : this.endLine;
         for (var i = 0; i < this.rules.length; i++) {
             this.tokenLists.push(new TokenLink());
         }
-        this.endLine = starLine + this.editor.maxVisualLine;
-        this.endLine = this.endLine > this.editor.linesContext.getLength() ? this.editor.linesContext.getLength() : this.endLine;
         for (var i = starLine; i <= this.endLine; i++) {
             this.taskList.insert(i);
         }

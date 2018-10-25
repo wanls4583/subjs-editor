@@ -9,17 +9,17 @@ import Fold from './fold.js';
 ////////////
 class Mode {
     /**
-     * @param {LinesContext} linesContext [行对应的内容]
+     * @param {Editor} editor 编辑器对象
      */
     constructor(editor) {
         var self = this;
-        this.linesContext = editor.linesContext;
-        this.linesContext.setDecEngine(Mode.decEngine); //设置修饰对象的处理引擎
+        this.editor = editor;
+        this.editor.linesContext.setDecEngine(Mode.decEngine); //设置修饰对象的处理引擎
         this.commentHighLight = new CommentHighLight(editor, Mode.commentRules);
         this.fold = new Fold(editor, Mode.foldRules);
         this.taskList = new TaskLink(100, function(line) {
             self.updateLine(line);
-        });
+        }, 'frontToBack');
     }
     //单行代码高亮
     highlight(currentLine) {
@@ -31,7 +31,7 @@ class Mode {
                 token = Mode.rules[i].token,
                 exclude = Mode.rules[i].exclude,
                 callback = Mode.rules[i].callback,
-                str = this.linesContext.getText(currentLine);
+                str = this.editor.linesContext.getText(currentLine);
             var result = Util.execReg(reg, exclude, str, callback);
             for (var j = 0; j < result.length; j++) {
                 result[j].token = token;
@@ -57,8 +57,8 @@ class Mode {
                 return 1;
             }
         });
-        this.linesContext.setLineDec(currentLine, lineDecoration);
-        this.linesContext.updateDom(currentLine);
+        this.editor.linesContext.setLineDec(currentLine, lineDecoration);
+        this.editor.linesContext.updateDom(currentLine);
     }
     /**
      * 当更新一行时触发[外部接口]
@@ -73,9 +73,6 @@ class Mode {
      * @param  {Number} startLine 行号
      */
     onInsertBefore(startLine, endLine) {
-        for (var i = startLine; i <= endLine; i++) {
-            this.taskList.insert(i);
-        }
         this.setPriorLine(endLine);
         this.commentHighLight.onInsertBefore(startLine, endLine);
         this.fold.onInsertBefore(startLine, endLine);
@@ -86,7 +83,6 @@ class Mode {
      * @param  {Number} endLine   结束行号
      */
     onInsertAfter(startLine, endLine) {
-        this.taskList.process();
         this.commentHighLight.onInsertAfter(startLine, endLine);
         this.fold.onInsertAfter(startLine, endLine);
     }
@@ -95,10 +91,6 @@ class Mode {
      * @param  {Number} startLine 行号
      */
     onDeleteBefore(startLine, endLine) {
-        //删除任务列表中还未完成的行
-        for (var i = startLine + 1; i <= endLine; i++) {
-            this.taskList.del(i);
-        }
         this.commentHighLight.onDeleteBefore(startLine, endLine);
         this.fold.onDeleteBefore(startLine, endLine);
     }
@@ -108,23 +100,28 @@ class Mode {
      * @param  {Number} endLine   结束行号
      */
     onDeleteAfter(startLine, endLine) {
-        this.updateLine(startLine);
         this.commentHighLight.onDeleteAfter(startLine, endLine);
         this.fold.onDeleteAfter(startLine, endLine);
     }
     /**
      * 设置优先处理行[外部接口]
-     * @param {Nunber} endLine 优先处理的末行
+     * @param {Nunber} line 优先处理的首行或末行
      * @param {Boolean} ifProcess 是否立刻处理
-     * @param  {String} type 更新类型
+     * @param {String} type 更新类型
      */
-    setPriorLine(endLine, ifProcess, type) {
+    setPriorLine(line, ifProcess, type) {
         if (type == 'fold') {
-            this.fold.setPriorLine(endLine, ifProcess);
+            this.fold.setPriorLine(line, ifProcess);
         } else if (type == 'pair') {
-            this.commentHighLight.setPriorLine(endLine, ifProcess);
+            this.commentHighLight.setPriorLine(line, ifProcess);
         } else {
-            this.taskList.setPriorLine(endLine, ifProcess);
+            var endLine = line + this.editor.maxVisualLine;
+            endLine = endLine > this.editor.linesContext.getLength() ? this.editor.linesContext.getLength() : endLine;
+            this.taskList.empty();
+            for (var i = line; i <= endLine; i++) {
+                this.taskList.insert(i);
+            }
+            this.taskList.process();
         }
     }
     /**
