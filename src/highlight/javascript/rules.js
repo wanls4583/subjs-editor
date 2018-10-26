@@ -1,8 +1,7 @@
-import Mode from './highlight.js';
-import Util from './util.js';
+import Util from '../core/util.js';
 
 //多行注释 ie. /*....*/
-var commentRules = [{
+export const commentRules = [{
     pre: /\/\*/g,
     pre_exclude: [Util.excludeStrReg(/\/\*/), /\*\/\*/g, /\/\/[^\n]*/g],
     suffix: /\*\//g,
@@ -10,7 +9,7 @@ var commentRules = [{
     token: 'pair_comment'
 }]
 //单行匹配
-var rules = [{
+export const rules = [{
     reg: /[.]?([\$_a-zA-Z][\$_a-zA-Z0-9]*?)(?=\()/g, //ie. test(),.test()
     token: 'function'
 }, {
@@ -49,7 +48,10 @@ var rules = [{
     reg: / {4}(?= )/g,
     exclude: [/[^ ]+? {4}[\s\S]*$/g],
     token: 'indent'
-}, {
+}/*, {
+    reg: /'[^']*$|"[^"]*$/g,
+    token: 'pre_string'
+}*/, {
     reg: /'[^']*?'|"[^"]*?"/g,
     token: 'string'
 }, {
@@ -57,17 +59,3 @@ var rules = [{
     exclude: Util.excludeStrReg(/\/\//),
     token: 'comment'
 }]
-//折叠规则
-var foldRules = [{
-    pre: /\{/g,
-    pre_exclude: [Util.excludeStrReg(/\{/)],
-    suffix: /\}/g,
-    suffix_exclude: [Util.excludeStrReg(/\}/)],
-    token: 'fold'
-}]
-
-Mode.rules = rules;
-Mode.commentRules = commentRules;
-Mode.foldRules = foldRules;
-
-export default Mode;

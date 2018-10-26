@@ -1,7 +1,7 @@
 import Util from './util.js';
 import { TokenLink, TokenNode } from './token_link.js';
 import TaskLink from './task_link.js';
-import CONST from '../common/const_var.js';
+import CONST from '../../common/const_var.js';
 
 class CommentHighLight {
     constructor(editor, rules) {
@@ -18,10 +18,10 @@ class CommentHighLight {
         window.tokenLists = this.tokenLists;
     }
     updateLine(line) {
-        this.highlight(line);
+        this.process(line);
     }
     //多行代码高亮
-    highlight(startLine) {
+    process(startLine) {
         var self = this,
             nodes = [];
         _doMatch();

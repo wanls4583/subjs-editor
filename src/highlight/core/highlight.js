@@ -1,36 +1,46 @@
 import Util from './util.js';
 import { TokenNode } from './token_link.js';
 import TaskLink from './task_link.js';
-import CommentHighLight from './comment.js';
-import Fold from './fold.js';
+import CommentProcessor from './comment.js';
+import FoldProcessor from './fold.js';
 
 ////////////
 // 高亮基础模板 //
 ////////////
 class Mode {
     /**
-     * @param {Editor} editor 编辑器对象
+     * @param {Editor}  Editor       编辑器对象
+     * @param {Object}  rules        高亮规则
+     * @param {Object}  commentRules 注释规则
+     * @param {Boolean} ifHideFold   是否隐藏折叠标记
      */
-    constructor(editor) {
+    constructor(editor, rules, commentRules, ifHideFold) {
         var self = this;
+        this.rules = rules;
         this.editor = editor;
         this.editor.linesContext.setDecEngine(Mode.decEngine); //设置修饰对象的处理引擎
-        this.commentHighLight = new CommentHighLight(editor, Mode.commentRules);
-        this.fold = new Fold(editor, Mode.foldRules);
+        this.commentProcessor = commentRules && new CommentProcessor(editor, commentRules);
+        this.foldProcessor = !ifHideFold && new FoldProcessor(editor);
         this.taskList = new TaskLink(100, function(line) {
-            self.updateLine(line);
-        }, 'frontToBack');
+            if(!self.editor.linesContext.hasHighlight(line)){ //避免重复渲染
+                self.updateLine(line);
+            }
+        });
     }
-    //单行代码高亮
-    highlight(currentLine) {
+    /**
+     * 高亮一行代码
+     * @param  {Number}  currentLine 当前行号
+     * @param  {Boolean} delayUpdate 是否延迟更新dom节点
+     */
+    highlight(currentLine, delayUpdate) {
         var self = this;
         var lineDecoration = []; //一行中已处理过的区域
         //单行匹配
-        for (var i = 0; i < Mode.rules.length; i++) {
-            var reg = Mode.rules[i].reg,
-                token = Mode.rules[i].token,
-                exclude = Mode.rules[i].exclude,
-                callback = Mode.rules[i].callback,
+        for (var i = 0; i < this.rules.length; i++) {
+            var reg = this.rules[i].reg,
+                token = this.rules[i].token,
+                exclude = this.rules[i].exclude,
+                callback = this.rules[i].callback,
                 str = this.editor.linesContext.getText(currentLine);
             var result = Util.execReg(reg, exclude, str, callback);
             for (var j = 0; j < result.length; j++) {
@@ -58,7 +68,7 @@ class Mode {
             }
         });
         this.editor.linesContext.setLineDec(currentLine, lineDecoration);
-        this.editor.linesContext.updateDom(currentLine);
+        !delayUpdate && this.editor.linesContext.updateDom(currentLine);
     }
     /**
      * 当更新一行时触发[外部接口]
@@ -73,9 +83,8 @@ class Mode {
      * @param  {Number} startLine 行号
      */
     onInsertBefore(startLine, endLine) {
-        this.setPriorLine(endLine);
-        this.commentHighLight.onInsertBefore(startLine, endLine);
-        this.fold.onInsertBefore(startLine, endLine);
+        this.commentProcessor && this.commentProcessor.onInsertBefore(startLine, endLine);
+        this.foldProcessor && this.foldProcessor.onInsertBefore(startLine, endLine);
     }
     /**
      * 插入新行之后触发[外部接口]
@@ -83,16 +92,19 @@ class Mode {
      * @param  {Number} endLine   结束行号
      */
     onInsertAfter(startLine, endLine) {
-        this.commentHighLight.onInsertAfter(startLine, endLine);
-        this.fold.onInsertAfter(startLine, endLine);
+        for (var i = startLine; i <= endLine; i++) {
+            this.editor.linesContext.resetLineDec(i);
+        }
+        this.commentProcessor && this.commentProcessor.onInsertAfter(startLine, endLine);
+        this.foldProcessor && this.foldProcessor.onInsertAfter(startLine, endLine);
     }
     /**
      * 删除行之前触发[外部接口]
      * @param  {Number} startLine 行号
      */
     onDeleteBefore(startLine, endLine) {
-        this.commentHighLight.onDeleteBefore(startLine, endLine);
-        this.fold.onDeleteBefore(startLine, endLine);
+        this.commentProcessor && this.commentProcessor.onDeleteBefore(startLine, endLine);
+        this.foldProcessor && this.foldProcessor.onDeleteBefore(startLine, endLine);
     }
     /**
      * 删除行之后触发[外部接口]
@@ -100,28 +112,31 @@ class Mode {
      * @param  {Number} endLine   结束行号
      */
     onDeleteAfter(startLine, endLine) {
-        this.commentHighLight.onDeleteAfter(startLine, endLine);
-        this.fold.onDeleteAfter(startLine, endLine);
+        this.editor.linesContext.resetLineDec(startLine);
+        this.commentProcessor && this.commentProcessor.onDeleteAfter(startLine, endLine);
+        this.foldProcessor && this.foldProcessor.onDeleteAfter(startLine, endLine);
     }
     /**
      * 设置优先处理行[外部接口]
-     * @param {Nunber} line 优先处理的首行或末行
-     * @param {Boolean} ifProcess 是否立刻处理
-     * @param {String} type 更新类型
+     * @param {Nunber}  line         优先处理的首行或末行
+     * @param {Boolean} ifProcess    是否立刻处理
+     * @param {String}  type         更新类型
+     * @param {Boolean} delayProcess 是否延迟执行任务
      */
-    setPriorLine(line, ifProcess, type) {
+    setPriorLine(line, ifProcess, type, delayProcess) {
         if (type == 'fold') {
-            this.fold.setPriorLine(line, ifProcess);
+            this.foldProcessor && this.foldProcessor.setPriorLine(line, ifProcess);
         } else if (type == 'pair') {
-            this.commentHighLight.setPriorLine(line, ifProcess);
+            this.commentProcessor && this.commentProcessor.setPriorLine(line, ifProcess);
         } else {
-            var endLine = line + this.editor.maxVisualLine;
-            endLine = endLine > this.editor.linesContext.getLength() ? this.editor.linesContext.getLength() : endLine;
+            var endLine = line;
+            var firstLine = line - this.editor.maxVisualLine - 1000;
+            firstLine = firstLine < 0 ? 1 : firstLine;
             this.taskList.empty();
-            for (var i = line; i <= endLine; i++) {
+            for (var i = firstLine; i <= endLine; i++) {
                 this.taskList.insert(i);
             }
-            this.taskList.process();
+            !delayProcess && this.taskList.process();
         }
     }
     /**

@@ -64,7 +64,11 @@ class LinesContext {
     getRangeText(startPos, endPos) {
         var str = this.getFullText(startPos.line),
             endStr = '';
-        str = str.substr(startPos.column);
+        if(startPos.line == endPos.line) {
+            str = str.substring(startPos.column, endPos.column);
+        } else {
+            str = str.substr(startPos.column);
+        }
         for (var line = startPos.line + 1; line < endPos.line; line++) {
             str += '\n' + this.getFullText(line);
         }
@@ -101,6 +105,7 @@ class LinesContext {
                 htmlDom: null,
                 width: 0,
                 lineDecs: [],
+                lighted: false,
                 priorLineDecs: [],
                 lineWholeDec: '',
                 foldObj: {
@@ -193,7 +198,8 @@ class LinesContext {
      * @param {Object} decoration 修饰对象
      */
     setLineDec(line, decoration) {
-        this.context[line - 1].lineDecs = decoration;
+        this.context[line - 1].lineDecs = decoration || [];
+        this.context[line - 1].lighted = true;
     }
     /**
      * 获取行内的修饰
@@ -202,6 +208,22 @@ class LinesContext {
      */
     getLineDec(line) {
         return this.context.length >= line && this.context[line - 1].lineDecs;
+    }
+    /**
+     * 撤销行内修饰
+     * @param  {Number} line 行号
+     */
+    resetLineDec(line) {
+        this.context[line - 1].lineDecs = [];
+        this.context[line - 1].lighted = false;
+    }
+    /**
+     * 是否已经高亮过
+     * @param  {Number} line 行号
+     * @return {Object}      该行对应的修饰对象
+     */
+    hasHighlight(line) {
+        return this.context.length >= line && this.context[line - 1].lighted;
     }
     /**
      * 设置高优先级行内修饰

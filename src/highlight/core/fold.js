@@ -1,46 +1,48 @@
 import Util from './util.js';
 import { TokenLink, TokenNode } from './token_link.js';
 import TaskLink from './task_link.js';
-import CONST from '../common/const_var.js';
+import CONST from '../../common/const_var.js';
 
 class FoldHightLight {
-    constructor(editor, rules) {
+    constructor(editor) {
         var self = this;
-        this.rules = rules;
         this.editor = editor;
+        this.rules = {
+            pre: /\{/g,
+            pre_exclude: [Util.excludeStrReg(/\{/)],
+            suffix: /\}/g,
+            suffix_exclude: [Util.excludeStrReg(/\}/)],
+            token: 'fold'
+        };
         this.taskList = new TaskLink(100, function(line) {
             self.updateLine(line);
-        }, 'frontToBack', function(){
+        }, 'frontToBack', function() {
             self.onTaskDone();
         }); //折叠待处理队列
     }
     //折叠代码
-    fold(startLine) {
+    process(startLine) {
         var nodes = [],
             self = this;
         _doMatch();
         _matchToken();
         //查找多行匹配标识
         function _doMatch() {
-            for (var i = 0; i < self.rules.length; i++) {
-                self.tokenLists[i].del(startLine, true);
-            }
+            self.tokenLists.del(startLine, true);
             __exec(true);
             __exec(false);
             //正则匹配
             function __exec(ifPre) {
-                for (var regIndex = 0; regIndex < self.rules.length; regIndex++) {
-                    var reg = ifPre ? self.rules[regIndex].pre : self.rules[regIndex].suffix,
-                        token = self.rules[regIndex].token,
-                        exclude = ifPre ? self.rules[regIndex].pre_exclude : self.rules[regIndex].suffix_exclude,
-                        str = self.editor.linesContext.getText(startLine);
-                    var result = Util.execReg(reg, exclude, str);
-                    for (var j = 0; j < result.length; j++) {
-                        var obj = result[j];
-                        var tokenNode = new TokenNode(startLine, obj.start, obj.end, token, ifPre ? 1 : 2, regIndex);
-                        //插入顺序链表
-                        nodes.push(self.tokenLists[regIndex].insert(tokenNode));
-                    }
+                var reg = ifPre ? self.rules.pre : self.rules.suffix,
+                    token = self.rules.token,
+                    exclude = ifPre ? self.rules.pre_exclude : self.rules.suffix_exclude,
+                    str = self.editor.linesContext.getText(startLine);
+                var result = Util.execReg(reg, exclude, str);
+                for (var j = 0; j < result.length; j++) {
+                    var obj = result[j];
+                    var tokenNode = new TokenNode(startLine, obj.start, obj.end, token, ifPre ? 1 : 2);
+                    //插入顺序链表
+                    nodes.push(self.tokenLists.insert(tokenNode));
                 }
             }
         }
@@ -92,20 +94,18 @@ class FoldHightLight {
      * @param  {String} type 更新类型
      */
     updateLine(line) {
-        this.fold(line);
+        this.process(line);
     }
     //折叠匹配插入前回调
     onInsertBefore(startLine, endLine) {
-        for (var i = 0; i < this.rules.length; i++) {
-            var tokenList = this.tokenLists[i];
-            var head = tokenList.avl.first;
-            //检测可视区域的折叠符号是否已处理完整
-            while (head) {
-                if (head.data.type == CONST.FOLD_PRE_TYPE && head.data.suffixToken) {
-                    this.editor.linesContext.setFoldPos(head.data.line, null, null);
-                }
-                head = head.next;
+        var tokenList = this.tokenLists;
+        var head = tokenList.avl.first;
+        //检测可视区域的折叠符号是否已处理完整
+        while (head) {
+            if (head.data.type == CONST.FOLD_PRE_TYPE && head.data.suffixToken) {
+                this.editor.linesContext.setFoldPos(head.data.line, null, null);
             }
+            head = head.next;
         }
     }
     /**
@@ -119,16 +119,14 @@ class FoldHightLight {
      * @param  {Number} startLine 行号
      */
     onDeleteBefore(startLine, endLine) {
-        for (var i = 0; i < this.rules.length; i++) {
-            var tokenList = this.tokenLists[i];
-            var head = tokenList.avl.first;
-            //检测可视区域的折叠符号是否已处理完整
-            while (head) {
-                if (head.data.type == CONST.FOLD_PRE_TYPE && head.data.suffixToken) {
-                    this.editor.linesContext.setFoldPos(head.data.line, null, null);
-                }
-                head = head.next;
+        var tokenList = this.tokenLists;
+        var head = tokenList.avl.first;
+        //检测可视区域的折叠符号是否已处理完整
+        while (head) {
+            if (head.data.type == CONST.FOLD_PRE_TYPE && head.data.suffixToken) {
+                this.editor.linesContext.setFoldPos(head.data.line, null, null);
             }
+            head = head.next;
         }
     }
     /**
@@ -144,30 +142,28 @@ class FoldHightLight {
         var self = this;
         var ifDone = true;
         this.addEndLine = this.addEndLine || this.endLine;
-        for (var i = 0; i < this.rules.length; i++) {
-            var tokenList = this.tokenLists[i];
-            var head = tokenList.avl.first;
-            var maxLine = this.editor.linesContext.getLength();
-            //检测可视区域的折叠符号是否已处理完整
-            while (head) {
-                if (head.data.type == CONST.FOLD_PRE_TYPE && !head.data.suffixToken && head.data.line <= this.endLine) {
-                    if(this.addEndLine - this.endLine + this.editor.maxVisualLine > CONST.MAX_FOLD_LINE || this.addEndLine == maxLine) {
-                        this.addEndLine = 0;
-                    } else {
-                        for (var i = 1; i < 100 && this.addEndLine < maxLine; i++) { //不完整，添加100行
-                            this.taskList.insert(++this.addEndLine);
-                        }
-                        ifDone = false;
+        var tokenList = this.tokenLists;
+        var head = tokenList.avl.first;
+        var maxLine = this.editor.linesContext.getLength();
+        //检测可视区域的折叠符号是否已处理完整
+        while (head) {
+            if (head.data.type == CONST.FOLD_PRE_TYPE && !head.data.suffixToken && head.data.line <= this.endLine) {
+                if (this.addEndLine - this.endLine + this.editor.maxVisualLine > CONST.MAX_FOLD_LINE || this.addEndLine == maxLine) {
+                    this.addEndLine = 0;
+                } else {
+                    for (var i = 1; i < 100 && this.addEndLine < maxLine; i++) { //不完整，添加100行
+                        this.taskList.insert(++this.addEndLine);
                     }
-                    break;
-                } else if (head.data.line > this.endLine) {
-                    break;
+                    ifDone = false;
                 }
-                head = head.next;
+                break;
+            } else if (head.data.line > this.endLine) {
+                break;
             }
+            head = head.next;
         }
         if (!ifDone) {
-            if(new Date().getTime() - this.startTime > 17) { //防止浏览器阻塞
+            if (new Date().getTime() - this.startTime > 17) { //防止浏览器阻塞
                 this.timer = setTimeout(function() {
                     self.taskList.process();
                 })
@@ -185,13 +181,10 @@ class FoldHightLight {
         clearTimeout(this.timer);
         this.startTime = new Date().getTime();
         this.taskList.empty();
-        this.tokenLists = []; //折叠符号记录
         this.addEndLine = 0;
         this.endLine = starLine + this.editor.maxVisualLine;
         this.endLine = this.endLine > this.editor.linesContext.getLength() ? this.editor.linesContext.getLength() : this.endLine;
-        for (var i = 0; i < this.rules.length; i++) {
-            this.tokenLists.push(new TokenLink());
-        }
+        this.tokenLists = new TokenLink();
         for (var i = starLine; i <= this.endLine; i++) {
             this.taskList.insert(i);
         }
