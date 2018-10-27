@@ -43,7 +43,10 @@
     color: #66d9ef;
 }
 .class {
-    color: #a6e22e;
+    color: #66d9ef;
+}
+.local {
+    color: #66d9ef;
 }
 /*函数名称*/
 .function_name {
@@ -51,6 +54,9 @@
 }
 /*函数参数*/
 .function_arg {
+    color: #fd971f;
+}
+.this {
     color: #fd971f;
 }
 .tag {

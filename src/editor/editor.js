@@ -75,11 +75,11 @@ class Editor {
     }
     //左侧行号
     createLeftNumBg() {
-        this.$leftNumBg = $('<div class="line_num_bg" style="padding-bottom:' + Editor.charHight + 'px;"></div>');
+        this.$leftNumBg = $('<div class="line_num_wrap" style="padding-bottom:' + Editor.charHight + 'px;"></div>');
         this.$wrapper.prepend(this.$leftNumBg);
         //最后一个用来撑开最大宽度
         for (var i = 1; i <= this.maxVisualLine + 1; i++) {
-            var $num = $('<span class="line_num"><span class="num"></span><i></i></span>');
+            var $num = $('<span class="line_num"><span class="num"></span><i class="fold_icon"></i></span>');
             $num.css({
                 'height': Editor.charHight + 'px',
                 'line-height': Editor.charHight + 'px',

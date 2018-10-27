@@ -14,7 +14,7 @@ class LinesContext {
         this.editor = editor;
         this.maxObj = { line: 1, width: 0 }; //文本当前最大宽度
         this.findMax = false; //是否要重新计算最大宽度
-        this._engine = function(content) { return content }; //默认处理引擎直接返回传入的内容
+        this._engine = function(content) { return Util.htmlTrans(content) }; //默认处理引擎直接返回传入的内容
         this.context = [
             // {
             //     content: '', //存储每行文本
@@ -63,10 +63,12 @@ class LinesContext {
      */
     getRangeText(startPos, endPos) {
         var str = this.getFullText(startPos.line),
+            lineText = this.getText(startPos.line),
             endStr = '';
-        if(startPos.line == endPos.line) {
+        if(startPos.line == endPos.line && lineText.length >= endPos.column) {
             str = str.substring(startPos.column, endPos.column);
         } else {
+            startPos.column = startPos.column > lineText.length ? lineText.length : startPos.column;
             str = str.substr(startPos.column);
         }
         for (var line = startPos.line + 1; line < endPos.line; line++) {

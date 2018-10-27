@@ -28,7 +28,7 @@
     vertical-align: middle;
     /*letter-spacing: -2px;*/
 }
-.line_num_bg {
+.line_num_wrap {
     position: relative;
     z-index: 2;
     top: 0;
@@ -42,23 +42,28 @@
 .line_num {
     position: relative;
     display: block;
-    padding-right: 15px;
-    padding-left: 15px;
+    padding-right: 20px;
+    padding-left: 20px;
     user-select: none;
     text-align: right;
 }
-.fold_arrow_open i,
-.fold_arrow_close i {
+.line_num_wrap .fold_icon {
+    display: none;
+}
+.line_num_wrap:hover .fold_icon {
+    display: block;
+}
+.fold_arrow_open .fold_icon,
+.fold_arrow_close .fold_icon {
     position: absolute;
     top: 0;
     right: 0;
-    display: block;
     box-sizing: border-box;
     height: 100%;
     padding: 3px 3px 0 3px;
     cursor: pointer;
 }
-.line_num.fold_arrow_open i:after {
+.line_num.fold_arrow_open .fold_icon:after {
     display: block;
     margin-top: 50%;
     content: '';
@@ -66,7 +71,7 @@
     border-style: solid;
     border-color: rgb(139, 139, 132) transparent;
 }
-.line_num.fold_arrow_open:hover i:after {
+.line_num.fold_arrow_open:hover .fold_icon:after {
     display: block;
     margin-top: 50%;
     content: '';
@@ -74,7 +79,7 @@
     border-style: solid;
     border-color: rgb(169, 169, 167) transparent;
 }
-.line_num.fold_arrow_close i:after {
+.line_num.fold_arrow_close .fold_icon:after {
     display: block;
     margin-top: 50%;
     content: '';
@@ -82,7 +87,7 @@
     border-style: solid;
     border-color: transparent rgb(139, 139, 132);
 }
-.line_num.fold_arrow_close:hover i:after {
+.line_num.fold_arrow_close:hover .fold_icon:after {
     display: block;
     margin-top: 50%;
     content: '';
