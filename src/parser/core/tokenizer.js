@@ -17,7 +17,7 @@ class Tokenizer {
                 self.analysis(line);
             }
         },null,function(){
-            onTaskDone(self.startParseline);
+            onTaskDone(self.startParseline, self.endLine);
         });
     }
     /**
@@ -28,6 +28,7 @@ class Tokenizer {
         var text = this.editor.linesContext.getText(currentLine).replace(/^\s+/g, '');
         var start = 0;
         var tokens = [];
+        this.editor.linesContext.setError(currentLine, '');
         while (text.length) {
             var pass = false;
             for (var i = 0; i < this.rules.length; i++) {
@@ -35,7 +36,8 @@ class Tokenizer {
                 if (match) {
                     tokens.push({
                         value: this.rules[i].value || match[0],
-                        type: this.rules[i].type
+                        type: this.rules[i].type,
+                        line: currentLine
                     });
                     text = text.substr(match[0].length).replace(/^\s+/g, '');
                     pass = true;
@@ -43,7 +45,7 @@ class Tokenizer {
                 }
             }
             if(!pass) {
-                this.editor.linesContext.setError(currentLine, 'unexpected\''+text[0]+'\'');
+                this.editor.linesContext.setError(currentLine, 'unexpected \''+text[0]+'\' ');
                 break;
             }
         }
@@ -86,6 +88,8 @@ class Tokenizer {
         var endLine = line;
         var firstLine = line - this.editor.maxVisualLine - 1000;
         firstLine = firstLine < 0 ? 1 : firstLine;
+        this.startParseline = firstLine;
+        this.endLine = endLine;
         this.taskList.empty();
         for (var i = firstLine; i <= endLine; i++) {
             this.taskList.insert(i);

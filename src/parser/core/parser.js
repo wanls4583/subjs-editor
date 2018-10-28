@@ -7,8 +7,8 @@ class Parser{
 	constructor(editor, Tokenizer){
 		var self = this;
 		this.editor = editor;
-		this.tokenizer = new Tokenizer(editor, function(firstLine){
-			self.parse(firstLine);
+		this.tokenizer = new Tokenizer(editor, function(firstLine, endLine){
+			self.parse(firstLine, endLine);
 		});
 	}
 	/**

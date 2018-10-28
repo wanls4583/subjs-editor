@@ -1,8 +1,0 @@
-const CONST = {
-	PAIR_PRE_TYPE : 1,
-	PAIR_SUFFIX_TYPE : 2,
-	FOLD_PRE_TYPE : 1,
-	FOLD_SUFFIX_TYPE : 2,
-	MAX_FOLD_LINE: 10000
-}
-export default CONST
