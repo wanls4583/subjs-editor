@@ -1,6 +1,6 @@
 import Util from './util.js';
 import { TokenLink, TokenNode } from './token_link.js';
-import TaskLink from './task_link.js';
+import TaskLink from '../../common/task_link.js';
 import CONST from '../../common/const_var.js';
 
 class FoldHightLight {

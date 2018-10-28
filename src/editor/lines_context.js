@@ -15,21 +15,7 @@ class LinesContext {
         this.maxObj = { line: 1, width: 0 }; //文本当前最大宽度
         this.findMax = false; //是否要重新计算最大宽度
         this._engine = function(content) { return Util.htmlTrans(content) }; //默认处理引擎直接返回传入的内容
-        this.context = [
-            // {
-            //     content: '', //存储每行文本
-            //     htmlDom: null, //存储每行文本对应的dom元素
-            //     width: 0, //记录每行文本的宽度
-            //     lineDecs: [], //存储行内修饰
-            //     priorLineDecs: [], //存储高优先级行内修饰
-            //     wholeLineDec: '', //存储整行修饰
-            //     foldObj: {
-            //         startPos: null, //折叠开始行列坐标
-            //         endPos: null, //折叠结束行列坐标
-            //         foldText: '' //折叠的内容
-            //     }
-            // }
-        ];
+        this.context = [];
         this.closeFolds = [];
         this.tabSpace = (function(tabsize) {
             var str = '';
@@ -38,59 +24,6 @@ class LinesContext {
             }
             return str;
         })(this.editor.config.tabsize);
-    }
-    /**
-     * 获取一行的计算文本
-     * @param  {Number} line 行号
-     * @return {String}      文本
-     */
-    getText(line) {
-        return this.context.length >= line && this.context[line - 1].content;
-    }
-    /**
-     * 获取一行的计算文本（该行可能已经折叠）
-     * @param  {Number} line 行号
-     * @return {String}      文本
-     */
-    getFullText(line) {
-        return this.getText(line) + this.getFoldText(line);
-    }
-    /**
-     * 获取范围内的文本
-     * @param  {Object} startPos 开始行列坐标
-     * @param  {Object} endPos   结束行列坐标
-     * @return {String}          范围内的文本
-     */
-    getRangeText(startPos, endPos) {
-        var str = this.getFullText(startPos.line),
-            lineText = this.getText(startPos.line),
-            endStr = '';
-        if(startPos.line == endPos.line && lineText.length >= endPos.column) {
-            str = str.substring(startPos.column, endPos.column);
-        } else {
-            startPos.column = startPos.column > lineText.length ? lineText.length : startPos.column;
-            str = str.substr(startPos.column);
-        }
-        for (var line = startPos.line + 1; line < endPos.line; line++) {
-            str += '\n' + this.getFullText(line);
-        }
-        if (endPos.line > startPos.line) {
-            endStr = this.getFullText(endPos.line);
-            endStr = '\n' + endStr.substring(0, endPos.column);
-        }
-        return str + endStr;
-    }
-
-    //更新一行文本
-    setText(line, txt) {
-        this.context[line - 1].content = txt;
-        this.context[line - 1].width = Util.getStrWidth(txt, this.Editor.charWidth, this.Editor.fullAngleCharWidth);
-        if (this.context[line - 1].width > this.maxObj.width) {
-            this.maxObj.width = this.context[line - 1].width;
-            this.maxObj.line = line;
-        } else if (line == this.maxObj.line) {
-            this.findMax = true;
-        }
     }
     //在指定行添加一行文本
     add(line, txt) {
@@ -107,9 +40,12 @@ class LinesContext {
                 htmlDom: null,
                 width: 0,
                 lineDecs: [],
-                lighted: false,
+                lighted: false, //是否已高亮过
                 priorLineDecs: [],
                 lineWholeDec: '',
+                error: '',
+                tokens: [],
+                parsed: false, //是否已经分析过词法
                 foldObj: {
                     startPos: null,
                     endPos: null,
@@ -194,6 +130,58 @@ class LinesContext {
             }
         }
     }
+    //更新一行文本
+    setText(line, txt) {
+        this.context[line - 1].content = txt;
+        this.context[line - 1].width = Util.getStrWidth(txt, this.Editor.charWidth, this.Editor.fullAngleCharWidth);
+        if (this.context[line - 1].width > this.maxObj.width) {
+            this.maxObj.width = this.context[line - 1].width;
+            this.maxObj.line = line;
+        } else if (line == this.maxObj.line) {
+            this.findMax = true;
+        }
+    }
+    /**
+     * 获取一行的计算文本
+     * @param  {Number} line 行号
+     * @return {String}      文本
+     */
+    getText(line) {
+        return this.context.length >= line && this.context[line - 1].content;
+    }
+    /**
+     * 获取一行的计算文本（该行可能已经折叠）
+     * @param  {Number} line 行号
+     * @return {String}      文本
+     */
+    getFullText(line) {
+        return this.getText(line) + this.getFoldText(line);
+    }
+    /**
+     * 获取范围内的文本
+     * @param  {Object} startPos 开始行列坐标
+     * @param  {Object} endPos   结束行列坐标
+     * @return {String}          范围内的文本
+     */
+    getRangeText(startPos, endPos) {
+        var str = this.getFullText(startPos.line),
+            lineText = this.getText(startPos.line),
+            endStr = '';
+        if (startPos.line == endPos.line && lineText.length >= endPos.column) {
+            str = str.substring(startPos.column, endPos.column);
+        } else {
+            startPos.column = startPos.column > lineText.length ? lineText.length : startPos.column;
+            str = str.substr(startPos.column);
+        }
+        for (var line = startPos.line + 1; line < endPos.line; line++) {
+            str += '\n' + this.getFullText(line);
+        }
+        if (endPos.line > startPos.line) {
+            endStr = this.getFullText(endPos.line);
+            endStr = '\n' + endStr.substring(0, endPos.column);
+        }
+        return str + endStr;
+    }
     /**
      * 设置行内修饰
      * @param {Number} line       行号
@@ -222,10 +210,59 @@ class LinesContext {
     /**
      * 是否已经高亮过
      * @param  {Number} line 行号
-     * @return {Object}      该行对应的修饰对象
+     * @return {Object}
      */
     hasHighlight(line) {
         return this.context.length >= line && this.context[line - 1].lighted;
+    }
+    /**
+     * 撤销词法
+     * @param  {Number} line 行号
+     */
+    resetTokens(line) {
+        this.context[line - 1].tokens = [];
+        this.context[line - 1].parsed = false;
+    }
+    /**
+     * 设置词法
+     * @param {Number} line     行号
+     * @param {Array}  tokens   词法数组
+     */
+    setTokens(line, tokens) {
+        this.context[line - 1].tokens = tokens || [];
+        this.context[line - 1].parsed = true;
+    }
+    /**
+     * 获取行内的修饰
+     * @param  {Number} line 行号
+     * @return {Array}       该行对应的词法数组
+     */
+    getTokens(line) {
+        return this.context.length >= line && this.context[line - 1].tokens;
+    }
+    /**
+     * 设置词法错误信息
+     * @param {Number} line  行号
+     * @param {String} error 错误信息
+     */
+    setError(line, error) {
+        this.context[line - 1].error = error;
+    }
+    /**
+     * 获取词法错误信息
+     * @param  {Number} line 行号
+     * @return {String}      
+     */
+    getError(line) {
+        return this.context.length >= line && this.context[line - 1].error;
+    }
+    /**
+     * 是否已经进行过词法分析
+     * @param  {Number} line 行号
+     * @return {Boolean}
+     */
+    hasParsed(line) {
+        return this.context.length >= line && this.context[line - 1].parsed;
     }
     /**
      * 设置高优先级行内修饰
@@ -325,11 +362,11 @@ class LinesContext {
         if (content) {
             var length = content.match(/\n/g).length;
             for (var i = 0; i < this.closeFolds.length; i++) {
-                if (this.closeFolds[i].line > line) { 
-                    if(this.closeFolds[i].line + this.closeFolds[i].length < line+length){ //内部的折叠直接删除
+                if (this.closeFolds[i].line > line) {
+                    if (this.closeFolds[i].line + this.closeFolds[i].length < line + length) { //内部的折叠直接删除
                         this.closeFolds.splice(i);
                         i--;
-                    }else{ //重置其后折叠行记录的行号
+                    } else { //重置其后折叠行记录的行号
                         this.closeFolds[i].line -= length;
                     }
                 }

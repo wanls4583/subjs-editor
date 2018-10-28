@@ -1,6 +1,6 @@
 import Util from './util.js';
 import { TokenNode } from './token_link.js';
-import TaskLink from './task_link.js';
+import TaskLink from '../../common/task_link.js';
 import CommentProcessor from './comment.js';
 import FoldProcessor from './fold.js';
 

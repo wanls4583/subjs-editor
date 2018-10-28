@@ -1,4 +1,4 @@
-import AVL from '../../avl/avl.js';
+import AVL from '../avl/avl.js';
 
 ///////////
 // 任务处理器 //

@@ -26,6 +26,7 @@ class Editor {
         this.config.tabsize = option.tabsize || 4;
         this.linesContext = new LinesContext(Editor, this); //所有的行
         this.highlighter = option.highlighter && new option.highlighter(this); //高亮器
+        this.parser = option.parser && new option.parser(this); //语法分析器
         this.history = new History(this); //历史记录管理器
         this.leftNumDom = []; //行号dom
         this.cursorPos = { line: 1, column: 0 }; //光标位置
@@ -358,6 +359,9 @@ class Editor {
         if (this.highlighter && endPos.line >= 1) {
             this.highlighter.onInsertBefore(endPos.line, endPos.line + strs.length - 1);
         }
+        if (this.parser) {
+            this.parser.tokenizer.onInsertBefore(endPos.line, endPos.line + strs.length - 1);
+        }
         var lineArr = [];
         //粘贴操作可能存在换号符,需要添加新行
         for (var tmp = 1; tmp < strs.length; tmp++) {
@@ -374,8 +378,17 @@ class Editor {
         if (this.highlighter) {
             if (endPos.line < 1) { //初始化坐标为(0,0)
                 this.highlighter.onInsertAfter(1, 1);
+                this.parser.tokenizer.onInsertAfter(1, 1);
             } else {
                 this.highlighter.onInsertAfter(endPos.line, endPos.line + strs.length - 1);
+                this.parser.tokenizer.onInsertAfter(endPos.line, endPos.line + strs.length - 1);
+            }
+        }
+        if (this.parser) {
+            if (endPos.line < 1) { //初始化坐标为(0,0)
+                this.parser.tokenizer.onInsertAfter(1, 1);
+            } else {
+                this.parser.tokenizer.onInsertAfter(endPos.line, endPos.line + strs.length - 1);
             }
         }
         this.renderLine(firstLine, noScroll);
@@ -407,6 +420,7 @@ class Editor {
         //添加历史记录
         !noHistory && this.history.push('del', startPos, endPos, this.linesContext.getRangeText(startPos, endPos));
         this.highlighter && this.highlighter.onDeleteBefore(startPos.line, endPos.line);
+        this.parser && this.parser.tokenizer.onDeleteBefore(startPos.line, endPos.line);
         endLineText = this.linesContext.getText(endPos.line);
         if (startPos.line == endPos.line) {
             var str = this.linesContext.getText(startPos.line);
@@ -441,6 +455,7 @@ class Editor {
         }
         this.setCursorPos(pos);
         this.highlighter && this.highlighter.onDeleteAfter(startPos.line, endPos.line);
+        this.parser && this.parser.tokenizer.onDeleteAfter(startPos.line, endPos.line);
         this.renderLine();
         this.updateScroll();
         this.updateCursorPos();
@@ -575,13 +590,16 @@ class Editor {
         if (!firstLine) {
             firstLine = this.firstLine;
         }
+        var endLine = firstLine + this.maxVisualLine;
+        endLine = endLine > this.linesContext.getLength() ? this.linesContext.getLength() : endLine;
         //设置优先处理行
         if (this.highlighter) {
-            var endLine = firstLine + this.maxVisualLine;
-            endLine = endLine > this.linesContext.getLength() ? this.linesContext.getLength() : endLine;
             this.highlighter.setPriorLine(endLine, true);
             this.highlighter.setPriorLine(firstLine, true, 'fold');
             this.highlighter.setPriorLine(endLine, true, 'pair');
+        }
+        if (this.parser) {
+            this.parser.tokenizer.setPriorLine(endLine);
         }
         var self = this,
             allDom = this.$context.find('.pre_code_line');
