@@ -366,8 +366,8 @@ export default [{
         type: CONST.END_COMMENT_TYPE,
     },
     {
-        reg: /^\/\//,
-        value: '//',
+        reg: /^\/\/[\s\S]*?$/,
+        value: '',
         type: CONST.COMMENT_TYPE
     },
     {
@@ -551,19 +551,19 @@ export default [{
         type: CONST.BINARY_OP_TYPE
     },
     {
+        reg: /^\,/,
+        value: ',',
+        type: CONST.BINARY_OP_TYPE
+    },
+    {
         reg: /^\?/,
         value: '?',
-        type: CONST.BINARY_OP_TYPE
+        type: CONST.TERNARY_OP_TYPE
     },
     {
         reg: /^\:/,
         value: ':',
-        type: CONST.BINARY_OP_TYPE
-    },
-    {
-        reg: /^\,/,
-        value: ',',
-        type: CONST.BINARY_OP_TYPE
+        type: CONST.TERNARY_OP_TYPE
     },
     {
         reg: /^[\d]*?\.?[\d]+/,
@@ -580,4 +580,9 @@ export default [{
         value: ';',
         type: CONST.SEMICOLON_TYPE
     },
+    {
+        reg: /^\\/,
+        value: '\\',
+        type: CONST.ESCAPE_TYPE
+    }
 ]

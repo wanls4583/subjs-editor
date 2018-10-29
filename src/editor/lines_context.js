@@ -222,6 +222,7 @@ class LinesContext {
     resetTokens(line) {
         this.context[line - 1].tokens = [];
         this.context[line - 1].parsed = false;
+        this.context[line - 1].error = '';
     }
     /**
      * 设置词法

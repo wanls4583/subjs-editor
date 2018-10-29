@@ -19,9 +19,12 @@ const CONST = {
 	COMMENT_TYPE: 13, //'//'
 	UNARY_OP_TYPE: 14, //单目运算符
 	BINARY_OP_TYPE: 15, //双目运算符
-	NUMBER_TYPE: 16, //常数
-	IDENTIFIER_TYPE: 17, //标识符
-	SEMICOLON_TYPE: 18, //';'
+	TERNARY_OP_TYPE: 16, //三目运算符
+	NUMBER_TYPE: 17, //常数
+	IDENTIFIER_TYPE: 18, //标识符
+	SEMICOLON_TYPE: 19, //';'
+	RESULT_TYPE: 20, //表达式结果
+	ESCAPE_TYPE: 21, //转义符
 	// 词语类型-END
 
 }
