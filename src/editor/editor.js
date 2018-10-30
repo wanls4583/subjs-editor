@@ -80,7 +80,7 @@ class Editor {
         this.$wrapper.prepend(this.$leftNumBg);
         //最后一个用来撑开最大宽度
         for (var i = 1; i <= this.maxVisualLine + 1; i++) {
-            var $num = $('<span class="line_num"><span class="num"></span><i class="fold_icon"></i></span>');
+            var $num = $('<span class="line_num"><div class="icon_tip"></div><span class="num"></span><i class="icon_fold"></i></span>');
             $num.css({
                 'height': Editor.charHight + 'px',
                 'line-height': Editor.charHight + 'px',
@@ -378,10 +378,8 @@ class Editor {
         if (this.highlighter) {
             if (endPos.line < 1) { //初始化坐标为(0,0)
                 this.highlighter.onInsertAfter(1, 1);
-                this.parser.tokenizer.onInsertAfter(1, 1);
             } else {
                 this.highlighter.onInsertAfter(endPos.line, endPos.line + strs.length - 1);
-                this.parser.tokenizer.onInsertAfter(endPos.line, endPos.line + strs.length - 1);
             }
         }
         if (this.parser) {
@@ -495,6 +493,7 @@ class Editor {
             var hasWDec = self.linesContext.getWholeLineDec(line);
             var $dom = self.leftNumDom[line - self.firstLine];
             var lineNum = self.linesContext.getLineNum(line);
+            var error = self.linesContext.getError(line);
             $dom.data('realLine', line);
             if (self.linesContext.getFoldText(line)) {
                 $dom.addClass('fold_arrow_close').removeClass('fold_arrow_open').find('.num').html(lineNum);
@@ -502,6 +501,11 @@ class Editor {
                 $dom.addClass('fold_arrow_open').removeClass('fold_arrow_close').find('.num').html(lineNum);
             } else {
                 $dom.removeClass('fold_arrow_close').removeClass('fold_arrow_open').find('.num').html(lineNum);
+            }
+            if(error) {
+                $dom.find('.icon_tip').addClass('icon_error').attr('title',error);
+            } else {
+                $dom.find('.icon_tip').removeClass('icon_error').removeAttr('title');
             }
         }
     }

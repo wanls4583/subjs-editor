@@ -486,6 +486,11 @@ export default [{
         type: CONST.BINARY_OP_TYPE
     },
     {
+        reg: /^=/,
+        value: '=',
+        type: CONST.BINARY_OP_TYPE
+    },
+    {
         reg: /^\*/,
         value: '*',
         type: CONST.BINARY_OP_TYPE
