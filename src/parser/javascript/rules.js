@@ -81,6 +81,11 @@ export default [{
         type: CONST.KEYWORD_TYPE
     },
     {
+        reg: /^else\s*?if\b/,
+        value: 'else if',
+        type: CONST.KEYWORD_TYPE
+    },
+    {
         reg: /^else\b/,
         value: 'else',
         type: CONST.KEYWORD_TYPE
