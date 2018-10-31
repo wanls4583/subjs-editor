@@ -151,12 +151,12 @@ class JsParser extends Parser {
             var preToken = _gerPreToken(1);
             var nextToken = _getNextToken(token);
             if (['if', 'else if', 'else', 'while', 'for', 'catch', 'with', 'eval'].indexOf(token.value) > -1) { //其后必须紧跟'('
-                if (nextToken.value != '(') {
+                if (!nextToken || nextToken.value != '(') {
                     _handleError(line, 'expected \'(\' after ' + token.value);
                     return;
                 }
             } else if (['try', 'finally'].indexOf(token.value) > -1) { //其后必须紧跟'{'
-                if (nextToken.value != '{') {
+                if (!nextToken || nextToken.value != '{') {
                     _handleError(line, 'expected \'{\' after ' + token.value);
                     return;
                 }
@@ -247,7 +247,7 @@ class JsParser extends Parser {
             var pre4Token = _gerPreToken(4);
             var nextToken = _getNextToken(token);
             if (token.value == '{') {
-                if (_getNextToken(nextToken) == ':') {
+                if (nextToken && _getNextToken(nextToken) == ':') {
                     startObjTokens.push(token);
                 }
                 stack.push(token);

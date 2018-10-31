@@ -80,7 +80,7 @@ class Editor {
         this.$wrapper.prepend(this.$leftNumBg);
         //最后一个用来撑开最大宽度
         for (var i = 1; i <= this.maxVisualLine + 1; i++) {
-            var $num = $('<span class="line_num"><div class="icon_tip"></div><span class="num"></span><i class="icon_fold"></i></span>');
+            var $num = $('<span class="line_num"><div class="icon_tip"></div><span class="tip_txt"></span><span class="num"></span><i class="icon_fold"></i></span>');
             $num.css({
                 'height': Editor.charHight + 'px',
                 'line-height': Editor.charHight + 'px',
@@ -503,9 +503,9 @@ class Editor {
                 $dom.removeClass('fold_arrow_close').removeClass('fold_arrow_open').find('.num').html(lineNum);
             }
             if(error) {
-                $dom.find('.icon_tip').addClass('icon_error').attr('title',error);
+                $dom.find('.icon_tip').addClass('icon_error').siblings('.tip_txt').html(error);
             } else {
-                $dom.find('.icon_tip').removeClass('icon_error').removeAttr('title');
+                $dom.find('.icon_tip').removeClass('icon_error').siblings('.tip_txt').html('');
             }
         }
     }
