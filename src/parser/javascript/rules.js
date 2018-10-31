@@ -113,7 +113,7 @@ export default [{
     {
         reg: /^false\b/,
         value: 'false',
-        type: CONST.KEYWORD_TYPE
+        type: CONST.CONSTANT_TYPE
     },
     {
         reg: /^final\b/,
@@ -203,7 +203,7 @@ export default [{
     {
         reg: /^null\b/,
         value: 'null',
-        type: CONST.KEYWORD_TYPE
+        type: CONST.CONSTANT_TYPE
     },
     {
         reg: /^package\b/,
@@ -258,7 +258,7 @@ export default [{
     {
         reg: /^this\b/,
         value: 'this',
-        type: CONST.KEYWORD_TYPE
+        type: CONST.IDENTIFIER_TYPE
     },
     {
         reg: /^throw\b/,
@@ -278,7 +278,7 @@ export default [{
     {
         reg: /^true\b/,
         value: 'true',
-        type: CONST.KEYWORD_TYPE
+        type: CONST.CONSTANT_TYPE
     },
     {
         reg: /^try\b/,
@@ -376,11 +376,6 @@ export default [{
         type: CONST.COMMENT_TYPE
     },
     {
-        reg: /^\./,
-        value: '.',
-        type: CONST.UNARY_OP_TYPE
-    },
-    {
         reg: /^\+\+/,
         value: '++',
         type: CONST.UNARY_OP_TYPE
@@ -391,14 +386,9 @@ export default [{
         type: CONST.UNARY_OP_TYPE
     },
     {
-        reg: /^\!/,
-        value: '!',
-        type: CONST.UNARY_OP_TYPE
-    },
-    {
-        reg: /^~/,
-        value: '~',
-        type: CONST.UNARY_OP_TYPE
+        reg: /^\./,
+        value: '.',
+        type: CONST.BINARY_OP_TYPE
     },
     {
         reg: /^===/,
@@ -491,6 +481,16 @@ export default [{
         type: CONST.BINARY_OP_TYPE
     },
     {
+        reg: /^\!/,
+        value: '!',
+        type: CONST.UNARY_OP_TYPE
+    },
+    {
+        reg: /^~/,
+        value: '~',
+        type: CONST.UNARY_OP_TYPE
+    },
+    {
         reg: /^\*/,
         value: '*',
         type: CONST.BINARY_OP_TYPE
@@ -578,7 +578,12 @@ export default [{
     {
         reg: /^[\d]*?\.?[\d]+/,
         value: '',
-        type: CONST.NUMBER_TYPE
+        type: CONST.CONSTANT_TYPE
+    },
+    {
+        reg: /^undefined/,
+        value: 'undefined',
+        type: CONST.CONSTANT_TYPE
     },
     {
         reg: /^[\$_a-zA-Z][\$_a-zA-Z0-9]*/,

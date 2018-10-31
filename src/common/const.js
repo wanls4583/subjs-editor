@@ -20,7 +20,7 @@ const CONST = {
 	UNARY_OP_TYPE: 14, //单目运算符
 	BINARY_OP_TYPE: 15, //双目运算符
 	TERNARY_OP_TYPE: 16, //三目运算符
-	NUMBER_TYPE: 17, //常数
+	CONSTANT_TYPE: 17, //常数
 	IDENTIFIER_TYPE: 18, //标识符
 	SEMICOLON_TYPE: 19, //';'
 	RESULT_TYPE: 20, //表达式结果

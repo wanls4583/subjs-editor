@@ -23,6 +23,7 @@ class JsParser extends Parser {
             lineError = false;
             for (var i = 0; i < tokens.length; i++) {
                 var token = tokens[i];
+                self.editor.linesContext.setError(line, '');
                 switch (token.type) {
                     case CONST.SEMICOLON_TYPE:
                         _handleSemicolon(line, token);
@@ -47,8 +48,12 @@ class JsParser extends Parser {
                     case CONST.RIGHT_BRACES:
                         _handleBraces(line, token);
                         break;
+                    case CONST.LEFT_SQUARE_BRACKETS:
+                    case CONST.RIGHT_SQUARE_BRACKETS:
+                        _handleBracekts(line, token);
+                        break;
                     case CONST.IDENTIFIER_TYPE:
-                    case CONST.NUMBER_TYPE:
+                    case CONST.CONSTANT_TYPE:
                         _handleIndentifier(line, token);
                         break;
                     case CONST.SINGLE_QUOTATION_TYPE:
@@ -73,7 +78,23 @@ class JsParser extends Parser {
         }
         //获取前一个token
         function _gerPreToken(distance) {
-            return stack[stack.length - distance];
+            if(typeof distance == 'number') {
+                return stack[stack.length - distance];
+            } else {
+                var token = distance;
+                var line = token.line;
+                var tokens = self.editor.linesContext.getTokens(line);
+                var index = tokens.indexOf(token.originToken || token) - 1;
+                while (line >= firstLine) {
+                    if (index >= 0) {
+                        return tokens[index];
+                    } else {
+                        tokens = self.editor.linesContext.getTokens(--line);
+                        index = tokens.length - 1;
+                    }
+                }
+                return null;
+            }
         }
         //获取下一个token
         function _getNextToken(token) {
@@ -85,6 +106,7 @@ class JsParser extends Parser {
                     return tokens[index];
                 } else {
                     tokens = self.editor.linesContext.getTokens(++line);
+                    index = 0;
                 }
             }
             return null;
@@ -139,6 +161,10 @@ class JsParser extends Parser {
                 if (token.line == line && (token.type < CONST.LEFT_PARENTHESES || token.type > CONST.RIGHT_BRACES)) {
                     stack.pop();
                 } else {
+                    if (token.value == '[') { //数组内有语句
+                        _handleError(token.line, 'unexpected \']\' ');
+                        return;
+                    }
                     break;
                 }
             }
@@ -161,12 +187,11 @@ class JsParser extends Parser {
                     return;
                 }
             }
-            if (preToken && preToken.value != ';' && (token.type < CONST.LEFT_PARENTHESES || token.type > CONST.RIGHT_BRACES)) { //关键字前面必须是界符
+            if (preToken && preToken.line == token.line && [';', '{', '}'].indexOf(preToken.value) == -1) { //关键字前面必须是界符
                 _handleError(line, 'expected \';\' before ' + token.value);
                 return;
             }
             if (token.value == 'for') { //for表达式
-                _checkForExp(line, token);
             }
             stack.push(token);
         }
@@ -178,7 +203,7 @@ class JsParser extends Parser {
             var preToken = _gerPreToken(1);
             var nextToken = _getNextToken(token);
             if (token.value == '(') {
-                if (nextToken && [CONST.IDENTIFIER_TYPE, CONST.NUMBER_TYPE, CONST.RESULT_TYPE].indexOf(nextToken.type) == -1) { //(后面非法字符
+                if (nextToken && nextToken.type == CONST.KEYWORD_TYPE && !(preToken && preToken.value == 'for' && nextToken.value == 'var')) { //(后面不能跟关键字
                     _handleError(line, 'expected identifier after ' + token.value);
                     return;
                 }
@@ -186,8 +211,7 @@ class JsParser extends Parser {
             } else {
                 var pPretoken = _gerPreToken(2);
                 if (preToken) {
-                    if (preToken.value == '(' || pPretoken && pPretoken.value == '(' &&
-                        [CONST.IDENTIFIER_TYPE, CONST.NUMBER_TYPE, CONST.RESULT_TYPE].indexOf(preToken.type) > -1) { //圆括号匹配正确
+                    if (preToken.value == '(' || pPretoken && pPretoken.value == '(' && [CONST.IDENTIFIER_TYPE, CONST.CONSTANT_TYPE, CONST.RESULT_TYPE].indexOf(preToken.type) > -1) { //圆括号匹配正确
                         if (preToken.value == '(' && pPretoken.type != CONST.IDENTIFIER_TYPE) { //空()
                             _handleError(line, 'expected expression after ' + preToken.value);
                             return;
@@ -254,7 +278,7 @@ class JsParser extends Parser {
             } else {
                 if (preToken && preToken.value == '{') {
                     stack.pop();
-                    _handleSemicolon(preToken.line); //语句块可以当作一个;
+                    _handleSemicolon(preToken.line, preToken); //语句块可以当作一个;
                 } else if (pre4Token && pre4Token == startObjTokens[startObjTokens.length - 1]) { //对象字面量
                     stack.pop();
                     startObjTokens.pop();
@@ -269,6 +293,36 @@ class JsParser extends Parser {
                 }
             }
         }
+        //处理方括号
+        function _handleBracekts(line, token) {
+            if (startStrToken || startCommentToken) {
+                return;
+            }
+            var preToken = _gerPreToken(1);
+            var pre2Token = _gerPreToken(2);
+            var nextToken = _getNextToken(token);
+            if (token.value == ']') {
+                if (!preToken || !pre2Token) {
+                    _handleError(line, 'unrecoverable \'[\' ');
+                    return;
+                } else if (preToken.value != '[' && (!pre2Token || pre2Token.value != '[')) {
+                    _handleError(line, 'unrecoverable \'[\' ');
+                    return;
+                }
+                stack.pop();
+                if (preToken.value != '[') {
+                    stack.pop();
+                }
+                token = {
+                    type: CONST.RESULT_TYPE,
+                    line: token.line,
+                    originToken: token
+                }
+                _handleIndentifier(line, token);
+            } else {
+                stack.push(token);
+            }
+        }
         //处理单目运算符
         function _handleUnaryOp(line, token) {
             if (startStrToken || startCommentToken) {
@@ -280,16 +334,9 @@ class JsParser extends Parser {
                 if (!preToken || preToken.value == ';' && (!nextToken || nextToken.type != CONST.IDENTIFIER_TYPE)) { //;++1
                     _handleError(line, 'expected identifier after ' + token.value);
                     return;
-                } else if (preToken.type != CONST.IDENTIFIER_TYPE) { //1++
-                    _handleError(preToken.line, 'bad operand ' + preToken.value);
-                    return;
                 }
-            } else if (token.value == '.') {
-                if (!preToken || preToken.type != CONST.IDENTIFIER_TYPE) {
-                    _handleError(line, 'expected identifier before \'.\'');
-                    return;
-                } else if (!nextToken || nextToken.type != CONST.IDENTIFIER_TYPE) {
-                    _handleError(line, 'expected identifier after \'.\'');
+                if (preToken.type != CONST.IDENTIFIER_TYPE) { //1++
+                    _handleError(preToken.line, 'bad operand ' + preToken.value);
                     return;
                 }
             } else if (token.value == '!') { //单目运算符，只有!后面可跟RESULT_TYPE
@@ -297,7 +344,6 @@ class JsParser extends Parser {
                     _handleError(line, 'expected identifier after ' + token.value);
                     return;
                 }
-
             }
             stack.push(token);
         }
@@ -309,9 +355,21 @@ class JsParser extends Parser {
             var preToken = _gerPreToken(1);
             var pre4Token = _gerPreToken(4);
             var nextToken = _getNextToken(token);
-            if (!preToken || [CONST.IDENTIFIER_TYPE, CONST.NUMBER_TYPE, CONST.RESULT_TYPE].indexOf(preToken.type) == -1) {
-                _handleError(preToken.line, 'expected left operand before ' + token.value);
+            if (!preToken || [CONST.IDENTIFIER_TYPE, CONST.CONSTANT_TYPE, CONST.RESULT_TYPE].indexOf(preToken.type) == -1) { //双目运算符必须要有左运算符
+                if (['+', '-'].indexOf(token.value) == -1) { //+,-运算符也可以当作单目运算符
+                    _handleError(preToken.line, 'expected left operand before ' + token.value);
+                }
                 return;
+            }
+            if (token.value == '.') {
+                if (!preToken || [CONST.IDENTIFIER_TYPE, CONST.RESULT_TYPE].indexOf(preToken.type) == -1) { //.符号前必须是标识符或表达式结果
+                    _handleError(line, 'expected identifier before \'.\'');
+                    return;
+                }
+                if (!nextToken || nextToken.type != CONST.IDENTIFIER_TYPE) { //.符号后面必须是标识符
+                    _handleError(line, 'expected identifier after \'.\'');
+                    return;
+                }
             }
             if (token.value == ',' && pre4Token == startObjTokens[startObjTokens.length - 1]) { //对象字面量
                 stack.splice(stack.length - 3, 3);
@@ -321,9 +379,12 @@ class JsParser extends Parser {
         }
         //处理三目运算符
         function _handTerNaryOp(line, token) {
+            if (startStrToken || startCommentToken) {
+                return;
+            }
             var preToken = _gerPreToken(1);
             if (token.value == '?') {
-                if (!preToken || [CONST.IDENTIFIER_TYPE, CONST.RESULT_TYPE, CONST.NUMBER_TYPE].indexOf(preToken.type) == -1) {
+                if (!preToken || [CONST.IDENTIFIER_TYPE, CONST.RESULT_TYPE, CONST.CONSTANT_TYPE].indexOf(preToken.type) == -1) {
                     _handleError(preToken.line, 'expected identifier before ' + token.value);
                     return;
                 }
@@ -339,11 +400,12 @@ class JsParser extends Parser {
             var pre3token = _gerPreToken(3);
             var nextToken = _getNextToken(token);
             if (preToken) {
-                if ([CONST.IDENTIFIER_TYPE, CONST.NUMBER_TYPE, CONST.RESULT_TYPE].indexOf(preToken.type) > -1) { //标识符之前还是标识符
+                if ([CONST.IDENTIFIER_TYPE, CONST.CONSTANT_TYPE, CONST.RESULT_TYPE].indexOf(preToken.type) > -1) { //标识符之前还是标识符
                     _handleError(preToken.line, 'expected \';\' ');
                     return;
-                } else if ([CONST.UNARY_OP_TYPE, CONST.BINARY_OP_TYPE].indexOf(preToken.type) > -1) { //标识符之前是单目或双目运算符
-                    if(!(nextToken && nextToken.value=='(')) { //如果标识符是函数，需要等待函数结果
+                }
+                if ([CONST.UNARY_OP_TYPE, CONST.BINARY_OP_TYPE].indexOf(preToken.type) > -1) { //标识符之前是单目或双目运算符
+                    if (!(token.type == CONST.IDENTIFIER_TYPE && nextToken && nextToken.value == '(')) { //如果标识符是函数，需要等待函数结果
                         stack.pop();
                         if (preToken.type == CONST.BINARY_OP_TYPE) {
                             stack.pop();
@@ -355,12 +417,14 @@ class JsParser extends Parser {
                         })
                         return;
                     }
-                } else if (preToken.value == '?') { //检测三目运算符
+                }
+                if (preToken.value == '?') { //检测三目运算符
                     if (!nextToken || nextToken != ':') {
                         _handleError(preToken.line, 'expected \':\' ');
                         return;
                     }
-                } else if (startObjTokens[startObjTokens.length - 1] == preToken) { //检测对象字面量
+                }
+                if (token.type != CONST.CONSTANT_TYPE && startObjTokens[startObjTokens.length - 1] == preToken) { //检测对象字面量
                     if (!nextToken || nextToken.value != ':') {
                         _handleError(preToken.line, 'expected \':\' ');
                         return;
@@ -376,9 +440,10 @@ class JsParser extends Parser {
         }
         //处理字符串
         function _handleString(line, token) {
+            var preToken = _gerPreToken(token);
             if (!startStrToken) {
                 startStrToken = token;
-            } else if (startStrToken.type == token.type) {
+            } else if (startStrToken.type == token.type && preToken.value!='\\') {
                 startStrToken = null;
                 token = { //生成处理结果
                     type: CONST.RESULT_TYPE,
@@ -412,38 +477,6 @@ class JsParser extends Parser {
                     return;
                 }
                 startCommentToken = null;
-            }
-        }
-        //验证for表达式
-        function _checkForExp(line, token) {
-            var tokens = self.editor.linesContext.getTokens(line);
-            var index = tokens.indexOf(token) + 2;
-            var semis = []; //分号的数量(for 语句中只能有两个';')
-            var inTokens = [];
-            while (tokens) {
-                if (index < tokens.length) {
-                    if (tokens[index].value == ';') {
-                        semis.push(token);
-                    } else if (tokens[index].value == ')') {
-                        break;
-                    }
-                    inTokens.push(tokens[index]);
-                    index++;
-                } else {
-                    index = 0;
-                    tokens = self.editor.linesContext.getTokens(++line);
-                    if (!tokens) {
-                        break;
-                    }
-                }
-            }
-            if (semis.length == 0) { //验证是否符合 for in
-                if (!(inTokens.length == 4 && inTokens[0].value == 'var' && inTokens[1].type == CONST.IDENTIFIER_TYPE &&
-                        inTokens[2].value == 'in' && inTokens[3].type == CONST.IDENTIFIER_TYPE)) {
-                    _handleError(line, 'bad for expression');
-                }
-            } else if (semis.length != 2) {
-                _handleError(line, 'bad for expression');
             }
         }
     }
