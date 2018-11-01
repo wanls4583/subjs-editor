@@ -161,11 +161,6 @@ export default [{
         type: CONST.KEYWORD_TYPE
     },
     {
-        reg: /^in\b/,
-        value: 'in',
-        type: CONST.KEYWORD_TYPE
-    },
-    {
         reg: /^instanceof\b/,
         value: 'instanceof',
         type: CONST.KEYWORD_TYPE
@@ -563,6 +558,11 @@ export default [{
     {
         reg: /^\,/,
         value: ',',
+        type: CONST.BINARY_OP_TYPE
+    },
+    {
+        reg: /^in\b/,
+        value: 'in',
         type: CONST.BINARY_OP_TYPE
     },
     {
