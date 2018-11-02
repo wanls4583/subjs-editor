@@ -77,10 +77,10 @@ class JsParser extends Parser {
             if (typeof distance == 'number') {
                 return stack[stack.length - distance];
             } else {
-                var token = distance;
+                var token = distance.originToken || distance;
                 var line = token.line;
                 var tokens = self.editor.linesContext.getTokens(line);
-                var index = tokens.indexOf(token.originToken || token) - 1;
+                var index = tokens.indexOf(token) - 1;
                 while (line >= firstLine) {
                     if (index >= 0) {
                         return tokens[index];
@@ -163,11 +163,8 @@ class JsParser extends Parser {
                 _handleError(line, 'unexpected \';\' after ' + preToken.value);
                 return;
             }
-            if (nextToken && nextToken.value == 'else') { //else之前应该是 IDENTIFIER_TYPE 或者 RESULT_TYPE
-                _handleError(line, 'unexpected \';\' before ' + nextToken.value);
-                return;
-            }
-            if (preToken && ['try', 'catch', 'if', 'else if'].indexOf(preToken.value) > -1) { //流程控制语句未结束
+            if (preToken && ['try', 'catch', 'if', 'else if'].indexOf(preToken.value) > -1 &&
+                nextToken && ['catch', 'finally', 'else if', 'else'].indexOf(nextToken.value) > -1) { //流程控制语句未结束
                 return;
             }
             while (stack.length > 0) { //清空表达式
@@ -309,7 +306,7 @@ class JsParser extends Parser {
                         stack.pop();
                     }
                     var _preToken = _gerPreToken(1);
-                    if (preToken && ['if', 'else if', 'catch'].indexOf(preToken.value) > -1) { //如果是流程控制关键字，直接返回
+                    if (_preToken && ['if', 'else if', 'catch'].indexOf(_preToken.value) > -1) { //如果是流程控制关键字，直接返回
                         return;
                     }
                     if (_preToken && _preToken.type == CONST.IDENTIFIER_TYPE) { //函数调用
@@ -322,14 +319,10 @@ class JsParser extends Parser {
                     var _token = { //生成处理结果
                         type: CONST.RESULT_TYPE,
                         line: token.line,
-                        originToken: token.originToken || token
+                        originToken: token
                     }
-                    if (pPretoken && pPretoken.value == '(') { //(a)，可继续将a当做IDENTIFIER_TYPE，使之可以a++
-                        var np = _getNextToken(pPretoken);
-                        var _np = _getNextToken(np);
-                        if (_np == token) {
-                            _token.type = CONST.IDENTIFIER_TYPE;
-                        }
+                    if (pPretoken && pPretoken.value == '(' && preToken.type == CONST.IDENTIFIER_TYPE) { //(a)，可继续将a当做IDENTIFIER_TYPE，使之可以a++
+                        _token.type = CONST.IDENTIFIER_TYPE;
                     }
                     //处理结果作为新的标识符
                     _handleIndentifier(token.line, _token);
@@ -362,7 +355,7 @@ class JsParser extends Parser {
                     token = { //生成处理结果
                         type: CONST.RESULT_TYPE,
                         line: token.line,
-                        originToken: token.originToken || token
+                        originToken: token
                     }
                     _handleIndentifier(token.line, token);
                 } else if (preToken && preToken.value == '{') {
@@ -370,7 +363,7 @@ class JsParser extends Parser {
                     token = {
                         type: CONST.SEMICOLON_TYPE,
                         line: preToken.line,
-                        originToken: token.originToken || token
+                        originToken: token
                     }
                     _handleSemicolon(preToken.line, token); //语句块可以当作一个;
                 } else {
@@ -401,7 +394,7 @@ class JsParser extends Parser {
                 token = {
                     type: CONST.RESULT_TYPE,
                     line: token.line,
-                    originToken: token.originToken || token
+                    originToken: token
                 }
                 _handleIndentifier(line, token);
             } else {
@@ -498,7 +491,8 @@ class JsParser extends Parser {
             var pre3token = _gerPreToken(3);
             var nextToken = _getNextToken(token);
             if (preToken) {
-                if (preToken && ['try', 'catch', 'if', 'else if'].indexOf(preToken.value) > -1) { //如果是流程控制关键字，直接返回
+                if (preToken && ['try', 'catch', 'if', 'else if'].indexOf(preToken.value) > -1 &&
+                    nextToken && ['catch', 'finally', 'else if', 'else'].indexOf(nextToken.value) > -1) { //流程控制语句未结束
                     return;
                 }
                 if ([CONST.IDENTIFIER_TYPE, CONST.CONSTANT_TYPE, CONST.RESULT_TYPE].indexOf(preToken.type) > -1) { //标识符之前还是标识符
@@ -571,7 +565,7 @@ class JsParser extends Parser {
                 token = { //生成处理结果
                     type: CONST.RESULT_TYPE,
                     line: token.line,
-                    originToken: token.originToken || token,
+                    originToken: token,
                     resultType: CONST.STRING_TYPE
                 }
                 _handleIndentifier(token.line, token);
