@@ -281,11 +281,6 @@ export default [{
         type: CONST.KEYWORD_TYPE
     },
     {
-        reg: /^typeof\b/,
-        value: 'typeof',
-        type: CONST.KEYWORD_TYPE
-    },
-    {
         reg: /^var\b/,
         value: 'var',
         type: CONST.KEYWORD_TYPE
@@ -378,6 +373,11 @@ export default [{
     {
         reg: /^\-\-/,
         value: '--',
+        type: CONST.UNARY_OP_TYPE
+    },
+    {
+        reg: /^typeof\b/,
+        value: 'typeof',
         type: CONST.UNARY_OP_TYPE
     },
     {

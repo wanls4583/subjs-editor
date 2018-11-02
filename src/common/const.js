@@ -26,6 +26,7 @@ const CONST = {
 	RESULT_TYPE: 20, //表达式结果
 	ESCAPE_TYPE: 21, //转义符
 	// 词语类型-END
+	STRING_TYPE: 'string',
 
 }
 export default CONST
