@@ -26,11 +26,6 @@ export default [{
         type: CONST.KEYWORD_TYPE
     },
     {
-        reg: /^case\b/,
-        value: 'case',
-        type: CONST.KEYWORD_TYPE
-    },
-    {
         reg: /^catch\b/,
         value: 'catch',
         type: CONST.KEYWORD_TYPE
@@ -573,6 +568,11 @@ export default [{
     {
         reg: /^\:/,
         value: ':',
+        type: CONST.TERNARY_OP_TYPE
+    },
+    {
+        reg: /^case\b/,
+        value: 'case',
         type: CONST.TERNARY_OP_TYPE
     },
     {
