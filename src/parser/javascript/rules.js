@@ -101,6 +101,11 @@ export default [{
         type: CONST.KEYWORD_TYPE
     },
     {
+        reg: /^from\b/,
+        value: 'from',
+        type: CONST.KEYWORD_TYPE
+    },
+    {
         reg: /^extends\b/,
         value: 'extends',
         type: CONST.KEYWORD_TYPE
