@@ -1,4 +1,4 @@
-import Util from './util.js';
+import Util from '../common/util.js';
 import LinesContext from './lines_context.js';
 import History from './history.js';
 import $ from 'jquery';
@@ -360,7 +360,7 @@ class Editor {
             this.highlighter.onInsertBefore(endPos.line, endPos.line + strs.length - 1);
         }
         if (this.parser) {
-            this.parser.tokenizer.onInsertBefore(endPos.line, endPos.line + strs.length - 1);
+            this.parser.onInsertBefore(endPos.line, endPos.line + strs.length - 1);
         }
         var lineArr = [];
         //粘贴操作可能存在换号符,需要添加新行
@@ -384,12 +384,12 @@ class Editor {
         }
         if (this.parser) {
             if (endPos.line < 1) { //初始化坐标为(0,0)
-                this.parser.tokenizer.onInsertAfter(1, 1);
+                this.parser.onInsertAfter(1, 1);
             } else {
-                this.parser.tokenizer.onInsertAfter(endPos.line, endPos.line + strs.length - 1);
+                this.parser.onInsertAfter(endPos.line, endPos.line + strs.length - 1);
             }
         }
-        this.renderLine(firstLine, noScroll);
+        this.renderLine(firstLine);
         endPos.line = endPos.line + strs.length - 1;
         //添加历史记录
         !noHistory && this.history.push('add', startPos, endPos, newContent);
@@ -418,7 +418,7 @@ class Editor {
         //添加历史记录
         !noHistory && this.history.push('del', startPos, endPos, this.linesContext.getRangeText(startPos, endPos));
         this.highlighter && this.highlighter.onDeleteBefore(startPos.line, endPos.line);
-        this.parser && this.parser.tokenizer.onDeleteBefore(startPos.line, endPos.line);
+        this.parser && this.parser.onDeleteBefore(startPos.line, endPos.line);
         endLineText = this.linesContext.getText(endPos.line);
         if (startPos.line == endPos.line) {
             var str = this.linesContext.getText(startPos.line);
@@ -453,8 +453,8 @@ class Editor {
         }
         this.setCursorPos(pos);
         this.highlighter && this.highlighter.onDeleteAfter(startPos.line, endPos.line);
-        this.parser && this.parser.tokenizer.onDeleteAfter(startPos.line, endPos.line);
-        this.renderLine();
+        this.parser && this.parser.onDeleteAfter(startPos.line, endPos.line);
+        this.renderLine(startPos.line < this.firstLine ? startPos.line : this.firstLine);
         this.updateScroll();
         this.updateCursorPos();
         this.$selectBg.html('');
@@ -603,7 +603,7 @@ class Editor {
             this.highlighter.setPriorLine(endLine, true, 'pair');
         }
         if (this.parser) {
-            this.parser.tokenizer.setPriorLine(endLine);
+            this.parser.setPriorLine(firstLine);
         }
         var self = this,
             allDom = this.$context.find('.pre_code_line');

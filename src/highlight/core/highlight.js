@@ -1,4 +1,4 @@
-import Util from './util.js';
+import Util from '../../common/util.js';
 import { TokenNode } from './token_link.js';
 import TaskLink from '../../common/task_link.js';
 import CommentProcessor from './comment.js';

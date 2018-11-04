@@ -604,5 +604,10 @@ export default [{
         reg: /^\\/,
         value: '\\',
         type: CONST.ESCAPE_TYPE
+    },
+    {
+        reg: /[\s\S]/,
+        value: '',
+        type: CONST.ILLEGAL_TYPE
     }
 ]

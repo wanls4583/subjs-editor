@@ -1,4 +1,4 @@
-import Util from '../core/util.js';
+import Util from '../../common/util.js';
 
 //多行注释 ie. /*....*/
 export const commentRules = [{

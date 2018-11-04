@@ -25,6 +25,7 @@ const CONST = {
 	SEMICOLON_TYPE: 19, //';'
 	RESULT_TYPE: 20, //表达式结果
 	ESCAPE_TYPE: 21, //转义符
+	ILLEGAL_TYPE: 22, //非法字符
 	// 词语类型-END
 	STRING_TYPE: 'string',
 
