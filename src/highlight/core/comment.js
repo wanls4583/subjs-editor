@@ -43,11 +43,27 @@ class CommentHighLight {
                     var result = Util.execReg(reg, exclude, str);
                     for (var j = 0; j < result.length; j++) {
                         var obj = result[j];
+                        if(ifPre && _checkString(obj)) {
+                            continue;
+                        }
                         var tokenNode = new TokenNode(startLine, obj.start, obj.end, token, ifPre ? 1 : 2, regIndex);
                         //插入顺序链表
                         nodes.push(self.tokenLists[regIndex].insert(tokenNode));
                     }
                 }
+            }
+            //检测是否处于多行字符串中
+            function _checkString(obj) {
+                var lineDec = self.editor.linesContext.getLineDec(startLine);
+                for (var i = 0; i < lineDec.length; i++) {
+                    var dec = lineDec[i]
+                    if (dec.token.indexOf('string') > -1 && dec.start <= obj.start && dec.end >= obj.end) {
+                        return true;
+                    } else if (dec.start > obj.start) {
+                        break;
+                    }
+                }
+                return false;
             }
         }
 
@@ -346,6 +362,13 @@ class CommentHighLight {
      */
     setPriorLine(endLine, ifProcess) {
         this.taskList.setPriorLine(endLine, ifProcess);
+    }
+    /**
+     * 重新检测行[外部接口]
+     * @param  {Number} line 行号
+     */
+    recheckLine(line) {
+        this.onInsertBefore(line,line);
     }
 }
 

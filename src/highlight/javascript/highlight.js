@@ -52,6 +52,11 @@ class JsHighlight extends Highlight {
                     }
                 }
                 lineDec.splice(insertIndex, 0, { start: start, end: index, token: token });
+                self.commentProcessor.recheckLine(currentLine); //重新检测多行注释
+                self.foldTimer = setTimeout(function(){ //重新检测折叠
+                    clearTimeout(self.foldTimer);
+                    self.foldProcessor.recheckLine();
+                },100);
                 _matchPreString(currentLine); //插入了line_string后，需要再检查pre_string
                 self.editor.linesContext.updateDom(currentLine);
                 return true;
@@ -87,6 +92,11 @@ class JsHighlight extends Highlight {
                         }
                     }
                     lineDec.push(dec);
+                    self.commentProcessor.recheckLine(currentLine); //重新检测多行注释
+                    self.foldTimer = setTimeout(function(){ //重新检测折叠
+                        clearTimeout(self.foldTimer);
+                        self.foldProcessor.recheckLine();
+                    },100);
                     var count = 1;
                     var maxLine = linesContext.getLength();
                     while (currentLine + count <= maxLine && _findSuffixString(currentLine + count)) {

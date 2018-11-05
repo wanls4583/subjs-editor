@@ -40,11 +40,46 @@ class FoldHightLight {
                 var result = Util.execReg(reg, exclude, str);
                 for (var j = 0; j < result.length; j++) {
                     var obj = result[j];
+                    if (_checkString(obj) || _checkComment(obj)) {
+                        continue;
+                    }
                     var tokenNode = new TokenNode(startLine, obj.start, obj.end, token, ifPre ? 1 : 2);
                     //插入顺序链表
                     nodes.push(self.tokenLists.insert(tokenNode));
                 }
             }
+        }
+
+        //检测是否处于多行字符串中
+        function _checkString(obj) {
+            var lineDec = self.editor.linesContext.getLineDec(startLine);
+            for (var i = 0; i < lineDec.length; i++) {
+                var dec = lineDec[i]
+                if (dec.token.indexOf('string') > -1 && dec.start <= obj.start && dec.end >= obj.end) {
+                    return true;
+                } else if (dec.start > obj.start) {
+                    break;
+                }
+            }
+            return false;
+        }
+
+        //检测是否处于多行注释中
+        function _checkComment(obj) {
+            var priLinDec = self.editor.linesContext.getPriorLineDecs(startLine);
+            for (var i = 0; i < priLinDec.length; i++) {
+                var dec = priLinDec[i];
+                if (dec.token.indexOf('comment') > -1 && dec.start <= obj.start && dec.end >= obj.end) {
+                    return true;
+                } else if (dec.start > obj.start) {
+                    break;
+                }
+            }
+            var wholeLineDec = self.editor.linesContext.getWholeLineDec(startLine);
+            if (wholeLineDec) {
+                return true;
+            }
+            return false;
         }
 
         function _matchToken() {
@@ -174,21 +209,27 @@ class FoldHightLight {
     }
     /**
      * 设置优先处理行[外部接口]
-     * @param {Nunber} starLine 优先处理的首行
-     * @param {Boolean} ifProcess 是否立刻处理
+     * @param {Nunber} startLine 优先处理的首行
      */
-    setPriorLine(starLine, ifProcess) {
+    setPriorLine(startLine) {
         clearTimeout(this.timer);
+        this.startLine = startLine;
         this.startTime = new Date().getTime();
         this.taskList.empty();
         this.addEndLine = 0;
-        this.endLine = starLine + this.editor.maxVisualLine;
+        this.endLine = startLine + this.editor.maxVisualLine;
         this.endLine = this.endLine > this.editor.linesContext.getLength() ? this.editor.linesContext.getLength() : this.endLine;
         this.tokenLists = new TokenLink();
-        for (var i = starLine; i <= this.endLine; i++) {
+        for (var i = startLine; i <= this.endLine; i++) {
             this.taskList.insert(i);
         }
         this.taskList.process();
+    }
+    /**
+     * 重新检测
+     */
+    recheckLine() {
+        this.setPriorLine(this.startLine);
     }
 }
 

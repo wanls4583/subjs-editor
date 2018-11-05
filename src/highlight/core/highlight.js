@@ -138,7 +138,10 @@ class Mode {
             this.taskList.empty();
             for (var i = firstLine; i <= endLine; i++) {
                 this.taskList.insert(i);
-            }!delayProcess && this.taskList.process();
+            }
+            if(!delayProcess) {
+                this.taskList.process();
+            }
         }
     }
     /**

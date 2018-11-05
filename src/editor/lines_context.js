@@ -279,6 +279,7 @@ class LinesContext {
             }
         }
         this.context[line - 1].priorLineDecs.push(decoration);
+        this._recheckFold(line);
     }
     /**
      * 删除优先级行内修饰
@@ -294,6 +295,7 @@ class LinesContext {
                 i--;
             }
         }
+        this._recheckFold(line);
     }
     /**
      * 获取高优先级行内的修饰
@@ -310,6 +312,7 @@ class LinesContext {
      */
     setWhoeLineDec(line, className) {
         this.context[line - 1].lineWholeDec = className;
+        this._recheckFold(line);
     }
     /**
      * 获取整行修饰
@@ -425,6 +428,20 @@ class LinesContext {
             }
         }
         return realLine;
+    }
+    /**
+     * 重新检测折叠
+     * @param  {Number} line 行号
+     */
+    _recheckFold(line) {
+        var self = this;
+        var foldProcessor = this.editor.highlighter.foldProcessor;
+        if (foldProcessor && foldProcessor.tokenLists.find(line) && !foldProcessor.taskList.find(line)) {
+            clearTimeout(this.foldTimer);
+            this.foldTimer = setTimeout(function() {
+                foldProcessor.recheckLine();
+            }, 100);
+        }
     }
 }
 
