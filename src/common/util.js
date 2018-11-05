@@ -270,7 +270,7 @@ class Util {
                 for (var m = 0; m < res.length; m++) {
                     var tmp = res[m];
                     //两个区域有交叉，或者结果区域不包含exclue区域，则丢弃
-                    if (!(start > tmp.end || end < tmp.start) && !(start > tmp.start && end < tmp.end)) {
+                    if (!(start > tmp.end || end < tmp.start) && !(start >= tmp.start && end <= tmp.end)) {
                         res.splice(m, 1);
                         m--;
                     }

@@ -22,7 +22,7 @@ class Mode {
         this.commentProcessor = commentRules && new CommentProcessor(editor, commentRules);
         this.foldProcessor = !ifHideFold && new FoldProcessor(editor);
         this.taskList = new TaskLink(100, function(line) {
-            if(!self.editor.linesContext.hasHighlight(line)){ //避免重复渲染
+            if (!self.editor.linesContext.hasHighlight(line)) { //避免重复渲染
                 self.updateLine(line);
             }
         });
@@ -50,9 +50,12 @@ class Mode {
             for (var j = 0; j < result.length; j++) {
                 var obj = result[j];
                 for (var m = 0; m < lineDecoration.length; m++) {
-                    if (!(obj.start > lineDecoration[m].end || obj.end < lineDecoration[m].start)) {
+                    if (obj.start <= lineDecoration[m].start && obj.end >= lineDecoration[m].end) {
                         lineDecoration.splice(m, 1);
                         m--;
+                    } else if (obj.start >= lineDecoration[m].start && obj.end <= lineDecoration[m].end) {
+                        result.splice(j, 1);
+                        j--;
                     }
                 }
             }
@@ -135,8 +138,7 @@ class Mode {
             this.taskList.empty();
             for (var i = firstLine; i <= endLine; i++) {
                 this.taskList.insert(i);
-            }
-            !delayProcess && this.taskList.process();
+            }!delayProcess && this.taskList.process();
         }
     }
     /**

@@ -9,9 +9,9 @@ class FoldHightLight {
         this.editor = editor;
         this.rules = {
             pre: /\{/g,
-            pre_exclude: [Util.excludeStrReg(/\{/)],
+            pre_exclude: /''|""|'\\\\'|"\\\\"|(?:[^\\]|^)(?:\\\\)*?('.*?[^\\](?:\\\\)*?')|(?:[^\\]|^)(?:\\\\)*?(".*?[^\\](?:\\\\)*?")/g,
             suffix: /\}/g,
-            suffix_exclude: [Util.excludeStrReg(/\}/)],
+            suffix_exclude: /''|""|'\\\\'|"\\\\"|(?:[^\\]|^)(?:\\\\)*?('.*?[^\\](?:\\\\)*?')|(?:[^\\]|^)(?:\\\\)*?(".*?[^\\](?:\\\\)*?")/g,
             token: 'fold'
         };
         this.taskList = new TaskLink(100, function(line) {
