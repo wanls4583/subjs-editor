@@ -254,7 +254,7 @@ class JsParser extends Parser {
             }
             var preToken = _getPreToken(1);
             var nextToken = _getNextToken(token);
-            if (startDeconstruction) { //解构表达式里有语句
+            if (token.value != '}' && startDeconstruction) { //解构表达式里有语句
                 _handleError(startDeconstruction.line, 'unexpected ' + _locate(startDeconstruction));
                 startDeconstruction = null;
                 return;
@@ -424,9 +424,11 @@ class JsParser extends Parser {
                     token = { //生成处理结果
                         type: CONST.RESULT_TYPE,
                         line: token.line,
-                        originToken: token
+                        originToken: token,
+                        resultType: 'deconstruction'
                     }
                     _handleIndentifier(token.line, token);
+                    return;
                 } else if (preToken == startObj) { //对象字面量结束
                     if (preToken == startObj) {
                         stack.pop();
@@ -651,7 +653,7 @@ class JsParser extends Parser {
                     return;
                 }
             } else if (token.value == 'from') {
-                if (!(preToken && preToken.type == CONST.IDENTIFIER_TYPE &&
+                if (!(preToken && (preToken.type == CONST.IDENTIFIER_TYPE || preToken.resultType == 'deconstruction') &&
                         nextToken && [CONST.SINGLE_QUOTATION_TYPE, CONST.DOUBLE_QUOTATION_TYPE].indexOf(nextToken.type) > -1)) {
                     _handleError(line, 'unexpected ' + _locate(token));
                     return;
