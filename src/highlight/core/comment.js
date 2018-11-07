@@ -43,7 +43,7 @@ class CommentHighLight {
                     var result = Util.execReg(reg, exclude, str);
                     for (var j = 0; j < result.length; j++) {
                         var obj = result[j];
-                        if(ifPre && _checkString(obj)) {
+                        if (ifPre && _checkString(obj)) {
                             continue;
                         }
                         var tokenNode = new TokenNode(startLine, obj.start, obj.end, token, ifPre ? 1 : 2, regIndex);
@@ -267,6 +267,7 @@ class CommentHighLight {
         for (var i = 0; i < recheckLines.length; i++) {
             this.taskList.insert(recheckLines[i]);
         }
+        return recheckLines;
     }
     onInsertAfter(startLine, endLine) {
         //先处理当前行
@@ -343,6 +344,7 @@ class CommentHighLight {
         for (var i = 0; i < recheckLines.length; i++) {
             this.taskList.insert(recheckLines[i]);
         }
+        return recheckLines;
     }
     /**
      * 删除行之后触发[外部接口]
@@ -368,7 +370,11 @@ class CommentHighLight {
      * @param  {Number} line 行号
      */
     recheckLine(line) {
-        this.onInsertBefore(line,line);
+        var lines = this.onInsertBefore(line, line);
+        this.onInsertAfter(line, line);
+        if (lines.length) {
+            this.setPriorLine(lines[lines.length - 1], true);
+        }
     }
 }
 

@@ -20,9 +20,13 @@ class Tokenizer {
         if (currentLine > this.editor.linesContext.getLength() || this.editor.linesContext.hasParsed(currentLine)) { //避免重复分析
             return;
         }
-        var text = this.editor.linesContext.getText(currentLine).replace(/^\s+/g, '');
+        var text = this.editor.linesContext.getText(currentLine);
         var start = 0;
         var tokens = [];
+        var spaces = text.match(/^\s+/g);
+        spaces = spaces && spaces[0].length || 0;
+        text = text.substr(spaces);
+        start += spaces;
         this.editor.linesContext.setError(currentLine, '');
         while (text.length) {
             var pass = false;
@@ -34,8 +38,12 @@ class Tokenizer {
                         type: this.rules[i].type,
                         start: start
                     });
-                    text = text.substr(match[0].length).replace(/^\s+/g, '');
+                    text = text.substr(match[0].length);
                     start += match[0].length;
+                    spaces = text.match(/^\s+/g);
+                    spaces = spaces && spaces[0].length || 0;
+                    text = text.substr(spaces);
+                    start += spaces;
                     pass = true;
                     break;
                 }
