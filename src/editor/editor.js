@@ -1143,8 +1143,9 @@ class Editor {
                                 space = Util.space(self.config.tabsize);
                             for (var i = startPos.line; i <= endPos.line; i++) {
                                 if (!e.shiftKey) { //想后移动
-                                    self.linesContext.getDom(i).find('.code').prepend(space);
                                     self.linesContext.setText(i, space + self.linesContext.getText(i));
+                                    self.highlighter.updateLine(i);
+                                    self.cursorPos.column += space.length;
                                 } else { //像前移动
                                     _shiftTab(i);
                                 }
@@ -1168,15 +1169,15 @@ class Editor {
                         }
                         break;
                     default:
+                        var ts = 0
                         if (preCode > 222 && e.keyCode == 16) { //中文输入后shift延迟较大
-                            setTimeout(function() {
-                                _insertContent();
-                            }, 150);
-                        } else {
-                            setTimeout(function() {
-                                _insertContent();
-                            }, 0)
+                            ts = 150;
+                        } else if(preCode > 222){ //中文输入
+                            ts = 50;
                         }
+                        setTimeout(function() {
+                            _insertContent();
+                        }, ts);
                 }
             }
 
@@ -1191,30 +1192,22 @@ class Editor {
             }
 
             function _shiftTab(line) {
-                var hl = self.linesContext.getDom(line).find('.code').html();
+                var hl = self.linesContext.getText(line);
+                var length = 0;
                 if (hl.indexOf('    ') == 0) {
-                    self.linesContext.getDom(line).find('.code').html(hl.substr(4));
-                    self.linesContext.setText(line, self.linesContext.getText(line).substr(4));
-                    if (line == self.cursorPos.line) {
-                        self.cursorPos.column -= 4;
-                    }
+                    length = 4;
                 } else if (hl.indexOf('   ') == 0) {
-                    self.linesContext.getDom(line).find('.code').html(hl.substr(3));
-                    self.linesContext.setText(line, self.linesContext.getText(line).substr(3));
-                    if (line == self.cursorPos.line) {
-                        self.cursorPos.column -= 3;
-                    }
+                    length = 3;
                 } else if (hl.indexOf('  ') == 0) {
-                    self.linesContext.getDom(line).find('.code').html(hl.substr(2));
-                    self.linesContext.setText(line, self.linesContext.getText(line).substr(2));
-                    if (line == self.cursorPos.line) {
-                        self.cursorPos.column -= 2;
-                    }
+                    length = 2;
                 } else if (hl.indexOf(' ') == 0) {
-                    self.linesContext.getDom(line).find('.code').html(hl.substr(1));
-                    self.linesContext.setText(line, self.linesContext.getText(line).substr(1));
+                    length = 1;
+                }
+                if(length) {
+                    self.linesContext.setText(line, hl.substr(length));
+                    self.highlighter.updateLine(line);
                     if (line == self.cursorPos.line) {
-                        self.cursorPos.column -= 1;
+                        self.cursorPos.column -= length;
                     }
                 }
             }
