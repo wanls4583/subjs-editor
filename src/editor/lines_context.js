@@ -113,15 +113,19 @@ class LinesContext {
         }
         return this.context[line - 1].htmlDom;
     }
-    //更新dom
-    updateDom(line) {
+    /**
+     * 更新dom
+     * @param  {Number} line  行号
+     * @param  {Boolean} force 是否强制更新
+     */
+    updateDom(line, force) {
         var $dom = this.context[line - 1].htmlDom;
         $dom && ($dom.hasUpdate = false);
         //只有挂载到页面的元素才真正更新
         if ($dom && $dom[0].isConnected) {
             $dom.find('.code').html(this._engine(this.context[line - 1].content, this.context[line - 1].lineDecs, this.context[line - 1].priorLineDecs, this.context[line - 1].lineWholeDec));
             //设置更新标识
-            if (!$dom.hasUpdate) {
+            if (!$dom.hasUpdate || force) {
                 $dom.hasUpdate = true;
             }
             //折叠省略号

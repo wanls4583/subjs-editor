@@ -502,7 +502,7 @@ class Editor {
             } else {
                 $dom.removeClass('fold_arrow_close').removeClass('fold_arrow_open').find('.num').html(lineNum);
             }
-            if(error) {
+            if (error) {
                 $dom.find('.icon_tip').addClass('icon_error').siblings('.tip_txt').html(error);
             } else {
                 $dom.find('.icon_tip').removeClass('icon_error').siblings('.tip_txt').html('');
@@ -1131,22 +1131,16 @@ class Editor {
                             }
                         }
                         break;
-                        // case 13: //换行
-                        // case 108: //数字键换行
-                        //     break;
                     case 9: //tab
                         e.preventDefault();
                         //选中区域全体移动
                         if (self.selection.startPos) {
                             var startPos = self.selection.startPos,
-                                endPos = self.selection.endPos,
-                                space = Util.space(self.config.tabsize);
+                                endPos = self.selection.endPos;
                             for (var i = startPos.line; i <= endPos.line; i++) {
-                                if (!e.shiftKey) { //想后移动
-                                    self.linesContext.setText(i, space + self.linesContext.getText(i));
-                                    self.highlighter.updateLine(i);
-                                    self.cursorPos.column += space.length;
-                                } else { //像前移动
+                                if (!e.shiftKey) { //向后移动
+                                    _tab(i);
+                                } else { //向前移动
                                     _shiftTab(i);
                                 }
                             }
@@ -1161,8 +1155,7 @@ class Editor {
                             }
                         } else {
                             if (!e.shiftKey) {
-                                var val = Util.space(self.config.tabsize);
-                                self.insertContent(val);
+                                _tab(self.cursorPos.line);
                             } else {
                                 _shiftTab(self.cursorPos.line)
                             }
@@ -1172,7 +1165,7 @@ class Editor {
                         var ts = 0
                         if (preCode > 222 && e.keyCode == 16) { //中文输入后shift延迟较大
                             ts = 150;
-                        } else if(preCode > 222){ //中文输入
+                        } else if (preCode > 222) { //中文输入
                             ts = 50;
                         }
                         setTimeout(function() {
@@ -1190,27 +1183,51 @@ class Editor {
                     self.insertContent(val);
                 }
             }
-
+            //向后移动
+            function _tab(line) {
+                var tabsize = self.config.tabsize;
+                self.linesContext.setText(line, Util.space(tabsize) + self.linesContext.getText(line));
+                _moveLineDec(line, tabsize);
+                self.linesContext.getLineDec(line).unshift({ token: 'indent', start: 0, end: 3 });
+                self.linesContext.updateDom(line, true);
+                self.cursorPos.column += tabsize;
+            }
+            //向前移动
             function _shiftTab(line) {
-                var hl = self.linesContext.getText(line);
-                var length = 0;
-                if (hl.indexOf('    ') == 0) {
-                    length = 4;
-                } else if (hl.indexOf('   ') == 0) {
-                    length = 3;
-                } else if (hl.indexOf('  ') == 0) {
-                    length = 2;
-                } else if (hl.indexOf(' ') == 0) {
-                    length = 1;
-                }
-                if(length) {
-                    self.linesContext.setText(line, hl.substr(length));
-                    self.highlighter.updateLine(line);
+                var text = self.linesContext.getText(line);
+                var length = text.match(/^\s+/);
+                length = length && length[0].length || 0;
+                length = length > self.config.tabsize ? self.config.tabsize : length;
+                if (length) {
+                    self.linesContext.setText(line, text.substr(length));
+                    _moveLineDec(line, -length);
+                    self.linesContext.updateDom(line, true);
                     if (line == self.cursorPos.line) {
                         self.cursorPos.column -= length;
                     }
                 }
             }
+            //增加空格或减少空格后，需要修改高亮修饰的起始和结束位置
+            function _moveLineDec(line, tabsize) {
+                var lineDec = self.linesContext.getLineDec(line);
+                var priLineDec = self.linesContext.getPriorLineDecs(line);
+                for (var i = 0; i < lineDec.length; i++) {
+                    lineDec[i].start += tabsize;
+                    lineDec[i].end += tabsize;
+                    if(lineDec[i].start < 0 && lineDec[i].token == 'indent') {
+                        lineDec.splice(i,1);
+                        i--;
+                    }
+                }
+                for (var i = 0; i < priLineDec.length; i++) {
+                    priLineDec[i].start += tabsize;
+                    priLineDec[i].end += tabsize;
+                    if(priLineDec[i].start < 0) {
+                        priLineDec[i].start = 0;
+                    }
+                }
+            }
+
             preCode = e.keyCode;
             self.updateCursorPos();
             self.updateScroll(true);
