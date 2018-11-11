@@ -440,7 +440,7 @@ class JsParser extends Parser {
         var pre2Token = this._getPreToken(2);
         var nextToken = this._getNextToken(token);
         if (token.value == ']') {
-            if(!(preToken && preToken.value == ']' || pre2Token && pre2Token.value == ']')) {
+            if (!(preToken && preToken.value == ']' || pre2Token && pre2Token.value == ']')) {
                 this._handleError(line, 'unmatched ' + this._locate(token));
                 return;
             }
@@ -464,24 +464,23 @@ class JsParser extends Parser {
     }
     //处理单目运算符
     _handleUnaryOp(line, token) {
-        var preToken = this._getPreToken(1);
+        var preToken = this._getPreToken(token);
         var nextToken = this._getNextToken(token);
+        //++,--必须跟着标识符
         if ((token.value == '++' || token.value == '--')) {
-            if (!preToken || preToken.value == ';' && (!nextToken || nextToken.type != CONST.IDENTIFIER_TYPE)) { //;++1
+            if (!(preToken && preToken.type == CONST.IDENTIFIER_TYPE ||
+                    nextToken && nextToken.type == CONST.IDENTIFIER_TYPE)) {
                 this._handleError(line, 'expected identifier after ' + this._locate(token));
                 return;
-            } else {
-                preToken = this._getPreToken(token);
-                if (preToken && preToken.type == CONST.IDENTIFIER_TYPE) {
-                    this.stack.pop();
-                    token = { //生成处理结果
-                        type: CONST.RESULT_TYPE,
-                        line: token.line,
-                        originToken: token
-                    }
-                    this._handleIndentifier(token.line, token);
-                    return;
+            } else if (preToken && preToken.type == CONST.IDENTIFIER_TYPE) { //后缀运算符
+                this.stack.pop();
+                token = { //生成处理结果
+                    line: token.line,
+                    type: CONST.RESULT_TYPE,
+                    originToken: token
                 }
+                this, _handleIndentifier(line, token);
+                return;
             }
         }
         this.stack.push(token);
@@ -724,9 +723,21 @@ class JsParser extends Parser {
             }
             if ([CONST.BINARY_OP_TYPE].indexOf(preToken.type) > -1) { //标识符之前是单目或双目运算符
                 var skip = false;
-                //如果标识符是函数或者前缀表达式或者后面运算符优先级较高，需要等待执行结果
-                if ((token.type == CONST.IDENTIFIER_TYPE && nextToken && (nextToken.value == '(') || ['++', '--'].indexOf(token.value) > -1) ||
-                    (nextToken && nextToken.type == CONST.BINARY_OP_TYPE && (preToken.value.substr(-1) == '=' || ['||', '&&'].indexOf(preToken.value) > -1))) {
+                //标示符号前后不能同时有++,--
+                if(['++','--'].indexOf(preToken.value) > -1 && nextToken && ['++','--'].indexOf(nextToken.value) > -1) {
+                    this._handleError(nextToken.line, 'unexpected '+this._locate(nextToken));
+                    this.skipToken = 1;
+                    return;
+                }
+                //如果标识符是函数，需要等待执行结果
+                if (token.type == CONST.IDENTIFIER_TYPE && nextToken && nextToken.value == '(') {
+                    skip = true;
+                    //如果有后缀运算符，需要等待执行结果
+                } else if (nextToken && ['++', '--'].indexOf(nextToken.value) > -1) {
+                    skip = true;
+                    //如果后面运算符优先级较高，需要等待执行结果
+                } else if (nextToken && nextToken.type == CONST.BINARY_OP_TYPE &&
+                    (['&&', '||', '>', '<'].indexOf(preToken.value) > -1 || preToken.value.indexOf('=') > -1)) {
                     skip = true;
                 }
                 if (!skip) {
