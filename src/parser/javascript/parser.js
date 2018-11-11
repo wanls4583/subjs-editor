@@ -466,11 +466,18 @@ class JsParser extends Parser {
     _handleUnaryOp(line, token) {
         var preToken = this._getPreToken(token);
         var nextToken = this._getNextToken(token);
-        //++,--必须跟着标识符
+        var next2Token = nextToken && this._getNextToken(nextToken);
         if ((token.value == '++' || token.value == '--')) {
+            //++,--必须跟着标识符
             if (!(preToken && preToken.type == CONST.IDENTIFIER_TYPE ||
                     nextToken && nextToken.type == CONST.IDENTIFIER_TYPE)) {
                 this._handleError(line, 'expected identifier after ' + this._locate(token));
+                return;
+                //标示符号前后不能同时有++,--
+            } else if (nextToken && nextToken.type == CONST.IDENTIFIER_TYPE &&
+                next2Token && ['++', '--'].indexOf(next2Token) > -1) {
+                this._handleError(nextToken.line, 'unexpected ' + this._locate(nextToken));
+                this.skipToken = 2;
                 return;
             } else if (preToken && preToken.type == CONST.IDENTIFIER_TYPE) { //后缀运算符
                 this.stack.pop();
@@ -723,12 +730,6 @@ class JsParser extends Parser {
             }
             if ([CONST.BINARY_OP_TYPE].indexOf(preToken.type) > -1) { //标识符之前是单目或双目运算符
                 var skip = false;
-                //标示符号前后不能同时有++,--
-                if(['++','--'].indexOf(preToken.value) > -1 && nextToken && ['++','--'].indexOf(nextToken.value) > -1) {
-                    this._handleError(nextToken.line, 'unexpected '+this._locate(nextToken));
-                    this.skipToken = 1;
-                    return;
-                }
                 //如果标识符是函数，需要等待执行结果
                 if (token.type == CONST.IDENTIFIER_TYPE && nextToken && nextToken.value == '(') {
                     skip = true;
