@@ -494,18 +494,25 @@ class JsParser extends Parser {
     }
     //处理双目运算符
     _handBinaryOp(line, token) {
-        if (this.startStrToken || this.startCommentToken || this.startRegToken) {
-            if (this.startRegToken && token.value == '/') {
-                this.startRegToken = null;
-                this.stack.pop();
-                token = {
-                    type: CONST.RESULT_TYPE,
-                    line: token.line,
-                    originToken: token,
-                    resultType: 'reg'
-                }
-                this._handleIndentifier(line, token);
+        if (this.startRegToken && token.value == '/') {
+            var preToken = this._getPreToken(token);
+            var sum = 0;
+            while (preToken && preToken.value == '\\') {
+                preToken = this._getPreToken(preToken);
+                sum++;
             }
+            if (sum % 2 == 1) { //排除转义符
+                return;
+            }
+            this.startRegToken = null;
+            this.stack.pop();
+            token = {
+                type: CONST.RESULT_TYPE,
+                line: token.line,
+                originToken: token,
+                resultType: 'reg'
+            }
+            this._handleIndentifier(line, token);
             return;
         }
         var preToken = this._getPreToken(1);
@@ -515,11 +522,17 @@ class JsParser extends Parser {
             if (['+', '-', '/'].indexOf(token.value) == -1) { //+,-运算符也可以当作单目运算符
                 this._handleError(token.line, 'expected left operand before ' + this._locate(token));
                 return;
-            } else if (token.value == '/') {
+            }
+            if (token.value == '/') {
                 this.startRegToken = token;
             } else { //前缀单目运算符不入栈
                 return;
             }
+        }
+        //双目运算符必须要有右运算符
+        if (!nextToken || [CONST.IDENTIFIER_TYPE, CONST.CONSTANT_TYPE, CONST.RESULT_TYPE].indexOf(nextToken.type) == -1) {
+            this._handleError(token.line, 'expected right operand before ' + this._locate(token));
+            return;
         }
         if (token.value == '.') {
             if (!preToken || [CONST.IDENTIFIER_TYPE, CONST.RESULT_TYPE].indexOf(preToken.type) == -1) { //.符号前必须是标识符或表达式结果
@@ -533,8 +546,7 @@ class JsParser extends Parser {
             if (preToken && preToken.value == 'exports') { //exports 关键字转换成标识符
                 preToken.type = CONST.IDENTIFIER_TYPE;
             }
-        }
-        if (token.value == ',') {
+        }else if (token.value == ',') {
             this._handleEnd(line);
             return;
         }
