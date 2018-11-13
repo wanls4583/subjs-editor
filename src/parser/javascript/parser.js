@@ -241,9 +241,15 @@ class JsParser extends Parser {
             this.startRegToken = null;
             return;
         }
-        if (preToken && ifOver) { //结构语句未结束
-            if (['if', 'else if', 'for', 'while'].indexOf(preToken.value) > -1) {
+        if (preToken && ifOver) { //非正常结束
+            //以下关键字后面必须有表达式
+            if (['try', 'catch', 'if', 'else if', '?', ':', 'for', 'while'].indexOf(preToken.value) > -1) {
                 this._handleError(line, 'expected statement after ' + this._locate(preToken));
+                return;
+                //双目运算符必须要有右运算符
+            } else if (preToken.type == CONST.BINARY_OP_TYPE) {
+                this._handleError(line, 'expected right operand after ' + this._locate(preToken));
+                return;
             }
         }
         var tokens = this.editor.linesContext.getTokens(++line);
@@ -264,9 +270,8 @@ class JsParser extends Parser {
             }
         }
         if (preToken && ifOver) {
-            if (['(', '{', '['].indexOf(preToken.value) > -1) {
+            if (['(', '{', '['].indexOf(preToken.value) > -1) { //边界符未配对
                 this._handleError(preToken.line, 'unmatched ' + this._locate(preToken));
-                return;
             }
         }
     }
@@ -305,10 +310,10 @@ class JsParser extends Parser {
                 this.stack.push(token);
             }
             //对象字面量声明内有语句
-        } else if (this.startObjTokens.indexOf(preToken) > -1 && token.value == ';') {
+        } else if (this.startObjTokens.indexOf(preToken) > -1) {
             this._handleError(preToken.line, 'unexpected ' + this._locate(token));
             //解构表达式里有语句
-        } else if (this.startDeconstruction.indexOf(preToken) > -1 && token.value == ';') {
+        } else if (this.startDeconstruction.indexOf(preToken) > -1) {
             this._handleError(this.startDeconstruction.line, 'unexpected ' + this._locate(token));
         }
     }
@@ -360,7 +365,7 @@ class JsParser extends Parser {
                 originToken: token
             }
             preToken = this._getPreToken(1);
-            //如果是流程控制关键字，直接返回
+            //如果是以下流程控制关键字，直接返回
             if (preToken && ['if', 'else if', 'catch', '?', 'switch'].indexOf(preToken.value) > -1) {
                 return;
             }
@@ -403,7 +408,7 @@ class JsParser extends Parser {
                 this.startClass = token;
             }
         } else {
-            this._handleSemicolon(line, token);
+            this._handleEnd(line);
             preToken = this._getPreToken(1);
             var startObj = this.startObjTokens[this.startObjTokens.length - 1];
             if (preToken == this.startDeconstruction) { //解构表达式结束
@@ -428,7 +433,7 @@ class JsParser extends Parser {
                 this._handleIndentifier(token.line, token);
             } else if (preToken && preToken.value == '{') { //语句块结束
                 this.stack.pop();
-                this._handleSemicolon(line, token);
+                this._handleEnd(line);
             } else {
                 this._handleError(line, 'unmatched ' + this._locate(token));
             }
@@ -530,7 +535,7 @@ class JsParser extends Parser {
             }
         }
         //双目运算符必须要有右运算符
-        if (!nextToken || [CONST.IDENTIFIER_TYPE, CONST.CONSTANT_TYPE, CONST.RESULT_TYPE].indexOf(nextToken.type) == -1) {
+        if (nextToken && [CONST.IDENTIFIER_TYPE, CONST.CONSTANT_TYPE, CONST.RESULT_TYPE].indexOf(nextToken.type) == -1) {
             this._handleError(token.line, 'expected right operand before ' + this._locate(token));
             return;
         }
@@ -543,10 +548,7 @@ class JsParser extends Parser {
                 this._handleError(line, 'expected identifier after ' + this._locate(token));
                 return;
             }
-            if (preToken && preToken.value == 'exports') { //exports 关键字转换成标识符
-                preToken.type = CONST.IDENTIFIER_TYPE;
-            }
-        }else if (token.value == ',') {
+        } else if (token.value == ',') {
             this._handleEnd(line);
             return;
         }
@@ -559,55 +561,45 @@ class JsParser extends Parser {
         var pre3Token = this._getPreToken(3);
         var nextToken = this._getNextToken(token);
         if (token.value == '?') {
+            //?之后必须要有表达式结果
             if (!preToken || [CONST.IDENTIFIER_TYPE, CONST.RESULT_TYPE, CONST.CONSTANT_TYPE].indexOf(preToken.type) == -1) {
                 this._handleError(line, 'expected identifier before ' + this._locate(token));
                 return;
             }
-            if (!nextToken) {
-                this._handleError(line, 'expected statement after ' + this._locate(token));
-                return;
-            }
         } else if (token.value == 'case') {
-            this._handleSemicolon(line, token); //清除之前的 case
+            this._handleEnd(line); //清除之前的 case
             preToken = this._getPreToken(1);
             pre2Token = this._getPreToken(2);
+            //case 之前必须是 switch{
             if (!(preToken && preToken.value == '{' && pre2Token && pre2Token.value == 'switch')) {
                 this._handleError(line, 'unexpected ' + this._locate(token));
-                return;
-            }
-            if (!nextToken) {
-                this._handleError(line, 'expected statement after ' + this._locate(token));
                 return;
             }
         } else if (token.value == ':') {
             if (!preToken || !pre2Token) {
                 this._handleError(token.line, 'unexpected ' + this._locate(token));
                 return;
+                //':'之前必须是对象或者 switch 语句或者三目运算符
+            } else if (['{', 'case'].indexOf(pre2Token.value) == -1 && preToken.value != '?') {
+                this._handleError(line, 'unexpected ' + this._locate(token));
+                return;
             } else if (preToken.value == 'default') {
+                //default 之前必须是 switch{
                 if (pre3Token && pre3Token.value != 'switch') {
                     this._handleError(preToken.line, 'unexpected ' + this._locate(preToken));
                     return;
                 }
-            } else if (['{', 'case'].indexOf(pre2Token.value) == -1 && preToken.value != '?') {
-                this._handleError(line, 'unexpected ' + this._locate(token));
-                return;
+                //':'之前是对象,但是key不合法
             } else if (pre2Token.value == '{' && !(preToken.type == CONST.IDENTIFIER_TYPE || preToken.resultType == CONST.STRING_TYPE)) {
                 this._handleError(line, 'expected identifier before ' + this._locate(token));
                 return;
+                //':'之前是switch语句,但是条件表达式不合法
             } else if (pre2Token.value == 'case' && [CONST.IDENTIFIER_TYPE, CONST.CONSTANT_TYPE, CONST.RESULT_TYPE].indexOf(preToken.type) == -1) { //case 和 ? 语句后必须是表达式结果
                 this._handleError(line, 'unexpected ' + this._locate(token));
                 return;
-            } else if (pre2Token.value == '{') {
-                if (pre3Token && pre3Token.value == 'switch' && pre2Token.value != 'case') {
-                    this._handleError(line, 'unexpected ' + this._locate(token));
-                    return;
-                } else {
-                    this.startObjTokens.push(pre2Token);
-                }
-            }
-            if (!nextToken) {
-                this._handleError(line, 'expected statement after ' + this._locate(token));
-                return;
+                //对象字面量
+            } else if (pre2Token.value == '{' && pre3Token && pre3Token.value != 'switch') {
+                this.startObjTokens.push(pre2Token);
             }
         }
         this.stack.push(token);
