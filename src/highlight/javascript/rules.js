@@ -54,5 +54,6 @@ export const rules = [{
     token: 'string'
 }, {
     reg: /\/\/[^\n]*/g,
+    exclude: [/\/(?:\\\/|[^\/])*\//g],
     token: 'comment'
 }]
