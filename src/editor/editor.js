@@ -1134,32 +1134,32 @@ class Editor {
                     case 9: //tab
                         e.preventDefault();
                         //选中区域全体移动
-                        if (self.selection.startPos) {
-                            var startPos = self.selection.startPos,
-                                endPos = self.selection.endPos;
-                            for (var i = startPos.line; i <= endPos.line; i++) {
-                                if (!e.shiftKey) { //向后移动
-                                    _tab(i);
-                                } else { //向前移动
-                                    _shiftTab(i);
-                                }
-                            }
-                            if (!e.shiftKey) {
-                                startPos.column += 4;
-                                endPos.column += 4;
-                                self.renderSelectBg(startPos, endPos);
-                            } else {
-                                startPos.column = startPos.column - 4 >= 0 ? startPos.column - 4 : 0;
-                                endPos.column = endPos.column - 4 >= 0 ? endPos.column - 4 : 0;
-                                self.renderSelectBg(startPos, endPos);
-                            }
-                        } else {
-                            if (!e.shiftKey) {
-                                _tab(self.cursorPos.line);
-                            } else {
-                                _shiftTab(self.cursorPos.line)
-                            }
-                        }
+                        // if (self.selection.startPos) {
+                        //     var startPos = self.selection.startPos,
+                        //         endPos = self.selection.endPos;
+                        //     for (var i = startPos.line; i <= endPos.line; i++) {
+                        //         if (!e.shiftKey) { //向后移动
+                        //             _tab(i);
+                        //         } else { //向前移动
+                        //             _shiftTab(i);
+                        //         }
+                        //     }
+                        //     if (!e.shiftKey) {
+                        //         startPos.column += 4;
+                        //         endPos.column += 4;
+                        //         self.renderSelectBg(startPos, endPos);
+                        //     } else {
+                        //         startPos.column = startPos.column - 4 >= 0 ? startPos.column - 4 : 0;
+                        //         endPos.column = endPos.column - 4 >= 0 ? endPos.column - 4 : 0;
+                        //         self.renderSelectBg(startPos, endPos);
+                        //     }
+                        // } else {
+                        //     if (!e.shiftKey) {
+                        //         _tab(self.cursorPos.line);
+                        //     } else {
+                        //         _shiftTab(self.cursorPos.line)
+                        //     }
+                        // }
                         break;
                     default:
                         var ts = 0

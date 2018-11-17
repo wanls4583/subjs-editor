@@ -26,11 +26,6 @@ export default [{
         type: CONST.KEYWORD_TYPE
     },
     {
-        reg: /^catch\b/,
-        value: 'catch',
-        type: CONST.KEYWORD_TYPE
-    },
-    {
         reg: /^char\b/,
         value: 'char',
         type: CONST.KEYWORD_TYPE
@@ -66,23 +61,8 @@ export default [{
         type: CONST.KEYWORD_TYPE
     },
     {
-        reg: /^do\b/,
-        value: 'do',
-        type: CONST.KEYWORD_TYPE
-    },
-    {
         reg: /^double\b/,
         value: 'double',
-        type: CONST.KEYWORD_TYPE
-    },
-    {
-        reg: /^else\s*?if\b/,
-        value: 'else if',
-        type: CONST.KEYWORD_TYPE
-    },
-    {
-        reg: /^else\b/,
-        value: 'else',
         type: CONST.KEYWORD_TYPE
     },
     {
@@ -131,11 +111,6 @@ export default [{
         type: CONST.KEYWORD_TYPE
     },
     {
-        reg: /^for\b/,
-        value: 'for',
-        type: CONST.KEYWORD_TYPE
-    },
-    {
         reg: /^function\b/,
         value: 'function',
         type: CONST.KEYWORD_TYPE
@@ -143,11 +118,6 @@ export default [{
     {
         reg: /^goto\b/,
         value: 'goto',
-        type: CONST.KEYWORD_TYPE
-    },
-    {
-        reg: /^if\b/,
-        value: 'if',
         type: CONST.KEYWORD_TYPE
     },
     {
@@ -241,11 +211,6 @@ export default [{
         type: CONST.KEYWORD_TYPE
     },
     {
-        reg: /^switch\b/,
-        value: 'switch',
-        type: CONST.KEYWORD_TYPE
-    },
-    {
         reg: /^synchronized\b/,
         value: 'synchronized',
         type: CONST.KEYWORD_TYPE
@@ -276,11 +241,6 @@ export default [{
         type: CONST.CONSTANT_TYPE
     },
     {
-        reg: /^try\b/,
-        value: 'try',
-        type: CONST.KEYWORD_TYPE
-    },
-    {
         reg: /^var\b/,
         value: 'var',
         type: CONST.KEYWORD_TYPE
@@ -296,18 +256,58 @@ export default [{
         type: CONST.KEYWORD_TYPE
     },
     {
+        reg: /^yield\b/,
+        value: 'yield',
+        type: CONST.KEYWORD_TYPE
+    },
+    {
         reg: /^while\b/,
         value: 'while',
-        type: CONST.KEYWORD_TYPE
+        type: CONST.PROCESS_TYPE
     },
     {
         reg: /^with\b/,
         value: 'with',
-        type: CONST.KEYWORD_TYPE
+        type: CONST.PROCESS_TYPE
     },
     {
-        reg: /^yield\b/,
-        value: 'yield',
+        reg: /^try\b/,
+        value: 'try',
+        type: CONST.PROCESS_TYPE
+    },
+        {
+        reg: /^do\b/,
+        value: 'do',
+        type: CONST.PROCESS_TYPE
+    },
+        {
+        reg: /^else\s*?if\b/,
+        value: 'else if',
+        type: CONST.PROCESS_TYPE
+    },
+    {
+        reg: /^else\b/,
+        value: 'else',
+        type: CONST.PROCESS_TYPE
+    },
+    {
+        reg: /^for\b/,
+        value: 'for',
+        type: CONST.PROCESS_TYPE
+    },
+    {
+        reg: /^if\b/,
+        value: 'if',
+        type: CONST.PROCESS_TYPE
+    },
+    {
+        reg: /^switch\b/,
+        value: 'switch',
+        type: CONST.PROCESS_TYPE
+    },
+    {
+        reg: /^catch\b/,
+        value: 'catch',
         type: CONST.KEYWORD_TYPE
     },
     {
