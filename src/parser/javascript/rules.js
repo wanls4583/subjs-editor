@@ -485,6 +485,11 @@ export default [{
         value: '~',
         type: CONST.UNARY_OP_TYPE
     },
+        {
+        reg: /^@/, //类属性修饰器
+        value: '@',
+        type: CONST.UNARY_OP_TYPE
+    },
     {
         reg: /^\*/,
         value: '*',
