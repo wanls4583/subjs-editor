@@ -16,7 +16,7 @@ const CONST = {
 	DOUBLE_QUOTATION_TYPE: 10, //'"'
 	START_COMMENT_TYPE: 11, //'/*'
 	END_COMMENT_TYPE: 12, //'*/'
-	COMMENT_TYPE: 13, //'//'
+	LINE_COMMENT_TYPE: 13, //'//'
 	UNARY_OP_TYPE: 14, //单目运算符
 	BINARY_OP_TYPE: 15, //双目运算符
 	TERNARY_OP_TYPE: 16, //三目运算符

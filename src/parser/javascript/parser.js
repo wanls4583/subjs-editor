@@ -31,6 +31,7 @@ class JsParser extends Parser {
         this.stack = Util.copyObj(this.stack);
         this.startObjTokens = this.stack.startObjTokens || []; //对象字面量
         this.startStrToken = this.stack.startStrToken; //字符串开始
+        this.startLineComent = this.stack.startLineComent; //单行注释开始
         this.startCommentToken = this.stack.startCommentToken; //多行注释开始
         this.startRegToken = this.stack.startRegToken; //正则字面量
         this.startDeconstruction = this.stack.startDeconstruction; //es6解构表达式
@@ -57,7 +58,8 @@ class JsParser extends Parser {
                     var token = tokens[i];
                     token.line = line;
                     this.skipToken = 0;
-                    if (this._handleBefore(token)) {
+                    token = this._handleBefore(token);
+                    if (!token) {
                         continue;
                     }
                     switch (token.type) {
@@ -102,6 +104,9 @@ class JsParser extends Parser {
                         case CONST.ESCAPE_TYPE:
                             this._handleEscape(line, token);
                             break;
+                        case CONST.LINE_COMMENT_TYPE:
+                            this._handleLineComment(line, token);
+                            break;
                         case CONST.START_COMMENT_TYPE:
                         case CONST.END_COMMENT_TYPE:
                             this._handleComment(line, token);
@@ -131,19 +136,61 @@ class JsParser extends Parser {
      * @return {Boolean}       是否跳过token
      */
     _handleBefore(token) {
-        if (this.startStrToken) {
-            if (token.value != this.startStrToken.value) {
-                return true;
+        if (token.value == '*/') {
+            if (!this.startCommentToken) { //分解成*,/
+                var tokens = this.editor.linesContext.getTokens(token.line);
+                var index = tokens.indexOf(token);
+                token = {
+                    line: token.line,
+                    value: '*',
+                    start: token.start,
+                    type: CONST.BINARY_OP_TYPE
+                }
+                tokens.splice(index, token);
+                token = {
+                    line: token.line,
+                    value: '/',
+                    start: token.start + 1,
+                    type: CONST.BINARY_OP_TYPE
+                }
+                tokens.splice(index + 1, token);
             }
-        } else if (this.startCommentToken) {
-            if (token.type != CONST.END_COMMENT_TYPE) {
-                return true;
-            }
-        } else if (this.startRegToken) {
-            if (token.value != '/') {
-                return true;
+        } else if (token.value == '//') {
+            if (this.startRegToken) { //分解成/,/
+                var tokens = this.editor.linesContext.getTokens(token.line);
+                var index = tokens.indexOf(token);
+                token = {
+                    line: token.line,
+                    value: '/',
+                    start: token.start,
+                    type: CONST.BINARY_OP_TYPE
+                }
+                tokens.splice(index, token);
+                token = {
+                    line: token.line,
+                    value: '/',
+                    start: token.start + 1,
+                    type: CONST.BINARY_OP_TYPE
+                }
+                tokens.splice(index + 1, token);
             }
         }
+        if (this.startStrToken) { //字符串
+            if (token.value != this.startStrToken.value) {
+                return false;
+            }
+        } else if (this.startLineComent) { //单行注释
+            return false;
+        } else if (this.startCommentToken) { //多行注释
+            if (token.type != CONST.END_COMMENT_TYPE) {
+                return false;
+            }
+        } else if (this.startRegToken) { //正则表达式
+            if (token.value != '/') {
+                return false;
+            }
+        }
+        return token;
     }
     //获取前一个token
     _getPreToken(distance) {
@@ -193,7 +240,7 @@ class JsParser extends Parser {
             }
         } else { //抛出stack中的对象，直到遇到边界符号
             var preToken = this._getPreToken(1);
-            if(preToken && !this._getNextToken(preToken)) { //已经分析结束了，不再抛出
+            if (preToken && !this._getNextToken(preToken)) { //已经分析结束了，不再抛出
                 return;
             }
             while (this.stack.length) {
@@ -223,6 +270,7 @@ class JsParser extends Parser {
             }
             arr.startStrToken = this.startStrToken;
             arr.startRegToken = this.startRegToken;
+            arr.startLineComent = this.startLineComent;
             arr.startCommentToken = this.startCommentToken;
             arr.startObjTokens = this.startObjTokens;
             arr.startClass = this.startClass;
@@ -248,16 +296,19 @@ class JsParser extends Parser {
             this.startRegToken = null;
             return;
         }
+        if (this.startLineComent) {
+            this._popUntil(this.startLineComent);
+        }
         if (preToken && ifOver) { //非正常结束
             //以下关键字后面必须有表达式
             if (['try', 'catch', 'if', 'else if', '?', ':', 'for', 'while'].indexOf(preToken.value) > -1) {
                 this._handleError(preToken.line, 'expected statement after ' + this._locate(preToken));
                 return;
-                //双目运算符必须要有右运算符
-            } else if (preToken.type == CONST.BINARY_OP_TYPE) {
+                //运算符必须要有右运算符
+            } else if ([CONST.UNARY_OP_TYPE, CONST.BINARY_OP_TYPE, CONST.TERNARY_OP_TYPE].indexOf(preToken.type) > -1) {
                 this._handleError(preToken.line, 'expected right operand after ' + this._locate(preToken));
                 return;
-            } else if ([CONST.KEYWORD_TYPE,CONST.PROCESS_TYPE].indexOf(preToken.type) > -1) {
+            } else if ([CONST.KEYWORD_TYPE, CONST.PROCESS_TYPE].indexOf(preToken.type) > -1) {
                 this._handleError(preToken.line, 'unexpected ' + this._locate(preToken));
                 return;
             }
@@ -443,7 +494,7 @@ class JsParser extends Parser {
                 this._handleIndentifier(token.line, token);
             } else if (preToken && preToken.value == '{') { //语句块结束
                 this.stack.pop();
-                this._handleEnd(line,false,token);
+                this._handleEnd(line, false, token);
             } else {
                 this._handleError(line, 'unmatched ' + this._locate(token));
             }
@@ -697,7 +748,7 @@ class JsParser extends Parser {
     _handleProcess(line, token) {
         var preToken = this._getPreToken(1);
         var nextToken = this._getNextToken(token);
-         if (['if', 'else if', 'else', 'while', 'for', 'catch', 'with', 'switch'].indexOf(token.value) > -1) {
+        if (['if', 'else if', 'else', 'while', 'for', 'catch', 'with', 'switch'].indexOf(token.value) > -1) {
             if (token.value == 'else') { //其后必须跟表达式或语句
                 if (!nextToken) {
                     this._handleError(line, 'expected statement after ' + this._locate(token));
@@ -731,7 +782,7 @@ class JsParser extends Parser {
                 this._handleError(line, 'expected \'try\' before ' + this._locate(token));
                 return;
             }
-        } 
+        }
         this.stack.push(token);
     }
     //处理标识符
@@ -812,7 +863,7 @@ class JsParser extends Parser {
         }
         if (preToken.value == ':' && pre2Token && pre2Token.value == '?') {
             //三目运算符结束
-            if (!(nextToken && nextToken.type == CONST.BINARY_OP_TYPE)) {
+            if (!(nextToken && nextToken.type == CONST.BINARY_OP_TYPE && ['++', '--'].indexOf(nextToken.value) == -1)) {
                 this.stack.splice(this.stack.length - 3, 3);
                 token = { //生成处理结果
                     type: CONST.RESULT_TYPE,
@@ -820,8 +871,8 @@ class JsParser extends Parser {
                     originToken: token.originToken || token
                 }
                 this._handleIndentifier(line, token);
+                return;
             }
-            return;
         }
         //检测对象字面量关键字
         if ((token.type == CONST.IDENTIFIER_TYPE || token.resultType == CONST.STRING_TYPE) && this.startObjTokens[this.startObjTokens.length - 1] == preToken) {
@@ -861,11 +912,14 @@ class JsParser extends Parser {
             }
         }
     }
+    //处理单行注释
+    _handleLineComment(line, token) {
+        if (!this.startLineComent) {
+            this.startLineComent = token;
+        }
+    }
     //处理多行注释
     _handleComment(line, token) {
-        if (this.startStrToken) {
-            return;
-        }
         if (token.value == '/*' && !this.startCommentToken) {
             this.startCommentToken = token;
         } else if (token.value == '*/') {

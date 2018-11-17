@@ -361,9 +361,9 @@ export default [{
         type: CONST.END_COMMENT_TYPE,
     },
     {
-        reg: /^\/\/[\s\S]*?$/,
+        reg: /^\/\//,
         value: '',
-        type: CONST.COMMENT_TYPE
+        type: CONST.LINE_COMMENT_TYPE
     },
     {
         reg: /^\+\+/,
