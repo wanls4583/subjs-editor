@@ -1,97 +1,142 @@
-@font-face {
-    font-family: "iconfont";
-    src: url('data:application/x-font-woff;charset=utf-8;base64,d09GRgABAAAAAASMAAsAAAAABvwAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAABHU1VCAAABCAAAADMAAABCsP6z7U9TLzIAAAE8AAAARAAAAFY9xEl1Y21hcAAAAYAAAABWAAABhmzx02pnbHlmAAAB2AAAAMMAAADgtzAsy2hlYWQAAAKcAAAALwAAADYTHC0taGhlYQAAAswAAAAcAAAAJAfeA4RobXR4AAAC6AAAAAwAAAAMDAAAAGxvY2EAAAL0AAAACAAAAAgAQgBwbWF4cAAAAvwAAAAfAAAAIAERADBuYW1lAAADHAAAAUUAAAJtPlT+fXBvc3QAAARkAAAAJwAAADu0ZLpfeJxjYGRgYOBikGPQYWB0cfMJYeBgYGGAAJAMY05meiJQDMoDyrGAaQ4gZoOIAgCKIwNPAHicY2BkYWCcwMDKwMHUyXSGgYGhH0IzvmYwYuRgYGBiYGVmwAoC0lxTGBye+z1vZm7438AQw9zA0AAUZgTJAQDtbgy2eJztkLERgDAMA99OSMExCAWzUFOxTIbNGEFxYAt099ZZdiVgAZI4RAa7MYYupRZ5Yo08x0+RG97OVnuHzyXTrYS7RuHXFnN/Nx9tTUazrU7wB6UgEJIAAHicPY5PDsFQGMTne596UamN9L2uJDSUNLFg0Yg/Z2DBWaSqXEHiFjYsegCH6EF6gOIhTDK/zCSzGDDwzPnCIerQ8AFqkGyRXlA0JB5SYIKpDWIZSC11pKMgEsgKyyqyL0935vvpQ2e7ncfx/M0dh/9FVpTWb2IorCSZHtJpsp+lBwAVY/CNB2BINKHMi7Hru8bNXkdSVen2goJujSjfGK2ckfM42p7H8Dy7bNOEJgL5Zi3OrluGqk/UV0osyytelBk3twB4nGNgZGBgAGKmnJi38fw2Xxm4WRhA4Pq/khkI+v9VFgZmbSCXg4EJJAoAO7MLOgB4nGNgZGBgbvjfwBDDwgACQJKRARUwAwBHCQJsBAAAAAQAAAAEAAAAAAAAAABCAHB4nGNgZGBgYGZQYWBhAAEmIOYCQgaG/2A+AwAMewFCAHicZY9NTsMwEIVf+gekEqqoYIfkBWIBKP0Rq25YVGr3XXTfpk6bKokjx63UA3AejsAJOALcgDvwSCebNpbH37x5Y08A3OAHHo7fLfeRPVwyO3INF7gXrlN/EG6QX4SbaONVuEX9TdjHM6bCbXRheYPXuGL2hHdhDx18CNdwjU/hOvUv4Qb5W7iJO/wKt9Dx6sI+5l5XuI1HL/bHVi+cXqnlQcWhySKTOb+CmV7vkoWt0uqca1vEJlODoF9JU51pW91T7NdD5yIVWZOqCas6SYzKrdnq0AUb5/JRrxeJHoQm5Vhj/rbGAo5xBYUlDowxQhhkiMro6DtVZvSvsUPCXntWPc3ndFsU1P9zhQEC9M9cU7qy0nk6T4E9XxtSdXQrbsuelDSRXs1JErJCXta2VELqATZlV44RelzRiT8oZ0j/AAlabsgAAAB4nGNgYoAALgbsgJmRiZGZkYWBM7WoKL+oODM9jxXMYmAAAEGnBi8A') format('woff');
-}
-.icon_tip {
-    font-family: "iconfont" !important;
-    font-size: 16px;
-    font-style: normal;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-}
-.icon_error:before {
-    content: "\e74e";
-    color: red;
-}
-.icon_warn:before {
-    content: "\e783";
-    color: yellow;
-}
-.editor_scroller {
-    position: relative;
-    z-index: 3;
-    overflow: hidden;
+* {
     box-sizing: border-box;
+}
+
+.subjs-editor-container {
+    width: 100%;
     height: 100%;
-    padding: 5px 0 0 5px;
+    overflow: hidden;
+    font-style: normal;
+    font-variant-ligatures: normal;
+    font-variant-caps: normal;
+    font-variant-numeric: normal;
+    font-variant-east-asian: normal;
+    font-weight: normal;
+    font-stretch: normal;
+    font-size: 13px;
+    line-height: 1.5em;
+    font-family: Monaco, Menlo, "Ubuntu Mono", Consolas, source-code-pro, monospace;
+    -webkit-tap-highlight-color: rgab(0, 0, 0, 0);
 }
-.editor_context {
+
+.subjs-insert-cursor {
+    position: absolute;
+    left: 0;
+    z-index: 2;
+    width: 1px;
+}
+
+.subjs-insert-textarea {
+    position: absolute;
+    left: 0;
+    z-index: -1;
+    width: 1px;
+    padding: 0;
+    border-style: none;
+    outline: none;
+    opacity: 0;
+}
+
+.subjs-line-num-container {
     position: relative;
-    top: 0;
-    min-height: 100%;
-    cursor: text;
+    float: left;
+    height: 100%;
 }
-.editor_bg {
+
+.subjs-line-num {
+    position: relative;
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+.subjs-content-container {
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+}
+
+.subjs-content-scoller {
+    position: relative;
+    z-index: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+.subjs-content {
+    position: relative;
+    height: 10000000px;
+    cursor: text;
+    overflow: visible;
+}
+
+.subjs-line {
+    position: relative;
+    z-index: 1;
+    white-space: nowrap;
+}
+
+.subjs-code {
+    display: inline-block;
+    height: 100%;
+    white-space: pre;
+}
+
+.subjs-line-bg {
+    position: absolute;
+    top: 0;
+    z-index: -99;
+    height: 100%;
+    background-color: rgb(181, 213, 255);
+}
+
+.subjs-line.active {
+    background-color: transparent;
+}
+
+.subjs-v-scroll-wrap {
+    position: absolute;
+    z-index: 1;
+    top: 0;
+    right: 0;
+    overflow: auto;
+}
+
+.subjs-h-scroll-wrap {
     position: absolute;
     z-index: -1;
-    top: 0;
+    bottom: 0;
     left: 0;
+    overflow: auto;
 }
-.ellipsis {
-    display: inline-block;
-    height: 6px;
-    border-radius: 2px;
-    background: rgb(255, 221, 51);
-    line-height: 0;
-    color: #666;
-    vertical-align: middle;
-    /*letter-spacing: -2px;*/
+
+.subjs-v-scroll {
+    width: 100%;
 }
-.line_num_wrap {
-    position: relative;
-    z-index: 4;
-    top: 0;
-    left: 0;
-    float: left;
-    box-sizing: border-box;
-    min-height: 100%;
-    padding: 5px 0;
+
+.subjs-h-scroll {
+    height: 100%;
 }
-.line_num {
-    position: relative;
-    display: block;
-    padding-right: 20px;
-    padding-left: 20px;
-    user-select: none;
-    text-align: right;
+
+.subjs-h-scroll-wrap::-webkit-scrollbar,
+.subjs-v-scroll-wrap::-webkit-scrollbar {
+    border-radius: 4px;
 }
-.icon_tip {
-    position: absolute;
-    left: 2px;
-    top: 0;
+
+.subjs-v-scroll-wrap::-webkit-scrollbar {
+    width: 8px;
 }
-.icon_tip ~ .tip_txt {
-    display: none;
-    position: absolute;
-    top: 100%;
-    left: 100%;
-    padding: 5px 10px;
-    background-color: rgb(61,62,56);
-    white-space: nowrap;
-    color: #e1e1e1;
-    box-shadow: 1px 1px 5px #000;
+
+.subjs-h-scroll-wrap::-webkit-scrollbar {
+    height: 8px;
 }
-.icon_tip:hover ~ .tip_txt {
-    display: block;
+
+.subjs-h-scroll-wrap::-webkit-scrollbar-thumb,
+.subjs-v-scroll-wrap::-webkit-scrollbar-thumb {
+    border-radius: 4px;
 }
-.line_icon_num_.fold_icon {
-    display: none;
-}
-.line_num_wrap:hover .fold_icon {
-    display: block;
-}
-.fold_arrow_open .icon_fold,
-.fold_arrow_close .icon_fold {
+
+.fold-arrow-open .icon-fold,
+.fold-arrow-close .icon-fold {
     position: absolute;
     top: 0;
     right: 0;
@@ -100,7 +145,8 @@
     padding: 3px 3px 0 3px;
     cursor: pointer;
 }
-.line_num.fold_arrow_open .icon_fold:after {
+
+.fold-arrow-open .icon-fold:after {
     display: block;
     margin-top: 50%;
     content: '';
@@ -108,7 +154,8 @@
     border-style: solid;
     border-color: rgb(139, 139, 132) transparent;
 }
-.line_num.fold_arrow_open:hover .icon_fold:after {
+
+.fold-arrow-open:hover .icon-fold:after {
     display: block;
     margin-top: 50%;
     content: '';
@@ -116,7 +163,8 @@
     border-style: solid;
     border-color: rgb(169, 169, 167) transparent;
 }
-.line_num.fold_arrow_close .icon_fold:after {
+
+.fold-arrow-close .icon-fold:after {
     display: block;
     margin-top: 50%;
     content: '';
@@ -124,83 +172,12 @@
     border-style: solid;
     border-color: transparent rgb(139, 139, 132);
 }
-.line_num.fold_arrow_close:hover .icon_fold:after {
+
+.fold-arrow-close:hover .icon-fold:after {
     display: block;
     margin-top: 50%;
     content: '';
     border-width: 4px 0 4px 6px;
     border-style: solid;
     border-color: transparent rgb(169, 169, 167);
-}
-#subjs_editor_textarea_wrap {
-    position: absolute;
-    z-index: -1;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    overflow: hidden;
-    opacity: 0;
-}
-#subjs_editor_textarea {
-    overflow: hidden;
-    width: 100%;
-    height: 100%;
-    padding: 0;
-    resize: none;
-    border-style: none;
-    outline: none;
-    background-color: transparent;
-    color: transparent;
-}
-.current_line_bg {
-    position: absolute;
-    z-index: 1;
-    top: 5px;
-    right: 0;
-    left: 40px;
-    display: none;
-}
-.cursor {
-    position: absolute;
-    top: 0;
-    display: none;
-    width: 2px;
-    background-color: #333;
-}
-.v_scrollbar_wrap {
-    position: absolute;
-    z-index: 4;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    overflow: auto;
-    width: 22px;
-}
-.h_scrollbar_wrap {
-    position: absolute;
-    z-index: 4;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    overflow: auto;
-    height: 22px;
-}
-.h_scrollbar {
-    height: 100%;
-}
-.h_scrollbar_wrap::-webkit-scrollbar,
-.v_scrollbar_wrap::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-    border-radius: 4px;
-    /*background: rgb(56,57,52);*/
-    background-color: rgb(76, 77, 72);
-    box-shadow: 0 0 20px rgba(0, 0, 0, .2);
-}
-.h_scrollbar_wrap::-webkit-scrollbar-thumb,
-.v_scrollbar_wrap::-webkit-scrollbar-thumb {
-    border-radius: 4px;
-    /*background-color: rgb(85,86,82);*/
-    background-color: rgb(115, 116, 112);
 }

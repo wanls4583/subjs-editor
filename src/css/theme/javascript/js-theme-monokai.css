@@ -1,35 +1,50 @@
 /*monokai 主题*/
-.editor_wrap {
+.subjs-editor-container {
     background-color: #272822;
-    font-family: Consolas, Monaco, monospace;
-    font-size: 13px;
-    line-height: 1.5;
     color: #f8f8f2;
-    letter-spacing: .5px;
 }
-.editor_wrap textarea {
-    user-select: none;
+.subjs-insert-cursor {
+    background-color: #fff;
 }
-.cursor {
-    width: 1px !important;
-    user-select: none;
-    background-color: #f8f8f0 !important;
-}
-.current_line_bg {
-    user-select: none;
-}
-.line_num_bg {
-    color: #272822;
-}
-.line_num {
+.subjs-line-num {
     color: #999;
 }
-.line_num.active {
+.subjs-line-num.active {
     background-color: #3e3d32;
 }
-.selection_line_bg {
-    background-color: #49483e !important;
+.subjs-line-bg {
+    background-color: #49483e;
 }
+.subjs-line.active::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: -1;
+    width: 100%;
+    height: 1px;
+    background-color: #3e3d32;
+}
+.subjs-line.active::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    z-index: -1;
+    width: 100%;
+    height: 1px;
+    background-color: #3e3d32;
+}
+.subjs-h-scroll-wrap::-webkit-scrollbar,
+.subjs-v-scroll-wrap::-webkit-scrollbar {
+    background-color: rgb(76, 77, 72);
+    box-shadow: 0 0 20px rgba(0, 0, 0, .2);
+}
+.subjs-h-scroll-wrap::-webkit-scrollbar-thumb,
+.subjs-v-scroll-wrap::-webkit-scrollbar-thumb {
+    background-color: rgb(115, 116, 112);
+}
+
 /*关键字*/
 .key {
     color: #f92672;
@@ -38,22 +53,34 @@
 .type {
     color: #66d9ef;
 }
-/*函数执行*/
 .function {
     color: #66d9ef;
 }
 .class {
     color: #66d9ef;
 }
-.local {
+/*函数执行*/
+.exec-function {
+    color: #66d9ef;
+}
+/*new对象*/
+/* .new-class {
+    color: #66d9ef;
+} */
+/*本地对象*/
+.local-var {
     color: #66d9ef;
 }
 /*函数名称*/
-.function_name {
+.function-name {
+    color: #a6e22e;
+}
+/*类名称*/
+.class-name {
     color: #a6e22e;
 }
 /*函数参数*/
-.function_arg {
+.function-arg {
     color: #fd971f;
 }
 .this {
@@ -62,15 +89,15 @@
 .tag {
     color: #f92672;
 }
-.tag_attr {
+.tag-attr {
     color: #a6e22e;
 }
 /*内置函数*/
-.lib_function {
+.lib-function {
     color: #66d9ef;
 }
 /*内置变量*/
-.lib_var {
+.lib-var {
     color: #66d9ef;
 }
 /*操作符号*/
@@ -79,22 +106,16 @@
 }
 /*注释*/
 .comment,
-.pair_comment {
+.pair-comment {
     color: #75715e;
 }
 /*字符串*/
-.string,
-.pre_string,
-.suffix_string,
-.line_string {
+.pair-string,
+.single-quotation-string,
+.double-quotation-string {
     color: #e6db74;
 }
 /*数字*/
 .number {
     color: #ae81ff;
-}
-/*对齐*/
-.indent {
-    display: inline-block;
-    background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAYAAACZgbYnAAAAEklEQVQImWPQ0FD0ZXBzd/wPAAjVAoxeSgNeAAAAAElFTkSuQmCC) right repeat-y;
 }
