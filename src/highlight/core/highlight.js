@@ -429,11 +429,11 @@ class Highlight {
         this.waiteMatchLines = this.waiteMatchLines || []; //待匹配的行
         for (var i = 0; i < this.waiteMatchLines.length; i++) {
             var item = this.waiteMatchLines[i];
-            if (line < item.line) {
-                item.line += length;
-            } else if (line <= item.line + item.length) {
+            if (line >= item.line && line <= item.line + item.length) { //在item的范围内插入
                 item.length += length;
                 insert = false;
+            } else if (line < item.line) { //在item的范围之前插入
+                item.line += length;
             }
         }
         if (insert) {
@@ -457,22 +457,22 @@ class Highlight {
         if (this.waiteMatchLines && this.waiteMatchLines.length) {
             for (var i = 0; i < this.waiteMatchLines.length; i++) {
                 var item = this.waiteMatchLines[i];
-                if (line + length <= item.line) { //在删除的范围之后
+                if (item.line >= line + length) { //在删除的范围之后
                     item.line -= length;
-                } else if (line >= item.line && line <= item.line + item.length) {
-                    if (line + length > item.line + item.length) { //与item末行有交叉
-                        item.length = line - item.line;
-                    } else { //被item包含
-                        item.length = item.length - length;
+                } else if (item.line <= line) {
+                    if (item.line + item.length > line) {
+                        if (item.line + item.length >= line + length) { //包含删除范围
+                            item.length = item.length - length;
+                        } else { //与删除范围首行有交叉
+                            item.length = line - item.line;
+                        }
                     }
-                } else if (line <= item.line && line + length >= item.line) {
-                    if (line + length < item.line + item.length) { //与item首行有交叉
-                        item.length = (item.line + item.length) - (line + length);
-                        item.line = line;
-                    } else { //包含item
-                        this.waiteMatchLines.splice(i, 1);
-                        i--;
-                    }
+                } else if (item.line + item.length <= line + length) { //被删除范围包含
+                    this.waiteMatchLines.splice(i, 1);
+                    i--;
+                } else { //与删除范围行末有交叉
+                    item.line = line;
+                    item.length = (item.line + item.length) - (line + length);
                 }
             }
         }
