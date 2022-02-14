@@ -1,11 +1,6 @@
-<!--
- * @Author: lisong
- * @Date: 2020-10-29 11:04:06
- * @Description: 
--->
-# subjs-editor
+# my-editor
 
-> 一个用 JavaScript 开发的简单的代码编辑器，目前可实现 JavaScript 代码的高亮，折叠。可处理百万行代码。
+> A simple code editor developed with JavaScript
 
 ## 内容
 
@@ -14,15 +9,16 @@
 - [**`贡献`**](#贡献)
 
 ## 功能特性
-* [x] 使用原生 JavaScript 开发，可在浏览器中运行
-* [x] 支持 JavaScript 代码的高亮，折叠，复制，删除，撤销，重做等操作
-* [ ] 支持 JavaScript 代码的常见语法错误检查（开发中，有兴趣的朋友可`Pull Request`）
+* [x] 使用 JavaScript 开发，可在浏览器中运行
+* [x] 支持代码的高亮，折叠，复制，删除，撤销，重做等操作
+* [x] 支持代码的常见语法错误检查
 * [x] 支持百万行级别的代码
 * [x] 可扩展其他语言
 
 ## 案例
 [**`online demo`**](https://blog.lisong.hn.cn/code/example/my-editor/dist/index.html)
 
-## 贡献
+![](https://wanls4583.github.io/images/code/my-editor.png)
 
+## 贡献
 欢迎给出一些意见和优化，期待你的 `Pull Request`
