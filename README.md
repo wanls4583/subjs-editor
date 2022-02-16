@@ -2,6 +2,9 @@
 
 > A simple code editor developed with JavaScript
 
+## 该仓库已经废弃，请移步至新仓库：
+[**`https://github.com/wanls4583/my-editor.git`**](https://github.com/wanls4583/my-editor.git)
+
 ## 内容
 
 - [**`功能特性`**](#功能特性)
